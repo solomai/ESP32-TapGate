@@ -1,0 +1,73 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Built application files
+*.apk
+*.aab
+*.ap_
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated build folder
+/build/
+
+# Local configuration folder (IDE settings)
+# Comment out .idea/ if you want to share IDE settings with your team
+.idea/
+
+# Gradle files
+.gradle/
+
+# Log Files
+*.log
+
+# Android Studio Profiler data files
+*.hprof
+*.snapshot
+*.trace
+
+# Keystore files (sensitive information - never commit these)
+*.jks
+*.keystore
+
+# External native build folder
+.cxx/
+/cmake/
+
+# Google Services (if you are not committing your google-services.json)
+# google-services.json
+
+# Maven local repository (if using publishToMavenLocal)
+.m2/
+
+# Output folder for generated code from kapt
+/build/generated/source/kapt/
+
+# Lint results
+lint-results-*.xml
+lint-results-*.html
+
+# Android Studio specific files
+captures/
+.externalNativeBuild/
+
+# Instance App
+/instant-run.zip
+/.idea/libraries/

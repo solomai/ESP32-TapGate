@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Outer shadow (glow) -->
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="200dp"
+                android:centerX="50%"
+                android:centerY="50%"
+                android:startColor="#8019F6C9"
+                android:endColor="#0019F6C9"
+                android:useLevel="false"/>
+            <size android:width="360dp" android:height="360dp"/>
+        </shape>
+    </item>
+    <!-- Main concave gradient: темний центр, світлий край -->
+    <item android:left="10dp" android:top="10dp" android:right="10dp" android:bottom="10dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="155dp"
+                android:centerX="50%"
+                android:centerY="50%"
+                android:startColor="#FF0A6B5B"
+                android:centerColor="#FF19F6C9"
+                android:endColor="#FFB2FFF2"
+                android:useLevel="false"/>
+            <size android:width="320dp" android:height="320dp"/>
+        </shape>
+    </item>
+    <!-- Inner shadow/highlight for concave effect -->
+    <item android:left="30dp" android:top="60dp" android:right="30dp" android:bottom="30dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="80dp"
+                android:centerX="50%"
+                android:centerY="60%"
+                android:startColor="#30FFFFFF"
+                android:endColor="#00FFFFFF"
+                android:useLevel="false"/>
+            <size android:width="260dp" android:height="220dp"/>
+        </shape>
+    </item>
+</layer-list> 

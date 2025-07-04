@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="TurquoiseButton" parent="Widget.MaterialComponents.Button">
+        <item name="materialThemeOverlay">@null</item>
+        <item name="android:background">@drawable/gradient_circle</item>
+        <item name="android:backgroundTint">@null</item>
+        <item name="backgroundTint">@null</item>
+        <item name="android:textColor">@android:color/transparent</item>
+        <item name="rippleColor">@android:color/transparent</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetRight">0dp</item>
+        <item name="elevation">16dp</item>
+        <item name="cornerRadius">160dp</item>
+        <item name="android:clickable">true</item>
+    </style>
+</resources>
