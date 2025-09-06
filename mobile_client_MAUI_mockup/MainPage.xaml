@@ -5,16 +5,16 @@
              BackgroundColor="{StaticResource BackgroundColor}">
     <Grid x:Name="RootLayout" RowDefinitions="Auto,*" Padding="20" RowSpacing="40">
         <Grid x:Name="HeaderGrid" Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="2">
-            <Button Text="&lt;" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
-            <Button Grid.Column="1" Text="Gate 1" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
-            <Button Grid.Column="2" Text="&gt;" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
+            <Button Text="&lt;" Clicked="OnLeftBtn" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
+            <Button x:Name="GateTitleButton" Clicked="OnTitleBtn" Grid.Column="1" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
+            <Button Grid.Column="2" Text="&gt;" Clicked="OnRightBtn" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
         </Grid>
         <Grid x:Name="ContentGrid" Grid.Row="1" RowDefinitions="Auto, *" ColumnDefinitions="*" RowSpacing="40">
             <VerticalStackLayout x:Name="StatusLayout" Grid.Row="0" Spacing="10" HorizontalOptions="Center" VerticalOptions="Center">
                 <Border Background="{StaticResource BackgroundColor}" StrokeThickness="0" StrokeShape="RoundRectangle 8">
                     <HorizontalStackLayout Padding="10,5">
                         <Path x:Name="GateStatusPath"
-                            Data="M80-280v-400h80v400H80Zm120 80v-400q0-66 47-113t113-47h240q66 0 113 47t47 113v400H200Zm600-80v-400h80v400h-80ZM480-480ZM280-280h160v-160h-80v-80h80v-160h-80q-33 0-56.5 23.5T280-600v320Zm240 0h160v-320q0-33-23.5-56.5T600-680h-80v160h80v80h-80v160Z"
+                            Data="{StaticResource GateIconGeometry}"
                             Fill="White"
                             WidthRequest="28" HeightRequest="24"
                             Aspect="Uniform" />

@@ -5,6 +5,7 @@ public partial class MainPage : ContentPage
     public MainPage()
     {
         InitializeComponent();
+        SetGateName("gate is not configured yet");
         SetGateStatus(EnumGateState.Offline);
     }
     protected override void OnSizeAllocated(double width, double height)
@@ -44,6 +45,59 @@ public partial class MainPage : ContentPage
             Grid.SetColumn(ActionButton, 0);
         }
     }
+
+    void OnRightBtn(object sender, EventArgs e)
+    {
+        // Placeholder for right button action
+        // TODO: Debug mockup
+        void SetNextGateStatus()
+        {
+            // Get current state from GateStatusLabel.Text
+            EnumGateState currentState;
+            if (GateStatusLabel.Text.Contains("Offline"))
+                currentState = EnumGateState.Offline;
+            else if (GateStatusLabel.Text.Contains("Online"))
+                currentState = EnumGateState.Online;
+            else
+                currentState = EnumGateState.Connecting;
+
+            // Get next state, wrap to first if at last
+            var states = Enum.GetValues<EnumGateState>();
+            int nextIndex = ((int)currentState + 1) % states.Length;
+            SetGateStatus(states[nextIndex]);
+        }
+        SetNextGateStatus();
+        // TODO: Debug mockup - END
+    }
+    void OnLeftBtn(object sender, EventArgs e)
+    {
+        // Placeholder for left button action
+        // TODO: Debug mockup
+        void SetNextGateStatus()
+        {
+            // Get current state from GateStatusLabel.Text
+            EnumGateState currentState;
+            if (GateStatusLabel.Text.Contains("Offline"))
+                currentState = EnumGateState.Offline;
+            else if (GateStatusLabel.Text.Contains("Online"))
+                currentState = EnumGateState.Online;
+            else
+                currentState = EnumGateState.Connecting;
+
+            // Get all states in order
+            var states = Enum.GetValues<EnumGateState>();
+            int currentIndex = Array.IndexOf(states, currentState);
+            // Previous index with wrap-around
+            int prevIndex = (currentIndex - 1 + states.Length) % states.Length;
+            SetGateStatus(states[prevIndex]);
+        }
+        SetNextGateStatus();
+        // TODO: Debug mockup - END
+    }
+    void OnTitleBtn(object sender, EventArgs e)
+    {
+        // Placeholder for title button action
+    }
     void OnDoAction(object sender, EventArgs e)
     {
         // Placeholder for main action
@@ -56,26 +110,36 @@ public partial class MainPage : ContentPage
         Connecting
     }
 
+    public void SetGateName(string name)
+    {
+        GateTitleButton.Text = name;
+    }
+
     public void SetGateStatus(EnumGateState state)
     {
         Color color;
         string text;
+        bool enable_button = false;
+        const string prefix = "Connectivity Status: ";
         switch (state)
         {
             case EnumGateState.Offline:
                 color = (Color)Application.Current!.Resources["ColorOffline"];
-                text = "Gate offline";
+                text = prefix + "Offline";
                 break;
             case EnumGateState.Online:
+                enable_button = true;
                 color = (Color)Application.Current!.Resources["ColorOnline"];
-                text = "Gate online";
+                text = prefix + "Online";
                 break;
             default:
                 color = (Color)Application.Current!.Resources["ColorConnecting"];
-                text = "Gate connecting";
+                text = prefix + "Connecting";
                 break;
         }
         GateStatusPath.Fill = new SolidColorBrush(color);
         GateStatusLabel.Text = text;
+
+        ActionButton.IsEnabled = enable_button;
     }
 }
