@@ -5,6 +5,7 @@ public partial class MainPage : ContentPage
     public MainPage()
     {
         InitializeComponent();
+        SetGateStatus(EnumGateState.Online);
     }
     protected override void OnSizeAllocated(double width, double height)
     {
@@ -46,5 +47,35 @@ public partial class MainPage : ContentPage
     void OnDoAction(object sender, EventArgs e)
     {
         // Placeholder for main action
+    }
+
+    public enum EnumGateState
+    {
+        Offline,
+        Online,
+        Connecting
+    }
+
+    public void SetGateStatus(EnumGateState state)
+    {
+        Color color;
+        string text;
+        switch (state)
+        {
+            case EnumGateState.Offline:
+                color = (Color)Application.Current!.Resources["ColorOffline"];
+                text = "Gate offline";
+                break;
+            case EnumGateState.Online:
+                color = (Color)Application.Current!.Resources["ColorOnline"];
+                text = "Gate online";
+                break;
+            default:
+                color = (Color)Application.Current!.Resources["ColorConnecting"];
+                text = "Gate connecting";
+                break;
+        }
+        GateStatusIcon.SetValue(Image.TintColorProperty, color);
+        GateStatusLabel.Text = text;
     }
 }

@@ -13,8 +13,8 @@
             <VerticalStackLayout x:Name="StatusLayout" Grid.Row="0" Spacing="10" HorizontalOptions="Center" VerticalOptions="Center">
                 <Frame BackgroundColor="{StaticResource BackgroundColor}" CornerRadius="8" Padding="10,5" HasShadow="False">
                     <HorizontalStackLayout>
-                        <Label TextColor="#00B470" Text="📶" FontSize="14" />
-                        <Label Text="Wi-Fi Online" TextColor="White" FontSize="14" Margin="5,0,0,0" />
+                        <Image x:Name="GateStatusIcon" Source="gate.svg" WidthRequest="14" HeightRequest="14" />
+                        <Label x:Name="GateStatusLabel" Text="" TextColor="White" FontSize="14" Margin="5,0,0,0" />
                     </HorizontalStackLayout>
                 </Frame>
                 <Frame BackgroundColor="{StaticResource BackgroundColor}" CornerRadius="8" Padding="10,5" HasShadow="False">
