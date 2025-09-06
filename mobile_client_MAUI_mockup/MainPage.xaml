@@ -28,16 +28,10 @@
                     </HorizontalStackLayout>
                 </Border>
             </VerticalStackLayout>
-            <Button x:Name="ActionButton" Grid.Row="1" HeightRequest="200" WidthRequest="200" CornerRadius="100" Clicked="OnDoAction" HorizontalOptions="Center">
-                <Button.Background>
-                    <RadialGradientBrush>
-                        <GradientStop Color="#5DE0E6" Offset="0.0"/>
-                        <GradientStop Color="#004AAD" Offset="0.7"/>
-                        <GradientStop Color="#001F54" Offset="0.9"/>
-                        <GradientStop Color="#5DE0E6" Offset="0.1"/>
-                    </RadialGradientBrush>
-                </Button.Background>
-            </Button>
+            <Button x:Name="ActionButton"
+                    Grid.Row="1"
+                    Clicked="OnDoAction"
+                    Style="{StaticResource ActionButtonStyle}" />
         </Grid>
     </Grid>
 </ContentPage>

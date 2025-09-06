@@ -441,4 +441,73 @@
         <Setter Property="SelectedTabColor" Value="{AppThemeBinding Light={StaticResource Gray950}, Dark={StaticResource Gray200}}" />
     </Style>
 
+    <!-- ===================== -->
+    <!--  Action Button Brushes -->
+    <!-- ===================== -->
+
+    <!-- Normal state brush -->
+    <RadialGradientBrush x:Key="ActionNormalBrush">
+        <!-- center highlight first so it renders correctly -->
+        <GradientStop Color="#5DE0E6" Offset="0.0" />
+        <GradientStop Color="#5DE0E6" Offset="0.1" />
+        <GradientStop Color="#004AAD" Offset="0.7" />
+        <GradientStop Color="#001F54" Offset="0.9" />
+    </RadialGradientBrush>
+
+    <!-- Disabled state brush -->
+    <RadialGradientBrush x:Key="ActionDisabledBrush">
+        <GradientStop Color="#BDBDBD" Offset="0.0" />
+        <GradientStop Color="#BDBDBD" Offset="0.1" />
+        <GradientStop Color="#3F3F3F" Offset="0.7" />
+        <GradientStop Color="#1C1C1C" Offset="0.9" />
+    </RadialGradientBrush>
+
+    <!-- Pressed state brush (optional) -->
+    <RadialGradientBrush x:Key="ActionPressedBrush">
+        <GradientStop Color="#5DE0E6" Offset="0.0" />
+        <GradientStop Color="#53C9CF" Offset="0.1" />
+        <GradientStop Color="#003D8F" Offset="0.7" />
+        <GradientStop Color="#001947" Offset="0.9" />
+    </RadialGradientBrush>
+
+
+    <!-- ===================== -->
+    <!--   Action Button Style  -->
+    <!-- ===================== -->
+    <Style x:Key="ActionButtonStyle" TargetType="Button">
+        <!-- base properties -->
+        <Setter Property="CornerRadius" Value="100" />
+        <Setter Property="HeightRequest" Value="200" />
+        <Setter Property="WidthRequest" Value="200" />
+        <Setter Property="HorizontalOptions" Value="Center" />
+        <Setter Property="Background" Value="{StaticResource ActionNormalBrush}" />
+
+        <!-- Visual states defined in style -->
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <Setter.Value>
+                <VisualStateGroupList>
+                    <VisualStateGroup x:Name="CommonStates">
+                        <VisualState x:Name="Normal">
+                            <VisualState.Setters>
+                                <Setter Property="Background" Value="{StaticResource ActionNormalBrush}" />
+                            </VisualState.Setters>
+                        </VisualState>
+
+                        <VisualState x:Name="Pressed">
+                            <VisualState.Setters>
+                                <Setter Property="Background" Value="{StaticResource ActionPressedBrush}" />
+                            </VisualState.Setters>
+                        </VisualState>
+
+                        <VisualState x:Name="Disabled">
+                            <VisualState.Setters>
+                                <Setter Property="Background" Value="{StaticResource ActionDisabledBrush}" />
+                            </VisualState.Setters>
+                        </VisualState>
+                    </VisualStateGroup>
+                </VisualStateGroupList>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>
