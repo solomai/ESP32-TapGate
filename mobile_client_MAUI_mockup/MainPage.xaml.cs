@@ -5,7 +5,7 @@ public partial class MainPage : ContentPage
     public MainPage()
     {
         InitializeComponent();
-        SetGateStatus(EnumGateState.Online);
+        SetGateStatus(EnumGateState.Offline);
     }
     protected override void OnSizeAllocated(double width, double height)
     {
@@ -75,7 +75,7 @@ public partial class MainPage : ContentPage
                 text = "Gate connecting";
                 break;
         }
-        GateStatusIcon.SetValue(Image.TintColorProperty, color);
+        GateStatusPath.Fill = new SolidColorBrush(color);
         GateStatusLabel.Text = text;
     }
 }
