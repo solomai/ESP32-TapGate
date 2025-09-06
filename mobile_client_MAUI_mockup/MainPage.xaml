@@ -3,73 +3,37 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="MauiMockup.MainPage"
              BackgroundColor="{StaticResource BackgroundColor}">
-    <Grid>
-        <!-- Portrait layout -->
-        <Grid x:Name="PortraitLayout" IsVisible="True" RowDefinitions="Auto,*,Auto" Padding="20" RowSpacing="40">
-            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="2">
-                <Button Text="&lt;" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
-                <Button Grid.Column="1" Text="Gate 1" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
-                <Button Grid.Column="2" Text="&gt;" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
-            </Grid>
-            <Grid Grid.Row="1" RowDefinitions="*,2*">
-                <VerticalStackLayout Grid.Row="0" Spacing="10" HorizontalOptions="Center" VerticalOptions="Center">
-                    <Frame BackgroundColor="{StaticResource BackgroundColor}" CornerRadius="8" Padding="10,5" HasShadow="False">
+    <Grid x:Name="RootLayout" RowDefinitions="Auto,*" Padding="20" RowSpacing="40">
+        <Grid x:Name="HeaderGrid" Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="2">
+            <Button Text="&lt;" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
+            <Button Grid.Column="1" Text="Gate 1" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
+            <Button Grid.Column="2" Text="&gt;" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
+        </Grid>
+        <Grid x:Name="ContentGrid" Grid.Row="1" RowDefinitions="Auto, *" ColumnDefinitions="*" RowSpacing="40">
+            <VerticalStackLayout x:Name="StatusLayout" Grid.Row="0" Spacing="10" HorizontalOptions="Center" VerticalOptions="Center">
+                <Frame BackgroundColor="{StaticResource BackgroundColor}" CornerRadius="8" Padding="10,5" HasShadow="False">
                     <HorizontalStackLayout>
                         <Label TextColor="#00B470" Text="📶" FontSize="14" />
                         <Label Text="Wi-Fi Online" TextColor="White" FontSize="14" Margin="5,0,0,0" />
                     </HorizontalStackLayout>
                 </Frame>
-                    <Frame BackgroundColor="{StaticResource BackgroundColor}" CornerRadius="8" Padding="10,5" HasShadow="False">
+                <Frame BackgroundColor="{StaticResource BackgroundColor}" CornerRadius="8" Padding="10,5" HasShadow="False">
                     <HorizontalStackLayout>
                         <Label TextColor="#EB003F" Text="🔵" FontSize="14" />
                         <Label Text="BT Offline" TextColor="White" FontSize="14" Margin="5,0,0,0" />
                     </HorizontalStackLayout>
                 </Frame>
-                </VerticalStackLayout>
-                <Button Grid.Row="2" HeightRequest="200" WidthRequest="200" CornerRadius="100" Clicked="OnDoAction" HorizontalOptions="Center">
-                    <Button.Background>
-                        <RadialGradientBrush>
-                            <GradientStop Color="#5DE0E6" Offset="0.0"/>
-                            <GradientStop Color="#004AAD" Offset="0.7"/>
-                            <GradientStop Color="#001F54" Offset="1.0"/>
-                        </RadialGradientBrush>
-                    </Button.Background>
-                </Button>
-            </Grid>
-        </Grid>
-
-        <!-- Landscape layout -->
-        <Grid x:Name="LandscapeLayout" IsVisible="False" RowDefinitions="Auto,*" Padding="20" RowSpacing="20">
-            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="2">
-                <Button Text="&lt;" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
-                <Button Grid.Column="1" Text="Gate 1" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
-                <Button Grid.Column="2" Text="&gt;" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
-            </Grid>
-            <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="40" VerticalOptions="Center">
-                <VerticalStackLayout Grid.Column="0" Spacing="10" VerticalOptions="Center">
-                    <Frame BackgroundColor="#00B470" CornerRadius="8" Padding="10,5" HasShadow="False">
-                        <HorizontalStackLayout>
-                            <Label Text="📶" FontSize="14" />
-                            <Label Text="Wi-Fi Online" TextColor="White" FontSize="14" Margin="5,0,0,0" />
-                        </HorizontalStackLayout>
-                    </Frame>
-                    <Frame BackgroundColor="#EB003F" CornerRadius="8" Padding="10,5" HasShadow="False">
-                        <HorizontalStackLayout>
-                            <Label Text="🔵" FontSize="14" />
-                            <Label Text="BT Offline" TextColor="White" FontSize="14" Margin="5,0,0,0" />
-                        </HorizontalStackLayout>
-                    </Frame>
-                </VerticalStackLayout>
-                <Button Grid.Column="1" HeightRequest="200" WidthRequest="200" CornerRadius="100" Clicked="OnDoAction" HorizontalOptions="Center">
-                    <Button.Background>
-                        <RadialGradientBrush>
-                            <GradientStop Color="#5DE0E6" Offset="0.0"/>
-                            <GradientStop Color="#004AAD" Offset="0.7"/>
-                            <GradientStop Color="#001F54" Offset="1.0"/>
-                        </RadialGradientBrush>
-                    </Button.Background>
-                </Button>
-            </Grid>
+            </VerticalStackLayout>
+            <Button x:Name="ActionButton" Grid.Row="1" HeightRequest="200" WidthRequest="200" CornerRadius="100" Clicked="OnDoAction" HorizontalOptions="Center">
+                <Button.Background>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#5DE0E6" Offset="0.0"/>
+                        <GradientStop Color="#004AAD" Offset="0.7"/>
+                        <GradientStop Color="#001F54" Offset="0.9"/>
+                        <GradientStop Color="#5DE0E6" Offset="0.1"/>
+                    </RadialGradientBrush>
+                </Button.Background>
+            </Button>
         </Grid>
     </Grid>
 </ContentPage>
