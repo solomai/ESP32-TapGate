@@ -29,34 +29,14 @@
                 </Border>
             </VerticalStackLayout>
             <Button x:Name="ActionButton" Grid.Row="1" HeightRequest="200" WidthRequest="200" CornerRadius="100" Clicked="OnDoAction" HorizontalOptions="Center">
-                <VisualStateManager.VisualStateGroups>
-                    <VisualStateGroup Name="CommonStates">
-                        <VisualState Name="Normal">
-                            <VisualState.Setters>
-                                <Setter Property="Background">
-                                    <RadialGradientBrush>
-                                        <GradientStop Color="#5DE0E6" Offset="0.0" />
-                                        <GradientStop Color="#004AAD" Offset="0.7" />
-                                        <GradientStop Color="#001F54" Offset="0.9" />
-                                        <GradientStop Color="#5DE0E6" Offset="0.1" />
-                                    </RadialGradientBrush>
-                                </Setter>
-                            </VisualState.Setters>
-                        </VisualState>
-                        <VisualState Name="Disabled">
-                            <VisualState.Setters>
-                                <Setter Property="Background">
-                                    <RadialGradientBrush>
-                                        <GradientStop Color="#BDBDBD" Offset="0.0" />
-                                        <GradientStop Color="#3F3F3F" Offset="0.7" />
-                                        <GradientStop Color="#1C1C1C" Offset="0.9" />
-                                        <GradientStop Color="#BDBDBD" Offset="0.1" />
-                                    </RadialGradientBrush>
-                                </Setter>
-                            </VisualState.Setters>
-                        </VisualState>
-                    </VisualStateGroup>
-                </VisualStateManager.VisualStateGroups>
+                <Button.Background>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#5DE0E6" Offset="0.0"/>
+                        <GradientStop Color="#004AAD" Offset="0.7"/>
+                        <GradientStop Color="#001F54" Offset="0.9"/>
+                        <GradientStop Color="#5DE0E6" Offset="0.1"/>
+                    </RadialGradientBrush>
+                </Button.Background>
             </Button>
         </Grid>
     </Grid>
