@@ -3,34 +3,43 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-	<!-- ==== Shadow (outer glow) ==== -->
-	<Shadow x:Key="ActionGlow"
-			Brush="#204C9EFF"
-			Opacity="0.35"
-			Radius="40"
-			Offset="0,14" />
+	<!-- ===== Platform-specific shadows (Android needs much weaker shadow) ===== -->
+	<Shadow x:Key="ActionGlow.WinUI"
+            Brush="#204C9EFF"
+            Opacity="0.35"
+            Radius="40"
+            Offset="0,14" />
 
-	<!-- ==== Brushes (ring моделимо градієнтом) ==== -->
+	<Shadow x:Key="ActionGlow.Android"
+            Brush="#303B5BDC"
+            Opacity="0.12"
+            Radius="16"
+            Offset="0,6" />
+
+	<!-- ===== Brushes ===== -->
 
 	<!-- Normal -->
 	<RadialGradientBrush x:Key="ActionNormalBrush">
-		<!-- soft glow center -->
+		<!-- center glow -->
 		<GradientStop Color="#CFF6FF" Offset="0.00" />
 		<GradientStop Color="#8DEAF8" Offset="0.18" />
 		<!-- body -->
 		<GradientStop Color="#1D6EE2" Offset="0.62" />
-		<!-- ring illusion -->
+		<!-- ring -->
 		<GradientStop Color="#0E3E91" Offset="0.85" />
 		<GradientStop Color="#0A2A78" Offset="0.95" />
+		<!-- smooth fade to page background to avoid hard edge on Android -->
+		<GradientStop Color="{StaticResource BackgroundColor}" Offset="1.00" />
 	</RadialGradientBrush>
 
-	<!-- Pressed (slightly darker) -->
+	<!-- Pressed -->
 	<RadialGradientBrush x:Key="ActionPressedBrush">
 		<GradientStop Color="#B4EFFE" Offset="0.00" />
 		<GradientStop Color="#6DD5EB" Offset="0.18" />
 		<GradientStop Color="#155DC3" Offset="0.62" />
 		<GradientStop Color="#0B2E74" Offset="0.85" />
 		<GradientStop Color="#08235B" Offset="0.95" />
+		<GradientStop Color="{StaticResource BackgroundColor}" Offset="1.00" />
 	</RadialGradientBrush>
 
 	<!-- Disabled -->
@@ -39,22 +48,38 @@
 		<GradientStop Color="#BDBDBD" Offset="0.18" />
 		<GradientStop Color="#6B6B6B" Offset="0.62" />
 		<GradientStop Color="#2B2B2B" Offset="0.92" />
+		<GradientStop Color="{StaticResource BackgroundColor}" Offset="1.00" />
 	</RadialGradientBrush>
 
-	<!-- ==== Public style for Button ==== -->
+	<!-- ===== Style for Button ===== -->
 	<Style x:Key="ActionButtonStyle" TargetType="Button">
 		<!-- +20% size -->
 		<Setter Property="WidthRequest" Value="240" />
 		<Setter Property="HeightRequest" Value="240" />
 		<Setter Property="CornerRadius" Value="120" />
 		<Setter Property="HorizontalOptions" Value="Center" />
+
+		<!-- Use brush for background -->
 		<Setter Property="Background" Value="{StaticResource ActionNormalBrush}" />
 		<Setter Property="BackgroundColor" Value="Transparent" />
-		<!-- glossy rim imitation -->
-		<Setter Property="BorderWidth" Value="1.5" />
+
+		<!-- Border: use integer thickness on Android to avoid half-pixel AA -->
 		<Setter Property="BorderColor" Value="#66FFFFFF" />
-		<!-- soft outer glow -->
-		<Setter Property="Shadow" Value="{StaticResource ActionGlow}" />
+		<Setter Property="BorderWidth" Value="{OnPlatform Android=2, iOS=1.5, WinUI=1.5}" />
+
+		<!-- Shadow: platform-specific -->
+		<Setter Property="Shadow"
+                Value="{OnPlatform Android={StaticResource ActionGlow.Android},
+                                 iOS={StaticResource ActionGlow.WinUI},
+                                 WinUI={StaticResource ActionGlow.WinUI}}" />
+
+		<!-- Clip to a perfect circle so no gradient/antialias leaks past the edge -->
+		<Setter Property="Clip">
+			<Setter.Value>
+				<!-- size is fixed 240x240 in this style -->
+				<EllipseGeometry Center="120,120" RadiusX="120" RadiusY="120"/>
+			</Setter.Value>
+		</Setter>
 
 		<!-- Visual states -->
 		<Setter Property="VisualStateManager.VisualStateGroups">
