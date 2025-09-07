@@ -21,10 +21,10 @@
 		<Nullable>enable</Nullable>
 
 		<!-- Display name -->
-		<ApplicationTitle>TapGate Mockup</ApplicationTitle>
+		<ApplicationTitle>TapGate</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>tapgate.tapgate</ApplicationId>
+		<ApplicationId>tapgate.v1</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
