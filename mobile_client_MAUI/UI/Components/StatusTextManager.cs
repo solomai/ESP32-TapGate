@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
 
-namespace MauiMockup.Components;
+namespace TapGate.Components;
 
 /// <summary>
 /// Provides logic for displaying status text with a timed fade-out.

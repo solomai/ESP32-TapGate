@@ -1,2 +1,2 @@
-[assembly: XmlnsDefinition("http://schemas.microsoft.com/dotnet/maui/global", "MauiMockup")]
-[assembly: XmlnsDefinition("http://schemas.microsoft.com/dotnet/maui/global", "MauiMockup.Pages")]
+[assembly: XmlnsDefinition("http://schemas.microsoft.com/dotnet/maui/global", "TapGate")]
+[assembly: XmlnsDefinition("http://schemas.microsoft.com/dotnet/maui/global", "TapGate.Pages")]

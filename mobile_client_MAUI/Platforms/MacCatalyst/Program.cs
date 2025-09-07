@@ -1,7 +1,7 @@
 ﻿using ObjCRuntime;
 using UIKit;
 
-namespace MauiMockup
+namespace TapGate
 {
     public class Program
     {

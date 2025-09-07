@@ -1,6 +1,6 @@
 ﻿using Foundation;
 
-namespace MauiMockup
+namespace TapGate
 {
     [Register("AppDelegate")]
     public class AppDelegate : MauiUIApplicationDelegate

@@ -1,8 +1,8 @@
 ﻿<maui:MauiWinUIApplication
-    x:Class="MauiMockup.WinUI.App"
+    x:Class="TapGate.WinUI.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:maui="using:Microsoft.Maui"
-    xmlns:local="using:MauiMockup.WinUI">
+    xmlns:local="using:TapGate.WinUI">
 
 </maui:MauiWinUIApplication>

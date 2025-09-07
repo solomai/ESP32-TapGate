@@ -1,7 +1,7 @@
 ﻿using Android.App;
 using Android.Runtime;
 
-namespace MauiMockup
+namespace TapGate
 {
     [Application]
     public class MainApplication : MauiApplication

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
-using MauiMockup.Services;
+using TapGate.Services;
 
-namespace MauiMockup
+namespace TapGate
 {
     public static class MauiProgram
     {
