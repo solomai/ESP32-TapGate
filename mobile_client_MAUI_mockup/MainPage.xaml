@@ -43,9 +43,9 @@
                 </Border>                
             </VerticalStackLayout>
             <Button x:Name="ActionButton"
-                    Grid.Row="1"
-                    Clicked="OnDoAction"
-                    Style="{StaticResource ActionButtonStyle}" />
+                    Grid.Row="2"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Clicked="OnDoAction" />
         </Grid>
     </Grid>
 </ContentPage>
