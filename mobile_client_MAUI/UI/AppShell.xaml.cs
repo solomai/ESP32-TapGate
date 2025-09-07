@@ -1,4 +1,4 @@
-﻿namespace MauiMockup
+﻿namespace TapGate
 {
     public partial class AppShell : Shell
     {

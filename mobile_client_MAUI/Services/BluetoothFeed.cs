@@ -1,4 +1,4 @@
-namespace MauiMockup.Services;
+namespace TapGate.Services;
 
 public class BluetoothFeed : IFeed
 {

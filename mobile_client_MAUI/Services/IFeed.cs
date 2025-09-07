@@ -1,4 +1,4 @@
-namespace MauiMockup.Services;
+namespace TapGate.Services;
 
 public interface IFeed
 {

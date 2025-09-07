@@ -1,7 +1,7 @@
-using MauiMockup.Services;
-using MauiMockup.Components;
+using TapGate.Services;
+using TapGate.Components;
 
-namespace MauiMockup;
+namespace TapGate;
 
 public partial class MainPage : ContentPage
 {
