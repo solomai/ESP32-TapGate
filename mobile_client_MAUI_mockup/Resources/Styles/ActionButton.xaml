@@ -18,38 +18,57 @@
 
 	<!-- ===== Brushes ===== -->
 
-	<!-- Normal -->
+	<!-- Normal: many small steps to avoid banding on Android -->
 	<RadialGradientBrush x:Key="ActionNormalBrush">
 		<!-- center glow -->
-		<GradientStop Color="#CFF6FF" Offset="0.00" />
-		<GradientStop Color="#8DEAF8" Offset="0.18" />
-		<!-- body -->
-		<GradientStop Color="#1D6EE2" Offset="0.62" />
-		<!-- ring -->
-		<GradientStop Color="#0E3E91" Offset="0.85" />
-		<GradientStop Color="#0A2A78" Offset="0.95" />
-		<!-- smooth fade to page background to avoid hard edge on Android -->
+		<GradientStop Color="#E7FBFF" Offset="0.00" />
+		<!-- very soft -->
+		<GradientStop Color="#D8F8FF" Offset="0.06" />
+		<GradientStop Color="#C4F1FF" Offset="0.12" />
+		<!-- inner body -->
+		<GradientStop Color="#A3E6FE" Offset="0.20" />
+		<GradientStop Color="#86D7FA" Offset="0.30" />
+		<GradientStop Color="#5FB9F2" Offset="0.42" />
+		<GradientStop Color="#388FE6" Offset="0.55" />
+		<!-- outer body -->
+		<GradientStop Color="#246FDB" Offset="0.68" />
+		<GradientStop Color="#1856BE" Offset="0.80" />
+		<GradientStop Color="#123F98" Offset="0.90" />
+		<GradientStop Color="#0D2F79" Offset="0.96" />
+		<!-- fade to page background to kill edge band -->
 		<GradientStop Color="{StaticResource BackgroundColor}" Offset="1.00" />
 	</RadialGradientBrush>
 
-	<!-- Pressed -->
+	<!-- Pressed: same distribution, slightly darker/colder -->
 	<RadialGradientBrush x:Key="ActionPressedBrush">
-		<GradientStop Color="#B4EFFE" Offset="0.00" />
-		<GradientStop Color="#6DD5EB" Offset="0.18" />
-		<GradientStop Color="#155DC3" Offset="0.62" />
-		<GradientStop Color="#0B2E74" Offset="0.85" />
-		<GradientStop Color="#08235B" Offset="0.95" />
+		<GradientStop Color="#D9F6FF" Offset="0.00" />
+		<GradientStop Color="#C6EEFF" Offset="0.06" />
+		<GradientStop Color="#B1E6FF" Offset="0.12" />
+		<GradientStop Color="#8FD6FD" Offset="0.20" />
+		<GradientStop Color="#73C6F7" Offset="0.30" />
+		<GradientStop Color="#4FA8ED" Offset="0.42" />
+		<GradientStop Color="#2F82E0" Offset="0.55" />
+		<GradientStop Color="#2267C7" Offset="0.68" />
+		<GradientStop Color="#184FA7" Offset="0.80" />
+		<GradientStop Color="#123D88" Offset="0.90" />
+		<GradientStop Color="#0C2E6C" Offset="0.96" />
 		<GradientStop Color="{StaticResource BackgroundColor}" Offset="1.00" />
 	</RadialGradientBrush>
 
-	<!-- Disabled -->
+	<!-- Disabled: more steps, gentle falloff -->
 	<RadialGradientBrush x:Key="ActionDisabledBrush">
-		<GradientStop Color="#D7D7D7" Offset="0.00" />
-		<GradientStop Color="#BDBDBD" Offset="0.18" />
-		<GradientStop Color="#6B6B6B" Offset="0.62" />
-		<GradientStop Color="#2B2B2B" Offset="0.92" />
+		<GradientStop Color="#EFEFEF" Offset="0.00" />
+		<GradientStop Color="#E3E3E3" Offset="0.08" />
+		<GradientStop Color="#D6D6D6" Offset="0.16" />
+		<GradientStop Color="#C8C8C8" Offset="0.28" />
+		<GradientStop Color="#B8B8B8" Offset="0.40" />
+		<GradientStop Color="#9F9F9F" Offset="0.55" />
+		<GradientStop Color="#777777" Offset="0.72" />
+		<GradientStop Color="#545454" Offset="0.86" />
+		<GradientStop Color="#3A3A3A" Offset="0.95" />
 		<GradientStop Color="{StaticResource BackgroundColor}" Offset="1.00" />
 	</RadialGradientBrush>
+
 
 	<!-- ===== Style for Button ===== -->
 	<Style x:Key="ActionButtonStyle" TargetType="Button">
