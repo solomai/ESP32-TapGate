@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using MauiMockup.Services;
 
 namespace MauiMockup
 {
@@ -16,8 +17,9 @@ namespace MauiMockup
                 });
 
 #if DEBUG
-    		builder.Logging.AddDebug();
+            builder.Logging.AddDebug();
 #endif
+            builder.Services.AddSingleton<Connector>();
 
             return builder.Build();
         }

@@ -1,10 +1,15 @@
+using MauiMockup.Services;
+
 ﻿namespace MauiMockup;
 
 public partial class MainPage : ContentPage
 {
+    private readonly Connector _connector = new();
+
     public MainPage()
     {
         InitializeComponent();
+        _connector.StatusUpdate += OnStatusUpdate;
         SetGateName("gate is not configured yet");
         SetGateStatus(EnumGateState.Offline);
     }
@@ -100,7 +105,12 @@ public partial class MainPage : ContentPage
     }
     void OnDoAction(object sender, EventArgs e)
     {
-        // Placeholder for main action
+        _connector.DoAction("default");
+    }
+
+    void OnStatusUpdate(object? sender, string status)
+    {
+        // Placeholder for handling status updates
     }
 
     public enum EnumGateState
