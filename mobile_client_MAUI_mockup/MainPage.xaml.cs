@@ -12,6 +12,7 @@ public partial class MainPage : ContentPage
         _connector.StatusUpdate += OnStatusUpdate;
         SetGateName("gate is not configured yet");
         SetGateStatus(EnumGateState.Offline);
+        SetStatusText("");
     }
     protected override void OnSizeAllocated(double width, double height)
     {
@@ -80,6 +81,7 @@ public partial class MainPage : ContentPage
             SetGateStatus(states[nextIndex]);
         }
         SetNextGateStatus();
+        SetStatusText("Next state"); // TODO: Debug mockup
         // TODO: Debug mockup - END
     }
     void OnLeftBtn(object sender, EventArgs e)
@@ -105,14 +107,17 @@ public partial class MainPage : ContentPage
             SetGateStatus(states[prevIndex]);
         }
         SetNextGateStatus();
+        SetStatusText("Prev state"); // TODO: Debug mockup
         // TODO: Debug mockup - END
     }
     void OnTitleBtn(object sender, EventArgs e)
     {
         // Placeholder for title button action
+        SetStatusText("Gate Title Button"); // TODO: Debug mockup
     }
     void OnDoAction(object sender, EventArgs e)
     {
+        SetStatusText("DoAction"); // TODO: Debug mockup
         _connector.DoAction("default");
     }
 
@@ -160,7 +165,6 @@ public partial class MainPage : ContentPage
 
         ActionButton.IsEnabled = enable_button;
     }
-
     public void SetStatusText(string text)
     {
         StatusTextLabel.Text = text;
