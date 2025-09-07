@@ -48,7 +48,7 @@
         <Grid x:Name="ContentGrid"
               Grid.Row="2"
               Grid.Column="1"
-              RowDefinitions="Auto,*"
+              RowDefinitions="Auto,*,Auto"
               RowSpacing="40">
 
             <!-- Status list -->
@@ -142,6 +142,14 @@
                     HorizontalOptions="Center"
                     Style="{StaticResource ActionButtonStyle}"
                     Clicked="OnDoAction" />
+
+            <!-- Status text line under the action button -->
+            <Label x:Name="StatusTextLabel"
+                   Grid.Row="2"
+                   Text=""
+                   TextColor="LightGray"
+                   HorizontalOptions="Fill"
+                   HorizontalTextAlignment="Center" />
         </Grid>
     </Grid>
 </ContentPage>
