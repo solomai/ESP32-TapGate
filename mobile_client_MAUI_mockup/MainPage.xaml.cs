@@ -1,18 +1,21 @@
 using MauiMockup.Services;
+using MauiMockup.Components;
 
-﻿namespace MauiMockup;
+namespace MauiMockup;
 
 public partial class MainPage : ContentPage
 {
     private readonly Connector _connector = new();
+    private readonly StatusTextManager _statusTextManager;
 
     public MainPage()
     {
         InitializeComponent();
+        _statusTextManager = new StatusTextManager(StatusTextLabel);
         _connector.StatusUpdate += OnStatusUpdate;
         SetGateName("gate is not configured yet");
         SetGateStatus(EnumGateState.Offline);
-        SetStatusText("");
+        SetStatusText(string.Empty);
     }
     protected override void OnSizeAllocated(double width, double height)
     {
@@ -167,6 +170,6 @@ public partial class MainPage : ContentPage
     }
     public void SetStatusText(string text)
     {
-        StatusTextLabel.Text = text;
+        _statusTextManager.SetText(text);
     }
 }
