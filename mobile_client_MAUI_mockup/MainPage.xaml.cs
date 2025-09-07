@@ -27,6 +27,8 @@ public partial class MainPage : ContentPage
 
         if (isLandscape)
         {
+            ContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Star });
+            ContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             ContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             ContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Star });
             ContentGrid.RowSpacing = 0;
@@ -36,11 +38,15 @@ public partial class MainPage : ContentPage
             Grid.SetColumn(StatusLayout, 0);
             Grid.SetRow(ActionButton, 0);
             Grid.SetColumn(ActionButton, 1);
+            Grid.SetRow(StatusTextLabel, 1);
+            Grid.SetColumn(StatusTextLabel, 0);
+            Grid.SetColumnSpan(StatusTextLabel, 2);
         }
         else
         {
             ContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             ContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Star });
+            ContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             ContentGrid.RowSpacing = 40;
             ContentGrid.ColumnSpacing = 0;
 
@@ -48,6 +54,8 @@ public partial class MainPage : ContentPage
             Grid.SetColumn(StatusLayout, 0);
             Grid.SetRow(ActionButton, 1);
             Grid.SetColumn(ActionButton, 0);
+            Grid.SetRow(StatusTextLabel, 2);
+            Grid.SetColumn(StatusTextLabel, 0);
         }
     }
 
@@ -151,5 +159,10 @@ public partial class MainPage : ContentPage
         GateStatusLabel.Text = text;
 
         ActionButton.IsEnabled = enable_button;
+    }
+
+    public void SetStatusText(string text)
+    {
+        StatusTextLabel.Text = text;
     }
 }
