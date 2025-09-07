@@ -120,7 +120,7 @@ public partial class MainPage : ContentPage
         Color color;
         string text;
         bool enable_button = false;
-        const string prefix = "Connectivity Status: ";
+        const string prefix = "Gate Status: ";
         switch (state)
         {
             case EnumGateState.Offline:
