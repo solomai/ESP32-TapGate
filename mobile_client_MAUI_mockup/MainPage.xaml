@@ -9,43 +9,96 @@
             <Button x:Name="GateTitleButton" Clicked="OnTitleBtn" Grid.Column="1" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
             <Button Grid.Column="2" Text="&gt;" Clicked="OnRightBtn" BackgroundColor="Transparent" BorderColor="Gray" BorderWidth="1" TextColor="White" />
         </Grid>
-        <Grid x:Name="ContentGrid" Grid.Row="1" RowDefinitions="Auto, *" ColumnDefinitions="*" RowSpacing="40">
-            <VerticalStackLayout x:Name="StatusLayout" Grid.Row="0" Spacing="10" HorizontalOptions="Center" VerticalOptions="Center">
-                <Border Background="{StaticResource BackgroundColor}" StrokeThickness="0" StrokeShape="RoundRectangle 8">
-                    <HorizontalStackLayout Padding="10,5">
+
+        <Grid x:Name="ContentGrid"
+      Grid.Row="1"
+      RowDefinitions="Auto,*"
+      ColumnDefinitions="Auto,*"
+      RowSpacing="40">
+
+            <!-- Status block aligned with GateTitleButton -->
+            <VerticalStackLayout x:Name="StatusLayout"
+                         Grid.Row="0"
+                         Grid.Column="1"
+                         Spacing="12"
+                         HorizontalOptions="Start"
+                         VerticalOptions="Center">
+
+                <!-- Gate status -->
+                <Border Background="{StaticResource BackgroundColor}"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 8">
+                    <Grid Padding="10,8" ColumnDefinitions="32,*" ColumnSpacing="12">
                         <Path x:Name="GateStatusPath"
-                            Data="{StaticResource GateIconGeometry}"
-                            Fill="White"
-                            WidthRequest="28" HeightRequest="24"
-                            Aspect="Uniform" />
-                         <Label x:Name="GateStatusLabel" Text="" TextColor="White" FontSize="14" Margin="5,0,0,0" />
-                    </HorizontalStackLayout>
+                      Data="{StaticResource GateIconGeometry}"
+                      Fill="White"
+                      WidthRequest="24" HeightRequest="24"
+                      Aspect="Uniform"
+                      HorizontalOptions="Start"
+                      VerticalOptions="Center"/>
+                        <Label Grid.Column="1"
+                       x:Name="GateStatusLabel"
+                       Text=""
+                       TextColor="White"
+                       FontSize="14"
+                       HorizontalTextAlignment="Start"
+                       VerticalTextAlignment="Center"/>
+                    </Grid>
                 </Border>
-                <Border Background="{StaticResource BackgroundColor}" StrokeThickness="0" StrokeShape="RoundRectangle 8">
-                    <HorizontalStackLayout Padding="10,5">
+
+                <!-- MQTT status -->
+                <Border Background="{StaticResource BackgroundColor}"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 8">
+                    <Grid Padding="10,8" ColumnDefinitions="32,*" ColumnSpacing="12">
                         <Path x:Name="MqttStatusPath"
-                            Data="{StaticResource MqttIconGeometry}"
-                            Fill="White"
-                            WidthRequest="16" HeightRequest="16"
-                            Aspect="Uniform" />
-                        <Label x:Name="MqttStatusLabel" Text="mqtt status" TextColor="White" FontSize="14" Margin="5,0,0,0" />
-                    </HorizontalStackLayout>
+                      Data="{StaticResource MqttIconGeometry}"
+                      Fill="White"
+                      WidthRequest="24" HeightRequest="24"
+                      Aspect="Uniform"
+                      HorizontalOptions="Start"
+                      VerticalOptions="Center"/>
+                        <Label Grid.Column="1"
+                       x:Name="MqttStatusLabel"
+                       Text="mqtt status"
+                       TextColor="White"
+                       FontSize="14"
+                       HorizontalTextAlignment="Start"
+                       VerticalTextAlignment="Center"/>
+                    </Grid>
                 </Border>
-                <Border Background="{StaticResource BackgroundColor}" StrokeThickness="0" StrokeShape="RoundRectangle 8">
-                    <HorizontalStackLayout Padding="10,5">
+
+                <!-- BT status -->
+                <Border Background="{StaticResource BackgroundColor}"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 8">
+                    <Grid Padding="10,8" ColumnDefinitions="32,*" ColumnSpacing="12">
                         <Path x:Name="BtStatusPath"
-                            Data="{StaticResource BluetoothIconGeometry}"
-                            Fill="White"
-                            WidthRequest="18" HeightRequest="18"
-                            Aspect="Uniform" />
-                        <Label x:Name="BtStatusLabel" Text="bt status" TextColor="White" FontSize="14" Margin="5,0,0,0" />
-                    </HorizontalStackLayout>
-                </Border>                
+                      Data="{StaticResource BluetoothIconGeometry}"
+                      Fill="White"
+                      WidthRequest="24" HeightRequest="24"
+                      Aspect="Uniform"
+                      HorizontalOptions="Start"
+                      VerticalOptions="Center"/>
+                        <Label Grid.Column="1"
+                       x:Name="BtStatusLabel"
+                       Text="bt status"
+                       TextColor="White"
+                       FontSize="14"
+                       HorizontalTextAlignment="Start"
+                       VerticalTextAlignment="Center"/>
+                    </Grid>
+                </Border>
+
             </VerticalStackLayout>
+
+            <!-- Action button centered, spans both columns -->
             <Button x:Name="ActionButton"
-                    Grid.Row="2"
-                    Style="{StaticResource ActionButtonStyle}"
-                    Clicked="OnDoAction" />
+            Grid.Row="1"
+            Grid.ColumnSpan="2"
+            Style="{StaticResource ActionButtonStyle}"
+            Clicked="OnDoAction"/>
         </Grid>
+
     </Grid>
 </ContentPage>
