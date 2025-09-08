@@ -21,6 +21,9 @@ public partial class MainPage : ContentPage
     {
         base.OnSizeAllocated(width, height);
         bool isLandscape = width > height;
+        RootLayout.RowDefinitions[0].Height = new GridLength(isLandscape ? 1 : 10, GridUnitType.Absolute);
+        RootLayout.RowSpacing = isLandscape ? 3 : 40;
+        RootLayout.Padding = isLandscape ? new Thickness(20, 0, 20, 20) : new Thickness(20);
         UpdateLayout(isLandscape);
     }
 
