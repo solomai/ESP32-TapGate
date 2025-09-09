@@ -1,11 +1,19 @@
-﻿namespace ProtocolTest.Service
+using System;
+using ProtocolTest.Service.Connector;
+
+namespace ProtocolTest.Service
 {
     internal class ConnectorWraper
     {
-        public ConnectorWraper(IConnector connector)
+        private static Connector? _connector;
+
+        public ConnectorWraper()
         {
-            Connector = connector;
+            _connector ??= new Connector();
         }
-        public IConnector Connector { get; }
+
+        public bool SendCommand(string command) => _connector!.SendCommand(command);
+
+        public bool SetCallback(Action<string> callback) => _connector!.SetCallback(callback);
     }
 }
