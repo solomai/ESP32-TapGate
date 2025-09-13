@@ -2,9 +2,10 @@
   "C_Cpp.intelliSenseEngine": "default",
   "idf.adapterTargetName": "esp32",
   "files.associations": {
-    "task.h": "c"
+    "task.h": "c",
+    "esp_partition.h": "c"
   },
-  "idf.portWin": "COM1",
+  "idf.portWin": "COM6",
   "idf.flashType": "UART",
   "C_Cpp.errorSquiggles": "disabled",
   "idf.espIdfPath": "C:\\Espressif\\frameworks\\esp-idf-v5.5",
