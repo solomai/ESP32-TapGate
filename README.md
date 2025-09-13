@@ -38,6 +38,15 @@ A single IoT device can be controlled by multiple instances of the mobile app:
 Communication between the mobile client and the IoT device is implemented simultaneously across all available channels: Bluetooth (BLE) and MQTT (over Wi-Fi/Internet). This approach was chosen because it minimizes latency, the user always gets a response from the fastest channel, and ensures maximum reliability in scenarios where a connection may drop at any moment.<br>
 At the same time, the system preserves the ability to control the device locally via BLE even without an Internet connection. Combining both channels provides flexibility across different usage scenarios - from local offline control to global access via MQTT-making the system universal and resilient to connection loss, while parallel operation reduces delays when establishing connections or when one of the channels is unstable.
 
+## ESP32 MCU Documentation  
+For detailed information about the microcontroller firmware, architecture, and implementation notes,<br>
+see [ESP32 MCU Documentation](docs/esp32-mcu.md).  
+
+## Mobile Client Documentation  
+For details about the mobile application, communication flow, and integration with the ESP32 device,<br>
+see [Mobile Client Documentation](docs/mobile-client.md).  
+
+
 ## 📜 License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
