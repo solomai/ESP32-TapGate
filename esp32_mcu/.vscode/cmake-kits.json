@@ -1,9 +1,0 @@
-[
-  {
-    "name": "ESP-IDF xtensa-esp32-elf",
-    "compilers": {
-      "C": "C:/Espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp32-elf-gcc.exe",
-      "CXX": "C:/Espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp32-elf-g++.exe"
-    }
-  }
-]
