@@ -6,11 +6,14 @@ General description of the ESP32 firmware, its purpose, and supported features.
 
 ## Architecture  
 High-level view of the software design, components, and how modules interact.  
-- [Software Architecture for Device](../docs/device/architecture.md) — details on tasks, memory usage, and system flow.  
+- [Software Architecture for Device](../docs/device/architecture.md) — details on tasks, memory usage, and system flow.
+
+Modules:
+- [Users](../docs/device/module-users.md) — Users module details.
 
 ## Setup & Configuration  
 Instructions for preparing the environment, building, flashing, and monitoring.  
-- [Device How-To Build Guide](../docs/device/howto.md) — step-by-step guide on how to set up and compile the project.  
+- [How-To Build Guide](../docs/device/howto.md) — step-by-step guide on how to set up and compile the project.  
 
 ## Protocol  
 Description of the communication protocol between ESP32 and external clients.  
