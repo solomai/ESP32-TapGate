@@ -3,7 +3,7 @@
 To build this project you need **ESP-IDF 5.3 (or higher)**.  
 
 ### Install ESP-IDF
-1. Follow the official installation guide: [ESP-IDF Installation](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/index.html)  
+1. Follow the official installation guide: [ESP-IDF Installation](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/index.html) ( [github.com/espressif](https://github.com/espressif/esp-idf) )
 2. Recommended: use the **ESP-IDF Tools Installer** for Windows, which sets up Python, CMake, Ninja, Git, and environment variables automatically.  
 
 ### Build Instructions
