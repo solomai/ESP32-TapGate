@@ -7,9 +7,9 @@
   "idf.portWin": "COM1",
   "idf.flashType": "UART",
   "C_Cpp.errorSquiggles": "disabled",
-  "idf.espIdfPathWin": "C:/Espressif/frameworks/esp-idf-v5.5/",
-  "idf.toolsPathWin": "C:\\Espressif",
-  "idf.pythonInstallPath": "C:\\Espressif\\tools\\idf-python\\3.11.2\\python.exe"
+  "idf.espIdfPathWin": "c:\\Espressif\\frameworks\\esp-idf-v5.5",
+  "idf.toolsPathWin": "c:\\Espressif\\tools",
+  "idf.pythonInstallPath": "c:\\Espressif\\tools\\tools\\idf-python\\3.11.2\\python.exe"
 }
 
 
