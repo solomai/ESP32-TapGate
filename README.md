@@ -40,11 +40,11 @@ At the same time, the system preserves the ability to control the device locally
 
 ## ESP32 MCU Documentation  
 For detailed information about the microcontroller firmware, architecture, and implementation notes,<br>
-see [ESP32 MCU Documentation](docs/esp32-mcu.md).  
+see [ESP32 MCU Documentation](esp32_mcu/README.md).  
 
 ## Mobile Client Documentation  
 For details about the mobile application, communication flow, and integration with the ESP32 device,<br>
-see [Mobile Client Documentation](docs/mobile-client.md).  
+see [Mobile Client Documentation](mobile_client_MAUI/README.md).  
 
 
 ## 📜 License

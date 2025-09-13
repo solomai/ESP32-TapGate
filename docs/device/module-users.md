@@ -28,5 +28,7 @@ allow_flags : bits
     Bit 2..7    : Reserved for future use
 ```
 
-[← Back to ESP32 MCU Documentation](../esp32-mcu.md)  
+---
+
+[← Back to ESP32 MCU Documentation](../../esp32_mcu/README.md)  
 [← Back to main README](../../README.md)
