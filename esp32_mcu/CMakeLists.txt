@@ -16,7 +16,9 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 
 add_custom_target(run_unit_tests ALL
-    COMMAND ${CMAKE_COMMAND} -S ${CMAKE_SOURCE_DIR}/tests -B ${CMAKE_BINARY_DIR}/tests
+    COMMAND ${CMAKE_COMMAND} -G Ninja -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+            -S ${CMAKE_SOURCE_DIR}/tests -B ${CMAKE_BINARY_DIR}/tests
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/tests
     COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_BINARY_DIR}/tests --output-on-failure
     DEPENDS app
