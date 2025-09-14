@@ -1,3 +1,32 @@
+## Data storage strategy considering NVM specifics (dynamic / static data)
+
+The maximum number of users is defined by the constant `CLIENTS_DB_MAX_RECORDS` in `components/client.h`.  
+This value directly limits how many user records can be stored in NVM.
+
+### Rationale
+ESP32 NVM (NVS) uses page-based journaling with wear-leveling.  
+To minimize flash wear and keep updates efficient, data is separated into two categories:
+
+- **Static data** (rarely updated): `name`, `client_id`, `pub_pem`, `allow_flags`.  
+  These fields change infrequently and are stored together in larger records (blobs).
+
+- **Dynamic data** (frequently updated): `nonce`.  
+  This field increments on every user operation and must be committed immediately.  
+  It is stored as a separate integer key per user, isolated from static blobs.
+
+### Why this split
+- **Reduced write amplification:** nonce updates no longer force rewriting of large user blobs.  
+- **Even wear distribution:** hot writes are isolated in a smaller, dedicated keyspace, static data stays stable.  
+- **Reliability:** corruption in frequently updated entries does not affect static records.  
+- **Espressif recommendation:** separate partitions (or at least namespaces) should be used for data with very different update rates  
+  ([ESP-IDF NVS documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/nvs_flash.html)).
+
+### Implementation outline
+- Store static user fields in a dedicated NVS namespace (or partition) as versioned blobs.  
+- Store dynamic `nonce` counters in a separate NVS namespace (or partition) as individual integer keys (`u<id>_nonce`).  
+- Open handles once and reuse them; call `nvs_commit()` immediately after each nonce increment.  
+- Static blobs are only updated on registration or configuration changes.
+
 
 The data model handled by the Users module:
 

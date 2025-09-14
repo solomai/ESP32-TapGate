@@ -2,14 +2,8 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 // nonce type
 typedef uint32_t nonce_t;
 
-
-#ifdef __cplusplus
-}
-#endif
+// UID type. Up to 15 characters are allowed due to NVM key size limitations.
+typedef uint8_t  client_uid_t[15];
