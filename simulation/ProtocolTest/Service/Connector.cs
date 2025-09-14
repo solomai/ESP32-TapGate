@@ -2,14 +2,14 @@ using System;
 
 namespace ProtocolTest.Service.Connector
 {
-    internal class Connector
+    public class Connector
     {
-        public bool SendCommand(string command)
+        public static bool SendCommand(string command)
         {
             return true;
         }
 
-        public bool SetCallback(Action<string> callback)
+        public static bool SetCallback(Action<string> callback)
         {
             return true;
         }

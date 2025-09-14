@@ -17,15 +17,20 @@
 
         <!-- LEFT PANEL (full height) -->
         <Grid x:Name="LeftPanel" Grid.Column="0" BackgroundColor="#1A1A1A">
-            <VerticalStackLayout Padding="12" Spacing="12" VerticalOptions="FillAndExpand">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
                 <Button x:Name="buttonStart"
                         Text="Start"
                         HeightRequest="40"
                         Clicked="OnStartClicked"
                         BackgroundColor="#3A86FF"
-                        TextColor="White" />
+                        TextColor="White"
+                        Grid.Row="0" />
                 <!-- add more controls here if needed -->
-            </VerticalStackLayout>
+            </Grid>
         </Grid>
 
         <!-- ALWAYS-VISIBLE HANDLE WITH TOGGLE CHEVRON -->
@@ -49,13 +54,13 @@
                         ItemsSource="{Binding LogLines}"
                         SelectionMode="None"
                         Margin="0"
-                        VerticalOptions="FillAndExpand"
-                        HorizontalOptions="FillAndExpand">
+                        VerticalOptions="Fill"
+                        HorizontalOptions="Fill">
             <CollectionView.ItemsLayout>
                 <LinearItemsLayout Orientation="Vertical"/>
             </CollectionView.ItemsLayout>
             <CollectionView.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="x:String">
                     <Grid Padding="12,2">
                         <Label Text="{Binding .}"
                                LineBreakMode="WordWrap"

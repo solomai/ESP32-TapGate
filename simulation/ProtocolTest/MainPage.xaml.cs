@@ -1,4 +1,5 @@
 ﻿// File: MainPage.xaml.cs
+using ProtocolTest.Service.Cryptographer.Impl;
 using System.Collections.ObjectModel;
 
 namespace ProtocolTest
@@ -23,6 +24,9 @@ namespace ProtocolTest
         // Append a line to the terminal and auto-scroll to bottom
         public void Log(string line)
         {
+            // Output to system console as well
+            //Console.WriteLine(line);
+
             // Ensure non-null
             line ??= string.Empty;
 
@@ -62,6 +66,18 @@ namespace ProtocolTest
         private void OnStartClicked(object? sender, EventArgs e)
         {
             Log($"[{DateTime.Now:HH:mm:ss}] Start pressed.");
+
+            // Example: Generate RSA key pair and log lengths
+            (string publicPem, string privatePem) = RsaPem.GenerateRsaKeyPair();
+            Log($"Generated RSA Key Pair:\nPublic Key: {publicPem.Length} symbols\n{publicPem}\nPrivate Key: {privatePem.Length} symbols\n{privatePem}");
+
+            // Example: store and load keys
+            PemStorage.SaveKeysAsync(privatePem, publicPem).Wait();
+            // Load keys back
+            var (loadedPriv, loadedPub, loadedDevicePub) = PemStorage.LoadKeysAsync().Result;
+            Log($"Generated RSA Key Pair:\nPublic Key: {(loadedPub?.Length ?? 0)} symbols\n{loadedPub ?? string.Empty}\nPrivate Key: {(loadedPriv?.Length ?? 0)} symbols\n{loadedPriv ?? string.Empty}");
+
+            // Example: encode string to Base64
         }
     }
 }
