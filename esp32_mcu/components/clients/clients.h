@@ -29,14 +29,21 @@ typedef enum {
 
 // ---- TYPES ----
 // structure representing complete client information
-typedef struct __attribute__((packed))
-{
+#if defined(_MSC_VER)
+#define CLIENTS_PACKED
+#else
+#define CLIENTS_PACKED __attribute__((packed))
+#endif
+
+typedef struct CLIENTS_PACKED {
     uint8_t      allow_flags;
     nonce_t      nonce;
     client_uid_t client_id;
     char         name[CLIENTS_NAME_MAX];
     char         pub_pem[CLIENTS_PUBPEM_CAP];
 } client_t;
+
+#undef CLIENTS_PACKED
 
 
 // ---- API ----
