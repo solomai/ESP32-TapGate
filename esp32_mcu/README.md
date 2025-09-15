@@ -11,13 +11,17 @@ High-level view of the software design, components, and how modules interact.
 Modules:
 - [Clients](../docs/device/module-clients.md) — Clients module details.
 
-## Setup & Configuration  
-Instructions for preparing the environment, building, flashing, and monitoring.  
-- [How-To Build Guide](../docs/device/howto.md) — step-by-step guide on how to set up and compile the project.  
+## Setup & Configuration
+Instructions for preparing the environment, building, flashing, and monitoring.
+- [How-To Build Guide](../docs/device/howto.md) — step-by-step guide on how to set up and compile the project.
 
-## Protocol  
-Description of the communication protocol between ESP32 and external clients.  
-- [Communication Protocol](../docs/general/protocol.md) — message format, sequences, and error handling.  
+### Host unit tests
+- Configure the native test project with `cmake --preset host-tests` to work with IDE test runners. The preset builds the sources under `tests_host` without requiring the ESP-IDF toolchain.
+- Build and execute the suite locally via `cmake --build --preset host-tests` followed by `ctest --preset host-tests`.
+
+## Protocol
+Description of the communication protocol between ESP32 and external clients.
+- [Communication Protocol](../docs/general/protocol.md) — message format, sequences, and error handling.
 
 ---
 

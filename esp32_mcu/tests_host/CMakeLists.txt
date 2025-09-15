@@ -1,6 +1,11 @@
-# Minimal, self-contained host test project (no IDF toolchain).
-cmake_minimum_required(VERSION 3.20)
-project(esp32_tapgate_host_tests C)
+# Minimal, self-contained host test project (no IDF toolchain). When included
+# from the top-level CMake project the configuration already defines the
+# project(), so the logic below needs to behave both as a standalone project and
+# as a subdirectory.
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+    cmake_minimum_required(VERSION 3.20)
+    project(esp32_tapgate_host_tests C)
+endif()
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)

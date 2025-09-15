@@ -1,0 +1,27 @@
+{
+    "version": 5,
+    "configurePresets": [
+        {
+            "name": "host-tests",
+            "displayName": "Host tests (native)",
+            "description": "Configure the host-only unit tests using the native toolchain.",
+            "binaryDir": "${sourceDir}/build-host-tests",
+            "cacheVariables": {
+                "TAPGATE_BUILD_MODE": "host",
+                "BUILD_TESTING": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "host-tests",
+            "configurePreset": "host-tests"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "host-tests",
+            "configurePreset": "host-tests"
+        }
+    ]
+}
