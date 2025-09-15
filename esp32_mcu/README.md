@@ -10,6 +10,7 @@ High-level view of the software design, components, and how modules interact.
 
 Modules:
 - [Clients](../docs/device/module-clients.md) — Clients module details.
+- [RsaPem](../docs/device/module-rsapem.md) — module for working with RSA keys in PEM format.
 
 ## Setup & Configuration
 Instructions for preparing the environment, building, flashing, and monitoring.

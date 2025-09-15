@@ -54,8 +54,13 @@ target_compile_features(tapgate_production
 target_include_directories(tapgate_production
     PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/../components
+        ${CMAKE_CURRENT_LIST_DIR}/../components/rsapem
         ${CMAKE_CURRENT_LIST_DIR}/../components/clients
         ${CMAKE_CURRENT_LIST_DIR}/../components/common
+)
+
+set(_tapgate_component_sources
+    ${CMAKE_CURRENT_LIST_DIR}/../components/rsapem/rsapem.c
 )
 
 set(_tapgate_component_sources
@@ -139,5 +144,7 @@ function(tapgate_add_unity_test TEST_NAME)
 endfunction()
 
 # Individual test binaries
-tapgate_add_unity_test(test_clients ${CMAKE_CURRENT_LIST_DIR}/test_clients.c)
 tapgate_add_unity_test(test_types ${CMAKE_CURRENT_LIST_DIR}/test_types.c)
+tapgate_add_unity_test(test_clients ${CMAKE_CURRENT_LIST_DIR}/test_clients.c)
+tapgate_add_unity_test(test_rsapem ${CMAKE_CURRENT_LIST_DIR}/test_rsapem.c)
+
