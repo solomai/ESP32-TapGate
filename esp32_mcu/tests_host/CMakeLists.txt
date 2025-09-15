@@ -4,7 +4,7 @@
 # as a subdirectory.
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     cmake_minimum_required(VERSION 3.20)
-    project(esp32_tapgate_host_tests C)
+    project(esp32_tapgate_host_tests LANGUAGES C)
 endif()
 
 set(CMAKE_C_STANDARD 11)
@@ -29,42 +29,97 @@ target_include_directories(unity
         ${CMAKE_CURRENT_LIST_DIR}/unity
 )
 
-# Interface library that exposes production headers and IDF mocks to the tests.
-add_library(tapgate_headers INTERFACE)
+# Interface library exposing ESP-IDF shims used when compiling production
+# sources on the host.
+add_library(tapgate_idf_mocks INTERFACE)
 
-target_include_directories(tapgate_headers
+target_include_directories(tapgate_idf_mocks
     INTERFACE
-        ${CMAKE_CURRENT_LIST_DIR}/../components
-        ${CMAKE_CURRENT_LIST_DIR}/../components/clients
-        ${CMAKE_CURRENT_LIST_DIR}/../components/common
         ${CMAKE_CURRENT_LIST_DIR}/mocks/include
 )
 
-# Static library with the production sources that are safe to build on the host.
-add_library(tapgate_components STATIC
+# Static library with production sources that are safe to build on the host.
+add_library(tapgate_production STATIC)
+
+target_link_libraries(tapgate_production
+    PUBLIC
+        tapgate_idf_mocks
+)
+
+target_compile_features(tapgate_production
+    PUBLIC
+        c_std_11
+)
+
+target_include_directories(tapgate_production
+    PUBLIC
+        ${CMAKE_CURRENT_LIST_DIR}/../components
+        ${CMAKE_CURRENT_LIST_DIR}/../components/clients
+        ${CMAKE_CURRENT_LIST_DIR}/../components/common
+)
+
+set(_tapgate_component_sources
     ${CMAKE_CURRENT_LIST_DIR}/../components/clients/clients.c
 )
 
-# Link headers (with mocks) to the production library for tests.
-target_link_libraries(tapgate_components
-    PUBLIC
-        tapgate_headers
+file(GLOB _tapgate_common_sources
+    "${CMAKE_CURRENT_LIST_DIR}/../components/common/*.c"
 )
 
+list(APPEND _tapgate_component_sources ${_tapgate_common_sources})
+
+# Drop empty strings and zero-length sources to avoid compiler warnings from
+# placeholder files that ship with the firmware tree.
+set(_tapgate_filtered_sources)
+foreach(_tapgate_source IN LISTS _tapgate_component_sources)
+    if(NOT _tapgate_source)
+        continue()
+    endif()
+    if(NOT EXISTS "${_tapgate_source}")
+        continue()
+    endif()
+    file(SIZE "${_tapgate_source}" _tapgate_source_size)
+    if(_tapgate_source_size EQUAL 0)
+        continue()
+    endif()
+    list(APPEND _tapgate_filtered_sources "${_tapgate_source}")
+endforeach()
+
+set(_tapgate_component_sources ${_tapgate_filtered_sources})
+
+if(_tapgate_component_sources)
+    target_sources(tapgate_production
+        PRIVATE
+            ${_tapgate_component_sources}
+    )
+endif()
+
+if(MSVC)
+    target_compile_options(tapgate_production PRIVATE /W4)
+else()
+    target_compile_options(tapgate_production PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
 # Helper function to register Unity-based executables as CTest targets.
-function(add_unity_test TEST_NAME)
+function(tapgate_add_unity_test TEST_NAME)
     if(NOT ARGN)
         message(FATAL_ERROR "No source file provided for test ${TEST_NAME}")
     endif()
+
     add_executable(${TEST_NAME} ${ARGN})
     target_link_libraries(${TEST_NAME}
         PRIVATE
             unity
-            tapgate_components
+            tapgate_production
     )
+    if(MSVC)
+        target_compile_options(${TEST_NAME} PRIVATE /W4)
+    else()
+        target_compile_options(${TEST_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
 endfunction()
 
 # Individual test binaries
-add_unity_test(test_clients ${CMAKE_CURRENT_LIST_DIR}/test_clients.c)
-add_unity_test(test_types ${CMAKE_CURRENT_LIST_DIR}/test_types.c)
+tapgate_add_unity_test(test_clients ${CMAKE_CURRENT_LIST_DIR}/test_clients.c)
+tapgate_add_unity_test(test_types ${CMAKE_CURRENT_LIST_DIR}/test_types.c)

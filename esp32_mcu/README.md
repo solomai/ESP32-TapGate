@@ -18,6 +18,7 @@ Instructions for preparing the environment, building, flashing, and monitoring.
 ### Host unit tests
 - Configure the native test project with `cmake --preset host-tests` to work with IDE test runners. The preset builds the sources under `tests_host` without requiring the ESP-IDF toolchain.
 - Build and execute the suite locally via `cmake --build --preset host-tests` followed by `ctest --preset host-tests`.
+- If CMake is invoked without ESP-IDF's `ESP_PLATFORM` flag (for example when selecting a Visual Studio kit), the top-level project automatically enters the host-test configuration so IDE test menus can discover the executables.
 
 ## Protocol
 Description of the communication protocol between ESP32 and external clients.

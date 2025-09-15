@@ -4,16 +4,17 @@ cmake_minimum_required(VERSION 3.20)
 set(PROJECT_NAME esp32-tapgate)
 set(PROJECT_VER "1.0.0")
 
-# Determine which build flow should be enabled. When using Visual Studio
-# generator we default to the host-only test configuration so that the IDE can
-# discover the unit tests without the ESP-IDF toolchain. The mode can be
-# overridden explicitly with -DTAPGATE_BUILD_MODE={idf,host}.
+# Detect which toolchain is driving CMake. ESP-IDF passes ESP_PLATFORM whereas
+# a native host configuration (e.g. Visual Studio, Ninja with the local
+# compiler) leaves it unset. Allow manual override through
+# -DTAPGATE_BUILD_MODE={idf,host} so developers can choose explicitly.
+set(_tapgate_default_mode "host")
+if(DEFINED ESP_PLATFORM AND ESP_PLATFORM)
+    set(_tapgate_default_mode "idf")
+endif()
+
 if(NOT DEFINED TAPGATE_BUILD_MODE)
-    if(CMAKE_GENERATOR MATCHES "Visual Studio")
-        set(TAPGATE_BUILD_MODE "host")
-    else()
-        set(TAPGATE_BUILD_MODE "idf")
-    endif()
+    set(TAPGATE_BUILD_MODE "${_tapgate_default_mode}")
 endif()
 
 string(TOLOWER "${TAPGATE_BUILD_MODE}" TAPGATE_BUILD_MODE_LOWER)
@@ -28,15 +29,15 @@ if(TAPGATE_BUILD_MODE_LOWER STREQUAL "host")
     include(CTest)
     if(NOT BUILD_TESTING)
         message(STATUS "Host unit tests are disabled (BUILD_TESTING=OFF)")
-    else()
-        enable_testing()
-        add_subdirectory(tests_host)
+        return()
     endif()
 
+    enable_testing()
+    add_subdirectory(tests_host)
     return()
 elseif(NOT TAPGATE_BUILD_MODE_LOWER STREQUAL "idf")
     message(FATAL_ERROR "Unknown TAPGATE_BUILD_MODE value: ${TAPGATE_BUILD_MODE}."
-                           " Expected 'idf' or 'host'.")
+                         " Expected 'idf' or 'host'.")
 endif()
 
 if(NOT DEFINED ENV{IDF_PATH} OR NOT EXISTS "$ENV{IDF_PATH}/tools/cmake/project.cmake")
