@@ -9,7 +9,7 @@ High-level view of the software design, components, and how modules interact.
 - [Software Architecture for Device](../docs/device/architecture.md) — details on tasks, memory usage, and system flow.
 
 Modules:
-- [Users](../docs/device/module-users.md) — Users module details.
+- [Clients](../docs/device/module-clients.md) — Clients module details.
 
 ## Setup & Configuration  
 Instructions for preparing the environment, building, flashing, and monitoring.  
