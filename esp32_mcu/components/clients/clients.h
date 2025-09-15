@@ -1,4 +1,6 @@
 #pragma once
+
+// include components
 #include "types.h"
 #include "constants.h"
 
@@ -17,7 +19,7 @@
 
 // Status codes
 typedef enum {
-    CLIENTS_OK = OPP_OK,
+    CLIENTS_OK = 0,
     CLIENTS_ERR_NO_INIT,
     CLIENTS_ERR_STORAGE,
     CLIENTS_ERR_FULL,
@@ -40,3 +42,5 @@ typedef struct
 
 
 // ---- API ----
+clients_status_t open_client_db(void);
+void close_client_db(void);
