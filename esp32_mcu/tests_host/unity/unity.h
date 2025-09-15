@@ -30,6 +30,8 @@ bool UnityAssertEqualUInt32(uint32_t expected, uint32_t actual, unsigned int lin
 bool UnityAssertStringEqual(const char *expected, const char *actual, unsigned int line_number);
 bool UnityAssertLessOrEqualUInt32(uint32_t expected, uint32_t actual, unsigned int line_number);
 void UnityMessage(const char *message, unsigned int line_number);
+void UnityConfigureFromArgs(int argc, const char *argv[]);
+bool UnityIsListing(void);
 
 #define UNITY_BEGIN() (UnityBegin(__FILE__))
 #define UNITY_END() (UnityEnd())

@@ -32,7 +32,19 @@ if(TAPGATE_BUILD_MODE_LOWER STREQUAL "host")
         return()
     endif()
 
+    if(NOT DEFINED CTEST_CONFIGURATION_TYPE)
+        set(CTEST_CONFIGURATION_TYPE "Debug" CACHE STRING
+            "Default configuration for CTest when using multi-config generators")
+    endif()
+
     enable_testing()
+
+    if(CMAKE_CONFIGURATION_TYPES)
+        file(CONFIGURE OUTPUT "${CMAKE_BINARY_DIR}/CTestCustom.cmake" CONTENT
+"# Auto-generated to help IDE test runners pick the default multi-config profile.\nset(CTEST_CONFIGURATION_TYPE \"${CTEST_CONFIGURATION_TYPE}\")\nset(ENV{CTEST_CONFIGURATION_TYPE} \"${CTEST_CONFIGURATION_TYPE}\")\n"
+        @ONLY)
+    endif()
+
     add_subdirectory(tests_host)
     return()
 elseif(NOT TAPGATE_BUILD_MODE_LOWER STREQUAL "idf")

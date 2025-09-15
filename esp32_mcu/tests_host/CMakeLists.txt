@@ -117,7 +117,25 @@ function(tapgate_add_unity_test TEST_NAME)
     else()
         target_compile_options(${TEST_NAME} PRIVATE -Wall -Wextra -Wpedantic)
     endif()
-    add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+    list(GET ARGN 0 _tapgate_first_source)
+    if(_tapgate_first_source)
+        get_filename_component(_tapgate_first_source "${_tapgate_first_source}" ABSOLUTE)
+    else()
+        set(_tapgate_first_source "${CMAKE_CURRENT_SOURCE_DIR}")
+    endif()
+    file(RELATIVE_PATH _tapgate_source_label "${CMAKE_SOURCE_DIR}" "${_tapgate_first_source}")
+
+    set_target_properties(${TEST_NAME}
+        PROPERTIES
+            VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${TEST_NAME}>"
+    )
+
+    add_test(NAME ${TEST_NAME} COMMAND $<TARGET_FILE:${TEST_NAME}>)
+    set_tests_properties(${TEST_NAME}
+        PROPERTIES
+            WORKING_DIRECTORY "$<TARGET_FILE_DIR:${TEST_NAME}>"
+            LABELS "tests_host;${TEST_NAME};${_tapgate_source_label}"
+    )
 endfunction()
 
 # Individual test binaries

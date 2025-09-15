@@ -15,13 +15,18 @@
     "buildPresets": [
         {
             "name": "host-tests",
-            "configurePreset": "host-tests"
+            "configurePreset": "host-tests",
+            "configuration": "Debug"
         }
     ],
     "testPresets": [
         {
             "name": "host-tests",
-            "configurePreset": "host-tests"
+            "configurePreset": "host-tests",
+            "configuration": "Debug",
+            "environment": {
+                "CTEST_CONFIGURATION_TYPE": "Debug"
+            }
         }
     ]
 }
