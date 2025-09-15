@@ -1,4 +1,6 @@
 // include freertos lib
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_log.h"
 
 // include components
@@ -17,6 +19,6 @@ void app_main(void)
         // Main application logic goes here
 
         // For now, just delay to avoid busy loop
-        // vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
