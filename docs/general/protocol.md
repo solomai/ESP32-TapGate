@@ -1,10 +1,11 @@
 
 
-Message structure:
+All data is transmitted as a Base64-encoded string.
+
+Structure of the message transmitted between device and client:
 
 | Field        | Type         | Description                         |
 |--------------|--------------|-------------------------------------|
-| seq (nonce)  | u32          | command counter, also message id    |
 | client id    | UID          | unique client id assigned by device |
 | Payload      | Base64String | message peyload                     |
 | CRC-32       | u32          | CRC checksum                        |
@@ -13,19 +14,32 @@ ACK structure:
 
 | Field        | Type         | Description                         |
 |--------------|--------------|-------------------------------------|
-| seq (nonce)  | u32          | message id from received message    |
 | client id    | UID          | unique client id assigned by device |
 | CRC-32       | u32          | CRC checksum                        |
 
+Payload structure:
+1. Message for adding a new client (certificate exchange):<br>
+```text
+preliminary size : u8 - preliminary data size
+preliminary data : string
+pub key size     : u16 - public key data size 
+pub key          : public key data
+```
 
-The seq value is always incremented by the client when sending a new message. The device expects each new message to have a seq greater than the previous one. This mechanism is used to filter out duplicates and for Anti-replay guard ( Nonce ).
+2. Other messages:<br>
+The payload is always encrypted with the sender's private key. Decryption must be performed using the public key obtained during the certificate exchange.
+If you’d like, I can also help rephrase this for different technical audiences or embed it into a protocol spec or documentation template.<br>
+```text
+nonce : number;     // Used to filter out duplicates like message id and for Anti-replay guard
+opt   : number;     // Operation code to be executed or message id
+data  : any or non; // Message type dictates the structure and content of the transmitted data.
+```
 
 
 Privacy Strategy:
 For any unclear or invalid requests, the device provides no response and does not store any data. The cause of the silence is irrelevant from the client's perspective. Diagnostics, if required, can be conducted directly through the device logs. A missing ACK indicates that the message has failed.
 
 Sequences:
-
 
     %% 0. Sequence behavior in the fail case
     [NOK]
@@ -35,14 +49,16 @@ Sequences:
     %% 1. Add me message
     [OK]
     device --> device: set allow adding mode and generate SECRET CODE
-    client --> device: MessageAuthorizeMe ( SECRET CODE, PUB KEY, INFO )
+    client --> device: MessageAuthorizeMe ( SECRET CODE, PUB KEY )
     device --> client: ACK
-    device --> client: MessageAuthorizeMeGranted ( PUB KEY, CLIENT ID )
+    device --> client: MessageAuthorizeMeGranted ( CLIENT ID, PUB KEY )
     client --> device: ACK
+    client --> device: MessageClientInfo
+    device --> client: ACK
 
-    %% 2. Reset sequence
+    %% 2. Reset nonce
     [OK]
-    device --> client: MessageResetSequence
+    device --> client: MessageResetNonce
     client --> device: ACK
 
     %% 3. DoAction
