@@ -6,16 +6,24 @@
 
 // ---- Config ----
 // Maximum number of supported clients/users
+#ifndef CLIENTS_DB_MAX_RECORDS
 #define CLIENTS_DB_MAX_RECORDS 50
+#endif
 
 // Display name capacity (bytes, includes '\0')
+#ifndef CLIENTS_NAME_MAX
 #define CLIENTS_NAME_MAX       32
+#endif
 
-// Capacity for RSA public key in PEM ( BASE64 zero-base string )
+// Capacity for RSA public key in PEM (must include '\0')
+#ifndef CLIENTS_PUBPEM_CAP
 #define CLIENTS_PUBPEM_CAP     512
+#endif
 
 // NVM namespace. 15 characters are allowed due to NVM key size limitations.
+#ifndef CLIENTS_DB_NAMESPACE
 #define CLIENTS_DB_NAMESPACE   "clients"
+#endif
 
 // Status codes
 typedef enum {
