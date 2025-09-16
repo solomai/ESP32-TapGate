@@ -1,4 +1,6 @@
-## Data storage strategy considering NVM specifics (dynamic / static data)
+### Clients
+
+This module is designed for synchronous execution only — multithreaded access is not supported
 
 The maximum number of users is defined by the constant `CLIENTS_DB_MAX_RECORDS` in `components/client.h`.  
 This value directly limits how many user records can be stored in NVM ( by default up to 50 registered clients ).
