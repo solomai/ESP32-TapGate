@@ -29,14 +29,27 @@ target_include_directories(unity
         ${CMAKE_CURRENT_LIST_DIR}/unity
 )
 
-# Interface library exposing ESP-IDF shims used when compiling production
+# Library exposing ESP-IDF shims used when compiling production
 # sources on the host.
-add_library(tapgate_idf_mocks INTERFACE)
+add_library(tapgate_idf_mocks STATIC
+    ${CMAKE_CURRENT_LIST_DIR}/mocks/mock_nvs.c
+)
 
 target_include_directories(tapgate_idf_mocks
-    INTERFACE
+    PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/mocks/include
 )
+
+target_compile_features(tapgate_idf_mocks
+    PUBLIC
+        c_std_11
+)
+
+if(MSVC)
+    target_compile_options(tapgate_idf_mocks PRIVATE /W4)
+else()
+    target_compile_options(tapgate_idf_mocks PRIVATE -Wall -Wextra -Wpedantic)
+endif()
 
 # Static library with production sources that are safe to build on the host.
 add_library(tapgate_production STATIC)

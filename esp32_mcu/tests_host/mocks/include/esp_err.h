@@ -10,12 +10,18 @@ extern "C" {
 
 typedef int32_t esp_err_t;
 
-#define ESP_OK           0
-#define ESP_FAIL        -1
-#define ESP_ERR_NO_MEM   0x101
-#define ESP_ERR_INVALID_ARG 0x102
-#define ESP_ERR_NOT_FOUND   0x103
-#define ESP_ERR_TIMEOUT     0x104
+#define ESP_OK                     0
+#define ESP_FAIL                  -1
+#define ESP_ERR_NO_MEM             0x101
+#define ESP_ERR_INVALID_ARG        0x102
+#define ESP_ERR_NOT_FOUND          0x103
+#define ESP_ERR_TIMEOUT            0x104
+
+#define ESP_ERR_NVS_BASE           0x1100
+#define ESP_ERR_NVS_NOT_FOUND      (ESP_ERR_NVS_BASE + 1)
+#define ESP_ERR_NVS_INVALID_LENGTH (ESP_ERR_NVS_BASE + 2)
+#define ESP_ERR_NVS_NO_FREE_PAGES  (ESP_ERR_NVS_BASE + 3)
+#define ESP_ERR_NVS_NEW_VERSION_FOUND (ESP_ERR_NVS_BASE + 4)
 
 static inline const char *esp_err_to_name(esp_err_t code)
 {
@@ -33,6 +39,14 @@ static inline const char *esp_err_to_name(esp_err_t code)
             return "ESP_ERR_NOT_FOUND";
         case ESP_ERR_TIMEOUT:
             return "ESP_ERR_TIMEOUT";
+        case ESP_ERR_NVS_NOT_FOUND:
+            return "ESP_ERR_NVS_NOT_FOUND";
+        case ESP_ERR_NVS_INVALID_LENGTH:
+            return "ESP_ERR_NVS_INVALID_LENGTH";
+        case ESP_ERR_NVS_NO_FREE_PAGES:
+            return "ESP_ERR_NVS_NO_FREE_PAGES";
+        case ESP_ERR_NVS_NEW_VERSION_FOUND:
+            return "ESP_ERR_NVS_NEW_VERSION_FOUND";
         default:
             return "ESP_ERR_UNKNOWN";
     }
