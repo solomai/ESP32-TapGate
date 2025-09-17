@@ -40,12 +40,14 @@ data  : any or non;     // Message type dictates the structure and content of th
 To ensure message uniqueness and protect against replay attacks, both the client and the device maintain independent nonce counters.
 
 ### client_nonce
+- Each client has its own unique nonce.
 - Incremented by the client for every message sent to the device.  
 - Used by the device to:
   - Filter duplicate messages.
   - Provide Anti-replay protection.
 
 ### device_nonce
+- The device has a single shared nonce for doAction, which is used by all clients.
 - Incremented by the device after successfully executing a DoAction command.  
 - Used by the client to:
   - Ensure a command is executed only once.
