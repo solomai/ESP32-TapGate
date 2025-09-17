@@ -30,10 +30,30 @@ pub key          : public key data
 The payload is always encrypted with the sender's private key. Decryption must be performed using the public key obtained during the certificate exchange.
 If you’d like, I can also help rephrase this for different technical audiences or embed it into a protocol spec or documentation template.<br>
 ```text
-nonce : number;     // Used to filter out duplicates like message id and for Anti-replay guard
-opt   : number;     // Operation code to be executed or message id
-data  : any or non; // Message type dictates the structure and content of the transmitted data.
+client_nonce : number;  // Used to filter out
+opt   : number;         // Operation code to be executed
+data  : any or non;     // Message type dictates the structure and content of the transmitted data.
+                        // include device_nonce for command(s)
 ```
+### Nonce Usage in Client ↔ Device Communication
+
+To ensure message uniqueness and protect against replay attacks, both the client and the device maintain independent nonce counters.
+
+### client_nonce
+- Incremented by the client for every message sent to the device.  
+- Used by the device to:
+  - Filter duplicate messages.
+  - Provide Anti-replay protection.
+
+### device_nonce
+- Incremented by the device after successfully executing a DoAction command.  
+- Used by the client to:
+  - Ensure a command is executed only once.
+  - Filter duplicate commands.
+
+Protocol Rule:
+Before sending a DoAction command, the client must first query the current device_nonce.  
+The retrieved value must then be included in the command message. If the provided value does not match the current counter, the device will reject the command.
 
 
 Privacy Strategy:
@@ -63,6 +83,8 @@ Sequences:
 
     %% 3. DoAction
     [OK]
+    client --> device: MessageGetStatus ( to take cmd nonce )
+    device --> client: ACK    
     client --> device: MessageDoAction
     device --> client: ACK
 
