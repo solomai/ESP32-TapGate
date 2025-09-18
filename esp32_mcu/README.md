@@ -7,6 +7,7 @@ General description of the ESP32 firmware, its purpose, and supported features.
 ## Architecture  
 High-level view of the software design, components, and how modules interact.  
 - [Software Architecture for Device](../docs/device/architecture.md) — details on tasks, memory usage, and system flow.
+- [Partitioning and Partition Sizing Rationale](../docs/device/partitions.md) — describes the flash partition layout, purpose, and sizing choices for persistent nonce counters.
 
 Modules:
 - [Clients](../docs/device/module-clients.md) — Clients module details.
