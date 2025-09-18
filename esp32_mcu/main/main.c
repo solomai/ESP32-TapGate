@@ -4,14 +4,20 @@
 #include "esp_log.h"
 
 // include components
+#include "logs.h"
 #include "clients.h"
+
+#include "diagnostic.h"
 
 // log tag
 static const char log_tag[] = "APP_MAIN";
 
 void app_main(void)
 {
-    ESP_LOGI(log_tag, "Application started");
+#ifdef DIAGNOSTIC_VERSION
+    print_memory_inventory();
+#endif
+    LOGI(log_tag, "Application started");
     // Init section
 
     // Main loop
