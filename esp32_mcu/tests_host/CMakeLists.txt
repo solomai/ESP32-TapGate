@@ -58,12 +58,14 @@ target_include_directories(tapgate_production
         ${CMAKE_CURRENT_LIST_DIR}/../components/clients
         ${CMAKE_CURRENT_LIST_DIR}/../components/common
         ${CMAKE_CURRENT_LIST_DIR}/../components/logs
+        ${CMAKE_CURRENT_LIST_DIR}/../components/nvm
 )
 
 set(_tapgate_component_sources
     ${CMAKE_CURRENT_LIST_DIR}/../components/rsapem/rsapem.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/clients/clients.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/logs/logs.c
+    ${CMAKE_CURRENT_LIST_DIR}/../components/nvm/nvm.c
 )
 
 file(GLOB _tapgate_common_sources
@@ -147,4 +149,5 @@ tapgate_add_unity_test(test_types ${CMAKE_CURRENT_LIST_DIR}/test_types.c)
 tapgate_add_unity_test(test_clients ${CMAKE_CURRENT_LIST_DIR}/test_clients.c)
 tapgate_add_unity_test(test_rsapem ${CMAKE_CURRENT_LIST_DIR}/test_rsapem.c)
 tapgate_add_unity_test(test_logs ${CMAKE_CURRENT_LIST_DIR}/test_logs.c)
+tapgate_add_unity_test(test_nvm ${CMAKE_CURRENT_LIST_DIR}/test_nvm.c)
 
