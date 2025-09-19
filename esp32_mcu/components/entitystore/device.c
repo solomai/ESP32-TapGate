@@ -8,9 +8,3 @@
 #ifndef DEVICE_DB_NAMESPACE
 #define DEVICE_DB_NAMESPACE   "device_entity"
 #endif
-
-// NVM namespace. 15 characters are allowed due to NVM key size limitations.
-// used partitin nvs_nonce
-#ifndef DEVICE_NONCE_DB_NAMESPACE
-#define DEVICE_NONCE_DB_NAMESPACE   "device_nonce"
-#endif

@@ -4,8 +4,8 @@ idf_component_register(
     REQUIRES
         logs
         common
-        rsapem
-        entitystore        
+        entitystore
+        ecies_crypto
         diagnostic
         esp_common
 )

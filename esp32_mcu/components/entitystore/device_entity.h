@@ -6,7 +6,6 @@
 // structure representing complete client information
 typedef struct
 {
-    nonce_t       client_nonce;
     uid_t         device_id;
     name_t        name;
     public_key_t  pub_pem;

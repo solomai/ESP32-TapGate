@@ -21,14 +21,14 @@
 #define UID_CAP                15
 #endif
 
-// Capacity for RSA public key in PEM (must include '\0')
+// Capacity for public key X25519 (RFC 7748)
 #ifndef PUBPEM_CAP
-#define PUBPEM_CAP             512
+#define PUBPEM_CAP             32
 #endif
 
-// Capacity for RSA private key in PEM (must include '\0')
+// Capacity for private key X25519 (RFC 7748)
 #ifndef PRVPEM_CAP
-#define PRVPEM_CAP             512
+#define PRVPEM_CAP             32
 #endif
 
 // NVM partitions name
