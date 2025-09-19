@@ -5,5 +5,6 @@ file(GLOB srcs
 idf_component_register(
     SRCS ${srcs}
     INCLUDE_DIRS .
-    REQUIRES common
+    REQUIRES common mbedtls log
 )
+
