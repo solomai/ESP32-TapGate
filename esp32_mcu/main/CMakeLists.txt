@@ -4,8 +4,9 @@ idf_component_register(
     REQUIRES
         logs
         common
-        entitystore
+        entity_store
         ecies_crypto
+        wifi_manager
         diagnostic
         esp_common
 )
