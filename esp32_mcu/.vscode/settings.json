@@ -6,7 +6,9 @@
     "esp_partition.h": "c",
     "clients.h": "c",
     "types.h": "c",
-    "esp_log.h": "c"
+    "esp_log.h": "c",
+    "esp_heap_caps.h": "c",
+    "nvs_flash.h": "c"
   },
   "idf.portWin": "COM6",
   "idf.flashType": "UART",

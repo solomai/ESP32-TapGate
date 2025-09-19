@@ -1,4 +1,4 @@
-#include "diagnostic.h"
+#include "memory_inventory.h"
 #include <stddef.h>
 #include <stdint.h>
 #include "esp_log.h"

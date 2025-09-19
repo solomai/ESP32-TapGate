@@ -10,6 +10,19 @@
 #define LOGS_MESSAGE_BUFFER_SIZE 256
 #endif
 
+#define LOGS_TAG_BUFFER_SIZE 64
+
+// Helper: format tag with prefix
+static const char *logs_format_tag(const char *tag)
+{
+    static char tagged[LOGS_TAG_BUFFER_SIZE]; // static, not thread-safe
+    if (!tag)
+        tag = "";
+    snprintf(tagged, sizeof(tagged), "==> %s", tag);
+    return tagged;
+}
+
+// Core logging function
 static void logs_vlog(esp_log_level_t level, const char *tag, const char *fmt, va_list args)
 {
     char message[LOGS_MESSAGE_BUFFER_SIZE];
@@ -49,6 +62,8 @@ static void logs_vlog(esp_log_level_t level, const char *tag, const char *fmt, v
     }
 }
 
+// === Public logging wrappers ===
+
 void LOGD(const char *tag, const char *fmt, ...)
 {
     va_list args;
@@ -65,11 +80,19 @@ void LOGI(const char *tag, const char *fmt, ...)
     va_end(args);
 }
 
+void LOGN(const char *tag, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    logs_vlog(ESP_LOG_INFO, logs_format_tag(tag), fmt, args);
+    va_end(args);
+}
+
 void LOGW(const char *tag, const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    logs_vlog(ESP_LOG_WARN, tag, fmt, args);
+    logs_vlog(ESP_LOG_WARN, logs_format_tag(tag), fmt, args);
     va_end(args);
 }
 
@@ -77,7 +100,14 @@ void LOGE(const char *tag, const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    logs_vlog(ESP_LOG_ERROR, tag, fmt, args);
+    logs_vlog(ESP_LOG_ERROR, logs_format_tag(tag), fmt, args);
     va_end(args);
 }
 
+void LOGC(const char *tag, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    logs_vlog(ESP_LOG_ERROR, logs_format_tag(tag), fmt, args);
+    va_end(args);
+}

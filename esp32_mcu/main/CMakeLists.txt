@@ -5,7 +5,7 @@ idf_component_register(
         logs
         common
         rsapem
-        clients
-        esp_common
+        entitystore        
         diagnostic
+        esp_common
 )

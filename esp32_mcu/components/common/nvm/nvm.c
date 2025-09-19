@@ -1,12 +1,12 @@
 #include "nvm.h"
 #include "nvm_partition.h"
 
-#include "esp_log.h"
+#include "logs.h"
 #include "nvs_flash.h"
 
 #include <stddef.h>
 
-static const char *TAG = "nvm";
+static const char *TAG_NVM = "NVM";
 
 static esp_err_t ensure_partition_ready(const char *partition_label)
 {
@@ -17,13 +17,13 @@ static esp_err_t ensure_partition_ready(const char *partition_label)
 
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
-        ESP_LOGW(TAG, "Erasing NVS partition %s due to previous error: %s", partition_label,
+        LOGW(TAG_NVM, "Erasing Partition \"%s\" due to previous error: %s", partition_label,
                  esp_err_to_name(err));
 
         err = nvs_flash_erase_partition(partition_label);
         if (err != ESP_OK)
         {
-            ESP_LOGE(TAG, "Failed to erase NVS partition %s: %s", partition_label,
+            LOGE(TAG_NVM, "Failed to erase Partition \"%s\": %s", partition_label,
                      esp_err_to_name(err));
             return err;
         }
@@ -33,18 +33,13 @@ static esp_err_t ensure_partition_ready(const char *partition_label)
 
     if (err != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to initialize NVS partition %s: %s", partition_label,
+        LOGE(TAG_NVM, "Failed to initialize Partition \"%s\": %s", partition_label,
                  esp_err_to_name(err));
         return err;
     }
 
-    ESP_LOGD(TAG, "NVS partition %s ready", partition_label);
+    LOGI(TAG_NVM, "Partition \"%s\" is ready", partition_label);
     return ESP_OK;
-}
-
-esp_err_t nvm_init_partition(const char *partition_label)
-{
-    return ensure_partition_ready(partition_label);
 }
 
 esp_err_t nvm_init(void)
@@ -55,11 +50,13 @@ esp_err_t nvm_init(void)
         NVM_PARTITION_NONCE,
     };
 
+    LOGI(TAG_NVM, "Initializing %d partition(s)", sizeof(partitions) / sizeof(partitions[0]));
     for (size_t i = 0; i < sizeof(partitions) / sizeof(partitions[0]); ++i)
     {
         esp_err_t err = ensure_partition_ready(partitions[i]);
-        if (err != ESP_OK)
+        if (err != ESP_OK) {
             return err;
+        }
     }
 
     return ESP_OK;

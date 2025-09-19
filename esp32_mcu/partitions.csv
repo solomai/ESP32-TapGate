@@ -1,6 +1,6 @@
 # Name,        Type, SubType,   Offset,    Size,   Flags
 nvs,           data, nvs,       0x009000,  12K,
-nvs_clients,   data, nvs,       0x00C000,  40K,
+nvs_entity,    data, nvs,       0x00C000,  40K,
 nvs_nonce,     data, nvs,       0x016000,  24K,
 phy_init,      data, phy,       0x01C000,  4K,
 factory,       app,  factory,   0x020000,  1M,

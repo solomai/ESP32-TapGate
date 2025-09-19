@@ -5,4 +5,7 @@ file(GLOB srcs
 idf_component_register(
     SRCS ${srcs}
     INCLUDE_DIRS .
+    REQUIRES
+        esp_partition
+        spi_flash
 )
