@@ -1,5 +1,11 @@
 #pragma once
 
+#include "esp_log.h"
+
+void disable_esp_log(const char *tag);
+
+void set_esp_log_level(const char *tag, esp_log_level_t level);
+
 // ---------------------------------------------------------
 // Debug log. lowest priority.
 // does not go into the device event log.

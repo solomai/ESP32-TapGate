@@ -1,8 +1,6 @@
 #include "logs.h"
 #include "constants.h"
 
-#include "esp_log.h"
-
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -11,6 +9,17 @@
 #endif
 
 #define LOGS_TAG_BUFFER_SIZE 64
+
+// ESP logs wrapper
+void disable_esp_log(const char *tag)
+{
+    set_esp_log_level(tag, ESP_LOG_NONE);
+}
+
+void set_esp_log_level(const char *tag, esp_log_level_t level)
+{
+    esp_log_level_set(tag, level);
+}
 
 // Helper: format tag with prefix
 static const char *logs_format_tag(const char *tag)
