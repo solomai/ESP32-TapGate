@@ -2,7 +2,7 @@
 file(GLOB srcs "${CMAKE_CURRENT_LIST_DIR}/*.c")
 
 # Path to web folder
-set(WEB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/web)
+set(WEB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets)
 
 # Collect text assets to gzip and binary assets to embed as-is
 file(GLOB WEB_TEXT_FILES
