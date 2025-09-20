@@ -1,5 +1,5 @@
 #pragma once
-
+#include "constants.h"
 #include "esp_log.h"
 
 void disable_esp_log(const char *tag);
@@ -39,4 +39,13 @@ void LOGE(const char *tag, const char *fmt, ...);
 void LOGC(const char *tag, const char *fmt, ...);
 
 // ---------------------------------------------------------
+
+#define ERROR_CHECK(x, msg)                                                  \
+    do {                                                                     \
+        esp_err_t __err_rc = (x);                                            \
+        if (__err_rc != ESP_OK) {                                            \
+            LOGC(TAG, "%s : %s", (msg), esp_err_to_name(__err_rc));          \
+            abort();                                                         \
+        }                                                                    \
+    } while (0)
 
