@@ -7,7 +7,8 @@
 // include components
 #include "nvm/nvm.h"
 #include "logs.h"
-#include "clients.h"
+#include "constants.h"
+#include "wifi_manager.h"
 
 #ifdef DIAGNOSTIC_VERSION
     #include "diagnostic.h"
@@ -16,6 +17,8 @@
 // log tag
 static const char *TAG_MAIN = "APP_MAIN";
 
+
+// MAIN FUNCTION
 void app_main(void)
 {
 #ifdef DIAGNOSTIC_VERSION
@@ -31,7 +34,13 @@ void app_main(void)
     {
         // Critical error
         LOGC(TAG_MAIN, "Error accessing internal memory, device cannot start properly");
+        #ifdef DIAGNOSTIC_VERSION
+            esp_system_abort("Check NVM Partition naming 'nvm_partition.h' and 'partitions.csv'");
+        #endif
     }
+
+    // start wifi manager in separeted thread
+    wifi_manager_start();
 
     // Main loop
     while (1) {

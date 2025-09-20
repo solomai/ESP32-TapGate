@@ -8,5 +8,8 @@ idf_component_register(
     REQUIRES
         admin_portal
         common
-        log
+        logs
+        esp_wifi
+        esp_netif
+        esp_event
 )
