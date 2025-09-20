@@ -10,7 +10,11 @@
     "esp_heap_caps.h": "c",
     "nvs_flash.h": "c",
     "diagnostic.h": "c",
-    "wifi_manager.h": "c"
+    "wifi_manager.h": "c",
+    "esp_event.h": "c",
+    "nvm.h": "c",
+    "text_encoding": "c",
+    "typeinfo": "c"
   },
   "idf.portWin": "COM6",
   "idf.flashType": "UART",

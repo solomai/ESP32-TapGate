@@ -9,6 +9,9 @@
 // NVM Partition to store wifi data and credential
 #define NVM_WIFI_PARTITION NVM_PARTITION_DEFAULT
 
+// NVM WiFi Manager namespace
+#define NVM_WIFI_NAMESPACE "wifimanager"
+
 // Defines the task priority of the wifi_manager
 #define WIFI_MANAGER_TASK_PRIORITY			3
 
@@ -82,5 +85,74 @@ struct wifi_settings_t{
 };
 extern struct wifi_settings_t wifi_settings;
 
+// message_code_t
+#define MESSAGE_CODES                \
+    X(NONE)                          \
+    X(WM_ORDER_LOAD_AND_RESTORE_STA) \
+    X(WM_ORDER_START_AP)             \
+    X(WM_ORDER_START_HTTP_SERVER)    \
+    X(WM_ORDER_STOP_HTTP_SERVER)     \
+    X(WM_ORDER_START_DNS_SERVICE)    \
+    X(WM_ORDER_STOP_DNS_SERVICE)     \
+    X(WM_ORDER_START_WIFI_SCAN)      \
+    X(WM_ORDER_CONNECT_STA)          \
+    X(WM_ORDER_DISCONNECT_STA)       \
+    X(WM_EVENT_STA_DISCONNECTED)     \
+    X(WM_EVENT_SCAN_DONE)            \
+    X(WM_EVENT_STA_GOT_IP)           \
+    X(WM_ORDER_STOP_AP)              \
+    X(WM_MESSAGE_CODE_COUNT)
+
+typedef enum {
+#define X(name) name,
+    MESSAGE_CODES
+#undef X
+} message_code_t;
+
+static inline const char* message_code_to_str(message_code_t code) {
+    switch(code) {
+#define X(name) case name: return #name;
+        MESSAGE_CODES
+#undef X
+        default: return "UNKNOWN";
+    }
+} // message_code_to_str
+
+// connection_request_made_by_code_t
+#define CONNECTION_REQUEST                    \
+    X(CONNECTION_REQUEST_NONE)                \
+    X(CONNECTION_REQUEST_USER)                \
+	X(CONNECTION_REQUEST_AUTO_RECONNECT)      \
+    X(CONNECTION_REQUEST_RESTORE_CONNECTION)  \
+    X(CONNECTION_REQUEST_MAX)
+
+typedef enum : int32_t {
+#define X(name) name,
+	CONNECTION_REQUEST
+#undef X
+} connection_request_made_by_code_t;
+
+static inline const char* connection_request_to_str(connection_request_made_by_code_t code) {
+    switch(code) {
+#define X(name) case name: return #name;
+	CONNECTION_REQUEST
+#undef X
+        default: return "UNKNOWN";
+    }
+} // connection_request_to_str
+
+
+typedef struct{
+	message_code_t code;
+	void *param;
+} queue_message;
+
+
+// Start WiFi Manager
 void wifi_manager_start(void);
+
+// Stop WiFi Manager
 void wifi_manager_stop(void);
+
+// Register a callback to a custom function when specific event message_code happens.
+esp_err_t wifi_manager_set_callback(message_code_t message_code, void (*func_ptr)(void*) );

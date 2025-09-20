@@ -1,15 +1,19 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 
 #include "wifi_manager.h"
 #include "constants.h"
-#include "esp_log.h"
 #include "logs.h"
 
 // ESP-IDF networking stack
 #include "esp_netif.h"
 #include "esp_event.h"
 #include "esp_wifi.h"
+
+// NVM
+#include "nvs_flash.h"
+#include "nvs.h"
 
 #include "lwip/api.h"
 #include "lwip/err.h"
@@ -39,6 +43,29 @@ struct wifi_settings_t wifi_settings = {
 	.sta_static_ip = 0,
 };
 
+// objects used to manipulate the main queue of events
+QueueHandle_t wifi_manager_queue;
+
+BaseType_t wifi_manager_send_message(message_code_t code, void *param)
+{
+	queue_message msg;
+	msg.code = code;
+	msg.param = param;
+	return xQueueSend( wifi_manager_queue, &msg, portMAX_DELAY);
+}
+
+// Array of callback function pointers
+void (*cb_ptr_arr[WM_MESSAGE_CODE_COUNT])(void*) = {NULL};
+
+esp_err_t wifi_manager_set_callback(message_code_t message_code, void (*func_ptr)(void*) )
+{
+	if(message_code < WM_MESSAGE_CODE_COUNT){
+		cb_ptr_arr[message_code] = func_ptr;
+        return ESP_OK;
+	}
+    return ESP_ERR_WIFI_NOT_INIT;
+}
+
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
 	if (event_base == WIFI_EVENT)
@@ -46,28 +73,40 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
 		switch(event_id)
         {
             case WIFI_EVENT_WIFI_READY:
+                LOGI(TAG, "EVENT: WIFI_EVENT_WIFI_READY");
                 break;
             case WIFI_EVENT_SCAN_DONE:
+                LOGI(TAG, "EVENT: WIFI_EVENT_SCAN_DONE");
                 break;
             case WIFI_EVENT_STA_START:
+                LOGI(TAG, "EVENT: WIFI_EVENT_STA_START");
                 break;
             case WIFI_EVENT_STA_STOP:
+                LOGI(TAG, "EVENT: WIFI_EVENT_STA_STOP");
                 break;
             case WIFI_EVENT_STA_CONNECTED:
+                LOGI(TAG, "EVENT: WIFI_EVENT_STA_CONNECTED");            
                 break;
             case WIFI_EVENT_STA_DISCONNECTED:
+                LOGI(TAG, "EVENT: WIFI_EVENT_STA_DISCONNECTED");
                 break;
             case WIFI_EVENT_STA_AUTHMODE_CHANGE:
+                LOGI(TAG, "EVENT: WIFI_EVENT_STA_AUTHMODE_CHANGE");
                 break;
             case WIFI_EVENT_AP_START:
+                LOGI(TAG, "EVENT: WIFI_EVENT_AP_START");
                 break;
             case WIFI_EVENT_AP_STOP:
+                LOGI(TAG, "EVENT: WIFI_EVENT_AP_STOP");
                 break;
             case WIFI_EVENT_AP_STACONNECTED:
+                LOGI(TAG, "EVENT: WIFI_EVENT_AP_STACONNECTED");
                 break;
             case WIFI_EVENT_AP_STADISCONNECTED:
+                LOGI(TAG, "EVENT: WIFI_EVENT_AP_STADISCONNECTED");
                 break;
             case WIFI_EVENT_AP_PROBEREQRECVED:
+                LOGI(TAG, "EVENT: WIFI_EVENT_AP_PROBEREQRECVED");
                 break;
             default:
                 break;
@@ -82,15 +121,29 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base, int32_t eve
 		switch(event_id)
         {
             case IP_EVENT_STA_GOT_IP:
+                LOGI(TAG, "EVENT: IP_EVENT_STA_GOT_IP");
                 break;
             case IP_EVENT_GOT_IP6:
+                LOGI(TAG, "EVENT: IP_EVENT_GOT_IP6");
                 break;
             case IP_EVENT_STA_LOST_IP:
+                LOGI(TAG, "EVENT: IP_EVENT_STA_LOST_IP");
                 break;
             default:
                 break;
         }
     }
+}
+
+bool wifi_manager_fetch_wifi_sta_config()
+{
+    nvs_handle handle;
+    esp_err_t err = nvs_open_from_partition(NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, NVS_READONLY, &handle);
+    if(err != ESP_OK){
+        LOGE(TAG, "Failed open NVM \"%s\":\"%s\"", NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
+        return false;
+    }
+    return false;
 }
 
 void wifi_manager( void * pvParameters )
@@ -113,7 +166,7 @@ void wifi_manager( void * pvParameters )
 	ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM),
                 "Cannot set wifi storage");
 
-	/* event handler for the connection */
+	// event handler for the connection
     esp_event_handler_instance_t instance_wifi_event;
     esp_event_handler_instance_t instance_ip_event;
     ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL,&instance_wifi_event),
@@ -171,12 +224,47 @@ void wifi_manager( void * pvParameters )
 	ERROR_CHECK(esp_wifi_start(),
                 "Start failed");
 
-    // main wifi_manager loop
-	for(;;){
+	// wifi scanner config
+	wifi_scan_config_t scan_config = {
+		.ssid = 0,
+		.bssid = 0,
+		.channel = 0,
+		.show_hidden = true
+	};
 
-        // TODO: REMOVE DELAY
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-    }
+    // Create wifi manager message queue
+    wifi_manager_queue = xQueueCreate( 3, sizeof( queue_message) );
+
+	// enqueue first event: load previous config
+	wifi_manager_send_message(WM_ORDER_LOAD_AND_RESTORE_STA, NULL);
+    
+    // main wifi_manager loop
+    queue_message msg;
+	for(;;){
+        BaseType_t xStatus = xQueueReceive( wifi_manager_queue, &msg, portMAX_DELAY );
+        if(xStatus != pdPASS)
+            continue;
+        LOGI(TAG, "MESSAGE: %s", message_code_to_str(msg.code));
+        switch(msg.code)
+        {
+            case WM_ORDER_LOAD_AND_RESTORE_STA:
+                if(wifi_manager_fetch_wifi_sta_config()){
+                    ESP_LOGI(TAG, "Saved wifi found on startup. Will attempt to connect.");
+                    wifi_manager_send_message(WM_ORDER_CONNECT_STA, (void*)CONNECTION_REQUEST_RESTORE_CONNECTION);
+                }
+                else{
+                    // no wifi saved: start soft AP! This is what should happen during a first run
+                    ESP_LOGI(TAG, "No saved wifi found on startup. Starting access point.");
+                    wifi_manager_send_message(WM_ORDER_START_AP, NULL);
+                }
+                // callback
+				if(cb_ptr_arr[msg.code]) (*cb_ptr_arr[msg.code])(NULL);
+                break;
+            default:
+				break;                
+        }
+    } // end of for loop
+    vTaskDelete( NULL );
 }
 
 void wifi_manager_start(void)
@@ -193,4 +281,8 @@ void wifi_manager_stop()
     LOGI(TAG, "Stop manager");
 	vTaskDelete(task_wifi_manager);
 	task_wifi_manager = NULL;
+
+    // delete wifi manager message queue
+    vQueueDelete(wifi_manager_queue);
+	wifi_manager_queue = NULL;
 }
