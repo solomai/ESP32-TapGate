@@ -15,7 +15,8 @@
     "nvm.h": "c",
     "text_encoding": "c",
     "typeinfo": "c",
-    "http_server.h": "c"
+    "http_server.h": "c",
+    "esp_system.h": "c"
   },
   "idf.portWin": "COM6",
   "idf.flashType": "UART",

@@ -1,3 +1,5 @@
+// Flag CONFIG_FREERTOS_USE_TRACE_FACILITY=y expected
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
