@@ -507,3 +507,13 @@ void wifi_manager_stop()
 		wifi_manager_config_sta = NULL;
 	}    
 }
+
+esp_netif_t* wifi_manager_get_esp_netif_ap()
+{
+	return esp_netif_ap;
+}
+
+esp_netif_t* wifi_manager_get_esp_netif_sta()
+{
+	return esp_netif_sta;
+}

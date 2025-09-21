@@ -160,3 +160,9 @@ void wifi_manager_stop(void);
 
 // Register a callback to a custom function when specific event message_code happens.
 esp_err_t wifi_manager_set_callback(message_code_t message_code, void (*func_ptr)(void*) );
+
+// returns the current esp_netif object for the STAtion
+esp_netif_t* wifi_manager_get_esp_netif_sta();
+
+// returns the current esp_netif object for the Access Point
+esp_netif_t* wifi_manager_get_esp_netif_ap();
