@@ -23,7 +23,7 @@ void app_main(void)
 {
 #ifdef DIAGNOSTIC_VERSION
 	/* your code should go here. Here we simply create a task on core 2 that monitors free heap memory */
-	xTaskCreatePinnedToCore(&diagnostic_task, "monitoring_task", 2048, NULL, 1, NULL, 1); 
+	xTaskCreatePinnedToCore(&diagnostic_task, "debug_mon_task", 2560, NULL, 1, NULL, 1); 
 #endif
 
     LOGN(TAG_MAIN, "Application bootup");
