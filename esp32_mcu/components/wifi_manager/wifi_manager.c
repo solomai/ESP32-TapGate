@@ -6,6 +6,10 @@
 #include "constants.h"
 #include "logs.h"
 
+// admin portal
+#include "dns_server.h"
+#include "http_server.h"
+
 // ESP-IDF networking stack
 #include "esp_netif.h"
 #include "esp_event.h"
@@ -349,7 +353,7 @@ bool wifi_manager_fetch_wifi_sta_config()
     return false;
 }
 
-void wifi_manager( void * pvParameters )
+void wifi_manager(void * pvParameters)
 {
   	// initialize the tcp stack
     ERROR_CHECK(esp_netif_init(),
@@ -466,14 +470,24 @@ void wifi_manager( void * pvParameters )
             case WM_ORDER_START_AP:
                 esp_err_t err = esp_wifi_set_mode(WIFI_MODE_APSTA);
                 if (err == ESP_OK)
+                {
+                    // Start DNS server to have Captive Portal
+                    dns_server_start();
+                    // Start HTTP server with admin page
+                    http_server_start();
                     ESP_LOGI(TAG, "WiFi mode set to APSTA successfully (SoftAP started)");
+                }
                 else
                     ESP_LOGE(TAG, "Failed to set WiFi mode to APSTA (error=0x%x)", err);
 
                 /* callback */
-                if(cb_ptr_arr[msg.code]) (*cb_ptr_arr[msg.code])(NULL);                
+                if(cb_ptr_arr[msg.code]) (*cb_ptr_arr[msg.code])(NULL);
                 break;
             case WM_ORDER_STOP_AP:
+                http_server_stop();
+                dns_server_stop();
+                /* callback */
+                if(cb_ptr_arr[msg.code]) (*cb_ptr_arr[msg.code])(NULL);
                 break;
             default:
 				break;                
