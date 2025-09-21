@@ -43,7 +43,7 @@
 #define DEFAULT_AP_NETMASK					"255.255.255.0"
 
 // SSID (network name) the the esp32 will broadcast.
-#define DEFAULT_AP_SSID 					"TapGate"
+#define DEFAULT_AP_SSID 					"TapGate AP"
 
 // Password used for the Access Point. Leave empty and set AUTH MODE to WIFI_AUTH_OPEN for no password.
 #define DEFAULT_AP_PASSWORD                 "TapGate"
@@ -71,6 +71,10 @@
 // Note: Power save is only effective when in STA only mode
 #define DEFAULT_STA_POWER_SAVE 				WIFI_PS_NONE
 
+#define STORE_NVM_SSID 						"ssid"
+#define STORE_NVM_PSW                       "password"
+#define STORE_NVM_SETTINGS                  "settings"
+
 // The actual WiFi settings in use
 struct wifi_settings_t{
 	uint8_t ap_ssid[MAX_SSID_SIZE];
@@ -90,6 +94,7 @@ extern struct wifi_settings_t wifi_settings;
     X(NONE)                          \
     X(WM_ORDER_LOAD_AND_RESTORE_STA) \
     X(WM_ORDER_START_AP)             \
+	X(WM_ORDER_STOP_AP)              \
     X(WM_ORDER_START_HTTP_SERVER)    \
     X(WM_ORDER_STOP_HTTP_SERVER)     \
     X(WM_ORDER_START_DNS_SERVICE)    \
@@ -100,7 +105,6 @@ extern struct wifi_settings_t wifi_settings;
     X(WM_EVENT_STA_DISCONNECTED)     \
     X(WM_EVENT_SCAN_DONE)            \
     X(WM_EVENT_STA_GOT_IP)           \
-    X(WM_ORDER_STOP_AP)              \
     X(WM_MESSAGE_CODE_COUNT)
 
 typedef enum {
