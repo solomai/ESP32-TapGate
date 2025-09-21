@@ -9,6 +9,8 @@
 #include "logs.h"
 #include "constants.h"
 #include "wifi_manager.h"
+#include "dns_server.h"
+#include "http_server.h"
 
 #ifdef DIAGNOSTIC_VERSION
     #include "diagnostic.h"
@@ -17,6 +19,21 @@
 // log tag
 static const char *TAG_MAIN = "APP_MAIN";
 
+void cb_ap_start(void *pvParameter)
+{
+    LOGN(TAG_MAIN, "WiFi Access Point started");
+    // Start DNS server to have Captive Portal
+    dns_server_start();
+    // Start HTTP server with admin page
+    http_server_start();
+}
+
+void cb_ap_stop(void *pvParameter)
+{
+    LOGN(TAG_MAIN, "WiFi Access Point stopped");
+    http_server_stop();
+    dns_server_stop();
+}
 
 // MAIN FUNCTION
 void app_main(void)
@@ -39,6 +56,10 @@ void app_main(void)
         #endif
     }
 
+    // register wfif manager callbacks
+    wifi_manager_set_callback(WM_ORDER_START_AP, &cb_ap_start);
+    wifi_manager_set_callback(WM_ORDER_STOP_AP, &cb_ap_stop);
+    
     // start wifi manager in separeted thread
     wifi_manager_start();
 
