@@ -46,7 +46,7 @@
 #define DEFAULT_AP_SSID 					"TapGate AP"
 
 // Password used for the Access Point. Leave empty and set AUTH MODE to WIFI_AUTH_OPEN for no password.
-#define DEFAULT_AP_PASSWORD                 "TapGate"
+#define DEFAULT_AP_PASSWORD                 ""
 
 // Access Point WiFi Channel. Be careful you might not see the access point if you use a channel not allowed in your country.
 #define DEFAULT_AP_CHANNEL                  1

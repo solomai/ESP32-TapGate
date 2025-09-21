@@ -22,17 +22,11 @@ static const char *TAG_MAIN = "APP_MAIN";
 void cb_ap_start(void *pvParameter)
 {
     LOGN(TAG_MAIN, "WiFi Access Point started");
-    // Start DNS server to have Captive Portal
-    dns_server_start();
-    // Start HTTP server with admin page
-    http_server_start();
 }
 
 void cb_ap_stop(void *pvParameter)
 {
     LOGN(TAG_MAIN, "WiFi Access Point stopped");
-    http_server_stop();
-    dns_server_stop();
 }
 
 // MAIN FUNCTION

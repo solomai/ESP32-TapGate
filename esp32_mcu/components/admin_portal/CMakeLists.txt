@@ -51,7 +51,7 @@ idf_component_register(
         wpa_supplicant
         wifi_manager
         common
-        log
+        logs
     EMBED_FILES
         ${GZ_FILES}
         ${WEB_BIN_FILES}
