@@ -46,6 +46,10 @@ idf_component_register(
     INCLUDE_DIRS .
     REQUIRES
         esp_http_server
+        esp_wifi
+        esp_netif
+        wpa_supplicant
+        wifi_manager
         common
         log
     EMBED_FILES

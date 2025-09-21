@@ -14,7 +14,8 @@
     "esp_event.h": "c",
     "nvm.h": "c",
     "text_encoding": "c",
-    "typeinfo": "c"
+    "typeinfo": "c",
+    "http_server.h": "c"
   },
   "idf.portWin": "COM6",
   "idf.flashType": "UART",
