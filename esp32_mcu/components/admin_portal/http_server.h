@@ -2,8 +2,6 @@
 
 #include "esp_err.h"
 
-static const char TAG[] = "HTTP Server";
-
 // spawns the http server 
 esp_err_t http_server_start();
 

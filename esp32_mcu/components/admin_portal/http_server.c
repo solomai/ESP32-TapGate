@@ -1,6 +1,8 @@
 #include "http_server.h"
 #include "esp_http_server.h"
 
+static const char TAG[] = "HTTP Server";
+
 httpd_handle_t httpserver_handle = NULL;
 
 esp_err_t http_server_start()
