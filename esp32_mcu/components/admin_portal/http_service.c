@@ -10,8 +10,22 @@
 
 static const char *TAG = "HTTP Service";
 
-extern const uint8_t _binary_assets_logo_png_start[] asm("_binary_assets_logo_png_start");
-extern const uint8_t _binary_assets_logo_png_end[] asm("_binary_assets_logo_png_end");
+#ifndef HTTP_SERVICE_LOGO_SYMBOL_BASE
+#define HTTP_SERVICE_LOGO_SYMBOL_BASE assets_logo_png
+#endif
+
+#define HTTP_SERVICE_CAT2_INNER(a, b) a##b
+#define HTTP_SERVICE_CAT2(a, b) HTTP_SERVICE_CAT2_INNER(a, b)
+#define HTTP_SERVICE_CAT3(a, b, c) HTTP_SERVICE_CAT2(HTTP_SERVICE_CAT2(a, b), c)
+
+#define HTTP_SERVICE_LOGO_START_SYM(base) HTTP_SERVICE_CAT3(_binary_, base, _start)
+#define HTTP_SERVICE_LOGO_END_SYM(base) HTTP_SERVICE_CAT3(_binary_, base, _end)
+
+#define HTTP_SERVICE_LOGO_START HTTP_SERVICE_LOGO_START_SYM(HTTP_SERVICE_LOGO_SYMBOL_BASE)
+#define HTTP_SERVICE_LOGO_END HTTP_SERVICE_LOGO_END_SYM(HTTP_SERVICE_LOGO_SYMBOL_BASE)
+
+extern const uint8_t HTTP_SERVICE_LOGO_START[];
+extern const uint8_t HTTP_SERVICE_LOGO_END[];
 
 #define HTTP_SERVICE_BODY_MAX_LEN 512
 static const char HEX_DIGITS[] = "0123456789ABCDEF";
@@ -182,9 +196,11 @@ static esp_err_t http_service_handle_ap_config_post(httpd_req_t *req)
 
 static esp_err_t http_service_handle_logo_asset(httpd_req_t *req)
 {
-    size_t length = (size_t)(_binary_assets_logo_png_end - _binary_assets_logo_png_start);
+    const uint8_t *logo_start = HTTP_SERVICE_LOGO_START;
+    const uint8_t *logo_end = HTTP_SERVICE_LOGO_END;
+    size_t length = (size_t)(logo_end - logo_start);
     httpd_resp_set_type(req, "image/png");
-    return httpd_resp_send(req, (const char *)_binary_assets_logo_png_start, length);
+    return httpd_resp_send(req, (const char *)logo_start, length);
 }
 
 static esp_err_t http_service_send_redirect(httpd_req_t *req, const char *location)

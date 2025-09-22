@@ -22,9 +22,18 @@ file(GLOB WEB_BIN_FILES
 )
 
 set(LOGO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../../assets/logo.png)
+set(LOGO_SYMBOL_NAME "")
+
+if(NOT EXISTS ${LOGO_FILE})
+    set(LOGO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../../resources/logo.png)
+endif()
+
 if(EXISTS ${LOGO_FILE})
     file(RELATIVE_PATH LOGO_FILE_REL ${CMAKE_CURRENT_SOURCE_DIR}/../.. ${LOGO_FILE})
     list(APPEND WEB_BIN_FILES ${LOGO_FILE_REL})
+
+    string(REPLACE "/" "_" LOGO_SYMBOL_NAME ${LOGO_FILE_REL})
+    string(REPLACE "." "_" LOGO_SYMBOL_NAME ${LOGO_SYMBOL_NAME})
 endif()
 
 # Use Python (from ESP-IDF env) to gzip files (works on Win/Linux/macOS)
@@ -64,3 +73,7 @@ idf_component_register(
         ${GZ_FILES}
         ${WEB_BIN_FILES}
 )
+
+if(LOGO_SYMBOL_NAME)
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE HTTP_SERVICE_LOGO_SYMBOL_BASE=${LOGO_SYMBOL_NAME})
+endif()
