@@ -3,6 +3,11 @@ file(GLOB srcs "${CMAKE_CURRENT_LIST_DIR}/*.c")
 file(GLOB page_srcs "${CMAKE_CURRENT_LIST_DIR}/pages/*.c")
 list(APPEND srcs ${page_srcs})
 
+set(ASSET_DIR "${CMAKE_CURRENT_LIST_DIR}/assets")
+set(EMBEDDED_ASSETS
+    "${ASSET_DIR}/logo.png"
+)
+
 # Register component (single idf_component_register!)
 idf_component_register(
     SRCS ${srcs}
@@ -15,4 +20,5 @@ idf_component_register(
         wifi_manager
         common
         logs
+    EMBED_FILES ${EMBEDDED_ASSETS}
 )

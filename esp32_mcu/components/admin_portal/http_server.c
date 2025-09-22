@@ -54,6 +54,11 @@ esp_err_t http_server_start()
     }
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    // Allow slightly larger URIs and request headers because the admin portal
+    // exchanges longer query strings when posting the AP form.
+    config.max_uri_len = 256;
+    config.max_req_hdr_len = 1024;
+    config.max_resp_headers = 16;
     // this is an important option that isn't set up by default.
     // We could register all URLs one by one, but this would not work while the fake DNS is active
     config.uri_match_fn = httpd_uri_match_wildcard;
