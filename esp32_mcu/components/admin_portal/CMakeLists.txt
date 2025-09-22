@@ -21,7 +21,7 @@ file(GLOB WEB_BIN_FILES
     ${WEB_DIR}/*.svg
 )
 
-set(LOGO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../../resources/logo.png)
+set(LOGO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../../assets/logo.png)
 if(EXISTS ${LOGO_FILE})
     file(RELATIVE_PATH LOGO_FILE_REL ${CMAKE_CURRENT_SOURCE_DIR}/../.. ${LOGO_FILE})
     list(APPEND WEB_BIN_FILES ${LOGO_FILE_REL})
