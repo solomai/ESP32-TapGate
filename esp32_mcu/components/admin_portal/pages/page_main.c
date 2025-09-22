@@ -1,6 +1,7 @@
 #include "page_main.h"
 
 #include <stdio.h>
+#include <string.h>
 
 static const char LOGO_DATA_URI[] =
     "data:image/png;base64,"
@@ -56,7 +57,7 @@ esp_err_t page_main_render(httpd_req_t *req, const page_main_context_t *context)
 
     const char *version = safe_text(context->version_label);
 
-    const char *page =
+    const char *head =
         "<!DOCTYPE html>"
         "<html lang=\"en\">"
         "<head>"
@@ -84,26 +85,48 @@ esp_err_t page_main_render(httpd_req_t *req, const page_main_context_t *context)
         "<body>"
             "<div class=\"page\">"
                 "<div class=\"panel\">"
-                    "<img class=\"logo\" src=\"%s\" alt=\"TapGate logo\">"
-                    "<div class=\"buttons\">"
-                        "<button class=\"button\" type=\"button\" disabled>TapGate</button>"
-                        "<button class=\"button\" type=\"button\" onclick=\"window.location.href='/api/v1/ap'\">AP setting</button>"
-                        "<button class=\"button\" type=\"button\" disabled>WiFi connection</button>"
-                        "<button class=\"button\" type=\"button\" disabled>Clients</button>"
-                        "<button class=\"button\" type=\"button\" disabled>Events</button>"
-                    "</div>"
-                    "<div class=\"version\">%s</div>"
-                "</div>"
-            "</div>"
+                    "<img class=\"logo\" src=\"";
+
+    esp_err_t err = httpd_resp_sendstr_chunk(req, head);
+    if (err != ESP_OK) {
+        httpd_resp_sendstr_chunk(req, NULL);
+        return err;
+    }
+
+    err = httpd_resp_send_chunk(req, LOGO_DATA_URI, strlen(LOGO_DATA_URI));
+    if (err != ESP_OK) {
+        httpd_resp_sendstr_chunk(req, NULL);
+        return err;
+    }
+
+    const char *tail_template =
+        "\" alt=\"TapGate logo\">"
+        "<div class=\"buttons\">"
+            "<button class=\"button\" type=\"button\" disabled>TapGate</button>"
+            "<button class=\"button\" type=\"button\" onclick=\"window.location.href='/api/v1/ap'\">AP setting</button>"
+            "<button class=\"button\" type=\"button\" disabled>WiFi connection</button>"
+            "<button class=\"button\" type=\"button\" disabled>Clients</button>"
+            "<button class=\"button\" type=\"button\" disabled>Events</button>"
+        "</div>"
+        "<div class=\"version\">%s</div>"
+        "</div>"
+        "</div>"
         "</body>"
         "</html>";
 
-    char buffer[1024];
-    int written = snprintf(buffer, sizeof(buffer), page, LOGO_DATA_URI, version);
-    if (written < 0 || (size_t)written >= sizeof(buffer)) {
+    char tail[512];
+    int written = snprintf(tail, sizeof(tail), tail_template, version);
+    if (written < 0 || (size_t)written >= sizeof(tail)) {
+        httpd_resp_sendstr_chunk(req, NULL);
         return ESP_ERR_INVALID_SIZE;
     }
 
-    return httpd_resp_send(req, buffer, written);
+    err = httpd_resp_send_chunk(req, tail, written);
+    if (err != ESP_OK) {
+        httpd_resp_sendstr_chunk(req, NULL);
+        return err;
+    }
+
+    return httpd_resp_sendstr_chunk(req, NULL);
 }
 
