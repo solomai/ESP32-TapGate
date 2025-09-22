@@ -1,33 +1,26 @@
 #include "http_server.h"
 #include "esp_http_server.h"
 #include "logs.h"
+#include "http_service.h"
 
 static const char TAG[] = "HTTP Server";
 
 httpd_handle_t httpserver_handle = NULL;
 
 /* strings holding the URLs of the wifi manager */
-static char* http_root_url = NULL;
-
 static esp_err_t http_server_get_handler(httpd_req_t *req)
 {
-    LOGI(TAG, "request GET %s", req->uri);
-    esp_err_t ret = ESP_OK;
-    return ret;
+    return http_service_handle_get(req);
 }
 
 static esp_err_t http_server_post_handler(httpd_req_t *req)
 {
-    LOGI(TAG, "request POST %s", req->uri);
-	esp_err_t ret = ESP_OK;
-    return ret;
+    return http_service_handle_post(req);
 }
 
 static esp_err_t http_server_delete_handler(httpd_req_t *req)
 {
-    LOGI(TAG, "request DELETE %s", req->uri);
-	esp_err_t ret = ESP_OK;
-    return ret;
+    return http_service_handle_delete(req);
 }
 
 /* URI wild card for any GET request */
@@ -55,9 +48,9 @@ esp_err_t http_server_start()
         return ESP_ERR_INVALID_STATE;
     }
 
-    // generate the URLs
-	if(http_root_url == NULL){
-		int root_len = strlen(WEBAPP_LOCATION);
+    esp_err_t init_err = http_service_init();
+    if (init_err != ESP_OK) {
+        return init_err;
     }
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -72,7 +65,9 @@ esp_err_t http_server_start()
         httpd_register_uri_handler(httpserver_handle, &http_server_get_request);
         httpd_register_uri_handler(httpserver_handle, &http_server_post_request);
         httpd_register_uri_handler(httpserver_handle, &http_server_delete_request);
-    }    
+    } else {
+        http_service_deinit();
+    }
 
     return err;
 }
@@ -85,11 +80,8 @@ void http_server_stop()
         httpserver_handle = NULL;
     }
 
-    /* dealloc URLs */
-    if(http_root_url) {
-        free(http_root_url);
-        http_root_url = NULL;
-    }
+    http_service_deinit();
+
 }
 
 esp_err_t http_server_restart()
