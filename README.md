@@ -1,4 +1,4 @@
-# 🔐 TapGate v.1 ( prototype )
+# ![Logo](docs/logo.png) TapGate v.1 ( prototype )
 
 **TapGate** is a standalone extension module for gate automation systems that adds the ability to control gate via a smartphone application.
 
@@ -7,7 +7,6 @@ Develop a hardware - software system (IoT + mobile app) for remote control of st
 
 ### Device Interaction
 A single IoT device can be controlled by multiple instances of the mobile app:
-
 ```bash
              / 1 mobile app 
  IoT (ESP32) - 2 mobile app
