@@ -18,10 +18,6 @@ static const char *TAG = "HTTP Service";
 static const char *URI_ROOT = "/";
 static const char *URI_MAIN = "/api/v1/main";
 static const char *URI_AP = "/api/v1/ap";
-static const char *URI_LOGO = "/assets/logo.png";
-
-extern const uint8_t _binary_assets_logo_png_start[] asm("_binary_assets_logo_png_start");
-extern const uint8_t _binary_assets_logo_png_end[] asm("_binary_assets_logo_png_end");
 
 static bool string_is_blank(const char *text)
 {
@@ -101,14 +97,6 @@ static bool parse_form_body(char *body, char *ssid, size_t ssid_len, char *passw
     return has_ssid && has_password;
 }
 
-static esp_err_t send_logo(httpd_req_t *req)
-{
-    const uint8_t *start = _binary_assets_logo_png_start;
-    const uint8_t *end = _binary_assets_logo_png_end;
-    httpd_resp_set_type(req, "image/png");
-    return httpd_resp_send(req, (const char *)start, end - start);
-}
-
 static esp_err_t render_ap_page(httpd_req_t *req, const char *status, bool is_error,
                                 const char *ssid, const char *password,
                                 bool highlight_ssid, bool highlight_password)
@@ -162,10 +150,6 @@ esp_err_t http_service_handle_get(httpd_req_t *req)
 
     if (strcmp(uri, URI_AP) == 0) {
         return handle_get_ap(req);
-    }
-
-    if (strcmp(uri, URI_LOGO) == 0) {
-        return send_logo(req);
     }
 
     return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found");
