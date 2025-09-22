@@ -1,5 +1,7 @@
 # Collect all C sources in this component
 file(GLOB srcs "${CMAKE_CURRENT_LIST_DIR}/*.c")
+file(GLOB page_srcs "${CMAKE_CURRENT_LIST_DIR}/pages/*.c")
+list(APPEND srcs ${page_srcs})
 
 # Path to web folder
 set(WEB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets)
@@ -43,7 +45,7 @@ endforeach()
 # Register component (single idf_component_register!)
 idf_component_register(
     SRCS ${srcs}
-    INCLUDE_DIRS .
+    INCLUDE_DIRS . pages
     REQUIRES
         esp_http_server
         esp_wifi
