@@ -19,10 +19,6 @@ static const char *TAG = "HTTP Service";
 static const char *URI_ROOT = "/";
 static const char *URI_MAIN = "/api/v1/main";
 static const char *URI_AP = "/api/v1/ap";
-static const char *URI_LOGO = "/assets/logo.png";
-
-extern const uint8_t logo_png_start[] asm("_binary_assets_logo_png_start");
-extern const uint8_t logo_png_end[] asm("_binary_assets_logo_png_end");
 
 static bool string_is_blank(const char *text)
 {
@@ -139,14 +135,6 @@ static esp_err_t handle_get_main(httpd_req_t *req)
     return page_main_render(req, &context);
 }
 
-static esp_err_t handle_get_logo(httpd_req_t *req)
-{
-    const size_t logo_size = (size_t)(logo_png_end - logo_png_start);
-    httpd_resp_set_type(req, "image/png");
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600, immutable");
-    return httpd_resp_send(req, (const char *)logo_png_start, logo_size);
-}
-
 esp_err_t http_service_handle_get(httpd_req_t *req)
 {
     const char *uri = req->uri;
@@ -163,10 +151,6 @@ esp_err_t http_service_handle_get(httpd_req_t *req)
 
     if (strcmp(uri, URI_AP) == 0) {
         return handle_get_ap(req);
-    }
-
-    if (strcmp(uri, URI_LOGO) == 0) {
-        return handle_get_logo(req);
     }
 
     return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found");
