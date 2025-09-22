@@ -218,7 +218,7 @@ static esp_err_t http_service_send_error_json(httpd_req_t *req, const char *stat
         return http_service_send_json(req, "{\"status\":\"error\",\"message\":\"Unexpected encoding error\"}");
     }
 
-    char response[256];
+    char response[384];
     if (field && field[0] != '\0') {
         char field_json[64];
         if (!http_service_json_escape(field, field_json, sizeof(field_json))) {
