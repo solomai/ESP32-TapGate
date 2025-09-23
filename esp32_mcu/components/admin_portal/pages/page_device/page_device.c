@@ -26,13 +26,18 @@ esp_err_t page_device_render(httpd_req_t *req,
         message_block[0] = '\0';
     }
 
-    char ssid_extra[32] = "";
+    char ssid_class[16] = "";
+    char ssid_focus[16] = "";
     if (focus == ADMIN_FOCUS_SSID)
-        strncpy(ssid_extra, " class=\"error\" autofocus", sizeof(ssid_extra) - 1);
+    {
+        strncpy(ssid_class, " error", sizeof(ssid_class) - 1);
+        strncpy(ssid_focus, " autofocus", sizeof(ssid_focus) - 1);
+    }
 
     admin_template_pair_t pairs[] = {
         {"SSID_VALUE", admin_portal_get_ap_ssid(state)},
-        {"SSID_EXTRA", ssid_extra},
+        {"SSID_CLASS", ssid_class},
+        {"SSID_FOCUS", ssid_focus},
         {"MESSAGE_BLOCK", message_block},
     };
 

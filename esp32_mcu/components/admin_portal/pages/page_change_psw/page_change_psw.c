@@ -21,13 +21,21 @@ esp_err_t page_change_psw_render(httpd_req_t *req,
     char min_length[8];
     snprintf(min_length, sizeof(min_length), "%d", ADMIN_PORTAL_MIN_PASSWORD_LENGTH);
 
-    char old_extra[32] = "";
+    char old_class[16] = "";
+    char old_focus[16] = "";
     if (focus == ADMIN_FOCUS_PASSWORD_OLD)
-        strncpy(old_extra, " class=\"error\" autofocus", sizeof(old_extra) - 1);
+    {
+        strncpy(old_class, " error", sizeof(old_class) - 1);
+        strncpy(old_focus, " autofocus", sizeof(old_focus) - 1);
+    }
 
-    char new_extra[32] = "";
+    char new_class[16] = "";
+    char new_focus[16] = "";
     if (focus == ADMIN_FOCUS_PASSWORD_NEW)
-        strncpy(new_extra, " class=\"error\" autofocus", sizeof(new_extra) - 1);
+    {
+        strncpy(new_class, " error", sizeof(new_class) - 1);
+        strncpy(new_focus, " autofocus", sizeof(new_focus) - 1);
+    }
 
     char message_block[ADMIN_PORTAL_MESSAGE_MAX + 64];
     if (message && message[0] != '\0')
@@ -43,8 +51,10 @@ esp_err_t page_change_psw_render(httpd_req_t *req,
     admin_template_pair_t pairs[] = {
         {"ACCESS_POINT_LABEL", ssid_buffer},
         {"PASSWORD_MIN_LENGTH", min_length},
-        {"OLD_PASSWORD_EXTRA", old_extra},
-        {"NEW_PASSWORD_EXTRA", new_extra},
+        {"OLD_PASSWORD_CLASS", old_class},
+        {"OLD_PASSWORD_FOCUS", old_focus},
+        {"NEW_PASSWORD_CLASS", new_class},
+        {"NEW_PASSWORD_FOCUS", new_focus},
         {"MESSAGE_BLOCK", message_block},
     };
 

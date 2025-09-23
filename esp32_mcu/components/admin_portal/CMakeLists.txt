@@ -9,7 +9,10 @@ file(GLOB WEB_TEXT_FILES
     ${WEB_DIR}/*.css
     ${WEB_DIR}/*.js
 )
-file(GLOB WEB_HTML_FILES ${WEB_DIR}/*.html)
+file(GLOB WEB_HTML_FILES
+    ${WEB_DIR}/*.html
+    ${WEB_DIR}/*.css
+)
 file(GLOB WEB_BIN_FILES
     ${WEB_DIR}/*.png
     ${WEB_DIR}/*.jpg
@@ -43,7 +46,7 @@ endif()
 
 idf_component_register(
     SRCS ${srcs}
-    INCLUDE_DIRS .
+    INCLUDE_DIRS . pages
     REQUIRES
         esp_http_server
         esp_wifi

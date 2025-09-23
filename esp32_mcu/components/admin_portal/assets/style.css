@@ -1,0 +1,177 @@
+:root {
+    color-scheme: dark;
+    font-family: "Inter", "Segoe UI", sans-serif;
+    line-height: 1.4;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #0D1520;
+    color: #E6EEF8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.card {
+    background: rgba(13, 21, 32, 0.92);
+    border-radius: 18px;
+    width: min(460px, 100%);
+    padding: 32px;
+    box-shadow: 0 24px 60px rgba(3, 7, 18, 0.55);
+}
+
+.card--center {
+    text-align: center;
+}
+
+.logo {
+    display: block;
+    width: 120px;
+    margin: 0 auto 24px;
+}
+
+.title {
+    margin: 0 0 24px;
+    font-size: 26px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.field__label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #9CA3AF;
+}
+
+.field__input {
+    border-radius: 12px;
+    padding: 12px 16px;
+    background: linear-gradient(180deg, #10161D 0%, #0C1117 100%);
+    border: 1px solid #2A3642;
+    color: #E6EEF8;
+    font-size: 15px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.field__input:focus {
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+    outline: none;
+}
+
+.field__input.error {
+    border-color: #F87171;
+}
+
+.field__input[readonly] {
+    color: #C7D2FE;
+}
+
+.message {
+    margin-bottom: 16px;
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(248, 113, 113, 0.12);
+    color: #F87171;
+    text-align: center;
+    font-size: 14px;
+}
+
+.button {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: none;
+    text-decoration: none;
+    color: #FFFFFF;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    background: linear-gradient(180deg, #15294B 0%, #1F3D70 52%, #3B82F6 100%);
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.45);
+    transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.button:hover,
+.button:focus {
+    filter: brightness(1.08);
+}
+
+.button:active {
+    transform: translateY(1px);
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.5);
+}
+
+.button.full {
+    width: 100%;
+}
+
+.button.secondary {
+    background: linear-gradient(180deg, #1B2836 0%, #2A3D51 52%, #3A5069 100%);
+}
+
+.button.ghost {
+    background: linear-gradient(180deg, #101827 0%, #1C2839 52%, #2B3C53 100%);
+}
+
+.actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.footer-actions {
+    margin-top: 18px;
+    display: flex;
+}
+
+.footer-actions .button {
+    flex: 1 1 auto;
+}
+
+.nav-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.section-text {
+    margin: 0 0 24px;
+    font-size: 15px;
+    color: #C7D2FE;
+}
+
+.section-text:last-child {
+    margin-bottom: 0;
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 16px;
+    }
+
+    .card {
+        padding: 28px;
+    }
+}

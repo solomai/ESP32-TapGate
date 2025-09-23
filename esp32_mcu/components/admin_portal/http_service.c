@@ -28,6 +28,8 @@ static admin_portal_state_t g_state;
 #define SESSION_COOKIE_NAME "tapgate_session"
 #define FORM_BUFFER_MAX     512
 
+extern const uint8_t _binary_assets_style_css_start[] asm("_binary_assets_style_css_start");
+extern const uint8_t _binary_assets_style_css_end[] asm("_binary_assets_style_css_end");
 extern const uint8_t _binary_assets_logo_png_start[] asm("_binary_assets_logo_png_start");
 extern const uint8_t _binary_assets_logo_png_end[] asm("_binary_assets_logo_png_end");
 extern const uint8_t _binary_assets_lock_svg_start[] asm("_binary_assets_lock_svg_start");
@@ -51,6 +53,7 @@ typedef struct {
 } asset_entry_t;
 
 static const asset_entry_t ASSETS[] = {
+    {"/assets/style.css", _binary_assets_style_css_start, _binary_assets_style_css_end, "text/css"},
     {"/assets/logo.png", _binary_assets_logo_png_start, _binary_assets_logo_png_end, "image/png"},
     {"/assets/lock.svg", _binary_assets_lock_svg_start, _binary_assets_lock_svg_end, "image/svg+xml"},
     {"/assets/settings.svg", _binary_assets_settings_svg_start, _binary_assets_settings_svg_end, "image/svg+xml"},
