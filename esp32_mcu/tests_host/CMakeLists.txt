@@ -59,6 +59,7 @@ target_include_directories(tapgate_production
         ${CMAKE_CURRENT_LIST_DIR}/../components/common
         ${CMAKE_CURRENT_LIST_DIR}/../components/logs
         ${CMAKE_CURRENT_LIST_DIR}/../components/nvm
+        ${CMAKE_CURRENT_LIST_DIR}/../components/admin_portal
 )
 
 set(_tapgate_component_sources
@@ -66,6 +67,7 @@ set(_tapgate_component_sources
     ${CMAKE_CURRENT_LIST_DIR}/../components/clients/clients.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/logs/logs.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/nvm/nvm.c
+    ${CMAKE_CURRENT_LIST_DIR}/../components/admin_portal/admin_portal_state.c
 )
 
 file(GLOB _tapgate_common_sources
@@ -147,4 +149,5 @@ endfunction()
 # Individual test binaries
 tapgate_add_unity_test(test_types ${CMAKE_CURRENT_LIST_DIR}/test_types.c)
 tapgate_add_unity_test(test_logs ${CMAKE_CURRENT_LIST_DIR}/test_logs.c)
+tapgate_add_unity_test(test_admin_portal_state ${CMAKE_CURRENT_LIST_DIR}/test_admin_portal_state.c)
 

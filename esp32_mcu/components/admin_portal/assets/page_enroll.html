@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TapGate · Enroll</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <script defer src="/assets/app.js"></script>
+</head>
+<body class="page page-enroll">
+  <main class="card">
+    <img src="/assets/logo.png" alt="TapGate" class="logo">
+    <h1>Initial Setup</h1>
+    <p class="notice">Create an administrator password to secure the TapGate portal.</p>
+    <form data-action="enroll" class="form-grid">
+      <label>
+        Portal name
+        <input type="text" data-bind="portal-name" readonly>
+      </label>
+      <label>
+        New password
+        <input type="password" name="password" minlength="8" autocomplete="new-password" required>
+      </label>
+      <div class="message" data-message></div>
+      <button type="submit">Ok</button>
+    </form>
+  </main>
+</body>
+</html>

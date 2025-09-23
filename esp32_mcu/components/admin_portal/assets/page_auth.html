@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TapGate · Sign In</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <script defer src="/assets/app.js"></script>
+</head>
+<body class="page page-auth">
+  <main class="card">
+    <img src="/assets/logo.png" alt="TapGate" class="logo">
+    <h1>Administrator Login</h1>
+    <p class="notice">Enter the administrator password to access the TapGate portal.</p>
+    <form data-action="login" class="form-grid">
+      <label>
+        Portal name
+        <input type="text" data-bind="portal-name" readonly>
+      </label>
+      <label>
+        Password
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <div class="message" data-message></div>
+      <button type="submit">Ok</button>
+    </form>
+  </main>
+</body>
+</html>

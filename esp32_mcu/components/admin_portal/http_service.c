@@ -1,0 +1,807 @@
+#include "http_service.h"
+
+#include "admin_portal_state.h"
+#include "logs.h"
+#include "wifi_manager.h"
+
+#include "esp_random.h"
+#include "esp_timer.h"
+#include "nvs.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "pages/page_auth.h"
+#include "pages/page_busy.h"
+#include "pages/page_change_psw.h"
+#include "pages/page_clients.h"
+#include "pages/page_device.h"
+#include "pages/page_enroll.h"
+#include "pages/page_events.h"
+#include "pages/page_main.h"
+#include "pages/page_off.h"
+#include "pages/page_wifi.h"
+
+static const char *TAG = "AdminPortal";
+
+#define ADMIN_PORTAL_NAMESPACE       "admin_portal"
+#define ADMIN_PORTAL_KEY_PSW         "AP_PSW"
+#define ADMIN_PORTAL_KEY_SSID        "AP_SSID"
+#define ADMIN_PORTAL_KEY_IDLE_MIN    "AP_IDLE_TIMEOUT"
+#define ADMIN_PORTAL_COOKIE_NAME     "tg_session"
+#define DEFAULT_IDLE_TIMEOUT_MINUTES 15U
+
+typedef struct {
+    const char *uri;
+    const uint8_t *start;
+    const uint8_t *end;
+    const char *content_type;
+    bool compressed;
+} admin_portal_asset_t;
+
+static httpd_handle_t g_server = NULL;
+static admin_portal_state_t g_state;
+
+static const admin_portal_page_descriptor_t *const g_pages[] = {
+    &admin_portal_page_enroll,
+    &admin_portal_page_auth,
+    &admin_portal_page_change_psw,
+    &admin_portal_page_device,
+    &admin_portal_page_wifi,
+    &admin_portal_page_clients,
+    &admin_portal_page_events,
+    &admin_portal_page_main,
+    &admin_portal_page_busy,
+    &admin_portal_page_off,
+};
+
+extern const uint8_t _binary_logo_png_start[];
+extern const uint8_t _binary_logo_png_end[];
+extern const uint8_t _binary_styles_css_gz_start[];
+extern const uint8_t _binary_styles_css_gz_end[];
+extern const uint8_t _binary_app_js_gz_start[];
+extern const uint8_t _binary_app_js_gz_end[];
+
+static const admin_portal_asset_t g_assets[] = {
+    { .uri = "/assets/logo.png", .start = _binary_logo_png_start, .end = _binary_logo_png_end, .content_type = "image/png", .compressed = false },
+    { .uri = "/assets/styles.css", .start = _binary_styles_css_gz_start, .end = _binary_styles_css_gz_end, .content_type = "text/css", .compressed = true },
+    { .uri = "/assets/app.js", .start = _binary_app_js_gz_start, .end = _binary_app_js_gz_end, .content_type = "application/javascript", .compressed = true },
+};
+
+static uint64_t get_now_ms(void)
+{
+    return esp_timer_get_time() / 1000ULL;
+}
+
+static size_t strnlen_safe(const char *str, size_t max_len)
+{
+    size_t len = 0;
+    if (!str)
+        return 0;
+    while (len < max_len && str[len] != '\0')
+        ++len;
+    return len;
+}
+
+static uint64_t minutes_to_ms(uint32_t minutes)
+{
+    return (uint64_t)minutes * 60ULL * 1000ULL;
+}
+
+static void generate_session_token(char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1])
+{
+    uint8_t buffer[ADMIN_PORTAL_TOKEN_MAX_LEN / 2];
+    esp_fill_random(buffer, sizeof(buffer));
+    static const char hex[] = "0123456789abcdef";
+    for (size_t i = 0; i < sizeof(buffer); ++i)
+    {
+        token[i * 2] = hex[(buffer[i] >> 4) & 0x0F];
+        token[i * 2 + 1] = hex[buffer[i] & 0x0F];
+    }
+    token[ADMIN_PORTAL_TOKEN_MAX_LEN] = '\0';
+}
+
+static void set_cache_headers(httpd_req_t *req)
+{
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    httpd_resp_set_hdr(req, "Pragma", "no-cache");
+    httpd_resp_set_hdr(req, "Expires", "0");
+}
+
+static void set_session_cookie(httpd_req_t *req, const char *token, uint32_t max_age_seconds)
+{
+    char header[128];
+    if (token && token[0])
+    {
+        snprintf(header, sizeof(header), ADMIN_PORTAL_COOKIE_NAME "=%s; Max-Age=%u; Path=/; HttpOnly; SameSite=Lax", token, max_age_seconds);
+    }
+    else
+    {
+        snprintf(header, sizeof(header), ADMIN_PORTAL_COOKIE_NAME "=deleted; Max-Age=0; Path=/; HttpOnly; SameSite=Lax");
+    }
+    httpd_resp_set_hdr(req, "Set-Cookie", header);
+}
+
+static bool parse_cookie_value(const char *cookies, const char *name, char *value, size_t value_size)
+{
+    if (!cookies || !name || !value || value_size == 0)
+        return false;
+
+    size_t name_len = strlen(name);
+    const char *ptr = cookies;
+    while (ptr && *ptr)
+    {
+        while (*ptr == ' ')
+            ++ptr;
+
+        if (strncmp(ptr, name, name_len) == 0 && ptr[name_len] == '=')
+        {
+            const char *start = ptr + name_len + 1;
+            const char *end = strchr(start, ';');
+            if (!end)
+                end = start + strlen(start);
+            size_t length = (size_t)(end - start);
+            if (length >= value_size)
+                length = value_size - 1;
+            memcpy(value, start, length);
+            value[length] = '\0';
+            return true;
+        }
+
+        ptr = strchr(ptr, ';');
+        if (ptr)
+            ++ptr;
+    }
+    return false;
+}
+
+static bool get_session_token(httpd_req_t *req, char *token, size_t token_size)
+{
+    if (!req || !token || token_size == 0)
+        return false;
+
+    size_t length = httpd_req_get_hdr_value_len(req, "Cookie");
+    if (length == 0)
+        return false;
+
+    char *buffer = (char *)malloc(length + 1);
+    if (!buffer)
+        return false;
+
+    if (httpd_req_get_hdr_value_str(req, "Cookie", buffer, length + 1) != ESP_OK)
+    {
+        free(buffer);
+        return false;
+    }
+
+    bool found = parse_cookie_value(buffer, ADMIN_PORTAL_COOKIE_NAME, token, token_size);
+    free(buffer);
+    return found;
+}
+
+static esp_err_t nvm_open_handle(nvs_open_mode mode, nvs_handle_t *handle)
+{
+    if (!handle)
+        return ESP_ERR_INVALID_ARG;
+    return nvs_open_from_partition(NVM_WIFI_PARTITION, ADMIN_PORTAL_NAMESPACE, mode, handle);
+}
+
+static esp_err_t nvm_read_string(const char *key, char *buffer, size_t size)
+{
+    if (!key || !buffer || size == 0)
+        return ESP_ERR_INVALID_ARG;
+
+    nvs_handle_t handle;
+    esp_err_t err = nvm_open_handle(NVS_READONLY, &handle);
+    if (err != ESP_OK)
+    {
+        buffer[0] = '\0';
+        return err;
+    }
+
+    size_t length = size;
+    err = nvs_get_str(handle, key, buffer, &length);
+    if (err == ESP_ERR_NVS_NOT_FOUND)
+    {
+        buffer[0] = '\0';
+        err = ESP_OK;
+    }
+    nvs_close(handle);
+    return err;
+}
+
+static esp_err_t nvm_write_string(const char *key, const char *value)
+{
+    if (!key || !value)
+        return ESP_ERR_INVALID_ARG;
+
+    nvs_handle_t handle;
+    esp_err_t err = nvm_open_handle(NVS_READWRITE, &handle);
+    if (err != ESP_OK)
+        return err;
+
+    err = nvs_set_str(handle, key, value);
+    if (err == ESP_OK)
+        err = nvs_commit(handle);
+    nvs_close(handle);
+    return err;
+}
+
+static esp_err_t nvm_read_u32(const char *key, uint32_t *value)
+{
+    if (!key || !value)
+        return ESP_ERR_INVALID_ARG;
+
+    nvs_handle_t handle;
+    esp_err_t err = nvm_open_handle(NVS_READONLY, &handle);
+    if (err != ESP_OK)
+        return err;
+
+    err = nvs_get_u32(handle, key, value);
+    nvs_close(handle);
+    return err;
+}
+
+static void update_wifi_settings_password(const char *password)
+{
+    if (!password)
+        return;
+    size_t length = strnlen_safe(password, sizeof(wifi_settings.ap_pwd));
+    memcpy(wifi_settings.ap_pwd, password, length);
+    if (length < sizeof(wifi_settings.ap_pwd))
+        wifi_settings.ap_pwd[length] = '\0';
+}
+
+static void update_wifi_settings_ssid(const char *ssid)
+{
+    if (!ssid)
+        return;
+    size_t length = strnlen_safe(ssid, sizeof(wifi_settings.ap_ssid));
+    memcpy(wifi_settings.ap_ssid, ssid, length);
+    if (length < sizeof(wifi_settings.ap_ssid))
+        wifi_settings.ap_ssid[length] = '\0';
+}
+
+static void load_initial_state(void)
+{
+    uint32_t stored_minutes = DEFAULT_IDLE_TIMEOUT_MINUTES;
+    if (nvm_read_u32(ADMIN_PORTAL_KEY_IDLE_MIN, &stored_minutes) != ESP_OK || stored_minutes == 0)
+    {
+        stored_minutes = DEFAULT_IDLE_TIMEOUT_MINUTES;
+    }
+
+    admin_portal_state_init(&g_state, (uint32_t)minutes_to_ms(stored_minutes), WPA2_MINIMUM_PASSWORD_LENGTH);
+
+    char ssid[sizeof(g_state.ap_ssid)];
+    if (nvm_read_string(ADMIN_PORTAL_KEY_SSID, ssid, sizeof(ssid)) != ESP_OK || ssid[0] == '\0')
+    {
+        size_t length = strnlen_safe((const char *)wifi_settings.ap_ssid, sizeof(wifi_settings.ap_ssid));
+        if (length >= sizeof(ssid))
+            length = sizeof(ssid) - 1;
+        memcpy(ssid, wifi_settings.ap_ssid, length);
+        ssid[length] = '\0';
+    }
+    admin_portal_state_set_ssid(&g_state, ssid);
+
+    char password[sizeof(g_state.ap_password)];
+    if (nvm_read_string(ADMIN_PORTAL_KEY_PSW, password, sizeof(password)) != ESP_OK)
+    {
+        password[0] = '\0';
+    }
+    admin_portal_state_set_password(&g_state, password);
+    if (admin_portal_state_has_password(&g_state))
+        update_wifi_settings_password(password);
+}
+
+static esp_err_t send_asset(httpd_req_t *req, const admin_portal_asset_t *asset)
+{
+    if (!req || !asset)
+        return ESP_ERR_INVALID_ARG;
+
+    set_cache_headers(req);
+    httpd_resp_set_type(req, asset->content_type);
+    if (asset->compressed)
+        httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+
+    size_t length = (size_t)(asset->end - asset->start);
+    return httpd_resp_send(req, (const char *)asset->start, length);
+}
+
+static esp_err_t send_page_content(httpd_req_t *req, const admin_portal_page_descriptor_t *desc)
+{
+    if (!req || !desc)
+        return ESP_ERR_INVALID_ARG;
+
+    set_cache_headers(req);
+    httpd_resp_set_type(req, desc->content_type);
+    httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+    size_t length = (size_t)(desc->asset_end - desc->asset_start);
+    return httpd_resp_send(req, (const char *)desc->asset_start, length);
+}
+
+static esp_err_t send_redirect(httpd_req_t *req, admin_portal_page_t page)
+{
+    const char *location = admin_portal_state_page_route(page);
+    if (!location)
+        location = "/";
+    httpd_resp_set_status(req, "302 Found");
+    httpd_resp_set_hdr(req, "Location", location);
+    set_cache_headers(req);
+    return httpd_resp_send(req, "", 0);
+}
+
+static esp_err_t send_json(httpd_req_t *req, const char *status_text, const char *body)
+{
+    httpd_resp_set_status(req, status_text);
+    httpd_resp_set_type(req, "application/json");
+    set_cache_headers(req);
+    return httpd_resp_send(req, body, HTTPD_RESP_USE_STRLEN);
+}
+
+static admin_portal_session_status_t evaluate_session(httpd_req_t *req,
+                                                      char *token_buffer,
+                                                      size_t token_size)
+{
+    bool has_token = get_session_token(req, token_buffer, token_size);
+    uint64_t now = get_now_ms();
+    admin_portal_session_status_t status = admin_portal_state_check_session(&g_state, has_token ? token_buffer : NULL, now);
+    if (status == ADMIN_PORTAL_SESSION_MATCH)
+    {
+        admin_portal_state_update_session(&g_state, now);
+    }
+    return status;
+}
+
+static esp_err_t ensure_session_claim(httpd_req_t *req,
+                                      admin_portal_session_status_t *status,
+                                      char *token_buffer,
+                                      size_t token_size)
+{
+    if (!status || !token_buffer)
+        return ESP_ERR_INVALID_ARG;
+
+    if (*status != ADMIN_PORTAL_SESSION_NONE)
+        return ESP_OK;
+
+    char new_token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
+    generate_session_token(new_token);
+    admin_portal_state_start_session(&g_state, new_token, get_now_ms(), false);
+    uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
+    set_session_cookie(req, new_token, max_age);
+    strncpy(token_buffer, new_token, token_size - 1);
+    token_buffer[token_size - 1] = '\0';
+    *status = ADMIN_PORTAL_SESSION_MATCH;
+    return ESP_OK;
+}
+
+static size_t url_decode(char *dest, size_t dest_size, const char *src, size_t src_len)
+{
+    if (!dest || dest_size == 0)
+        return 0;
+
+    size_t di = 0;
+    for (size_t si = 0; si < src_len && di + 1 < dest_size; ++si)
+    {
+        char ch = src[si];
+        if (ch == '+')
+        {
+            dest[di++] = ' ';
+        }
+        else if (ch == '%' && si + 2 < src_len)
+        {
+            char hi = src[si + 1];
+            char lo = src[si + 2];
+            int value = 0;
+            if (hi >= '0' && hi <= '9')
+                value = (hi - '0') << 4;
+            else if (hi >= 'a' && hi <= 'f')
+                value = (hi - 'a' + 10) << 4;
+            else if (hi >= 'A' && hi <= 'F')
+                value = (hi - 'A' + 10) << 4;
+            else
+                value = -1;
+
+            if (lo >= '0' && lo <= '9')
+                value |= (lo - '0');
+            else if (lo >= 'a' && lo <= 'f')
+                value |= (lo - 'a' + 10);
+            else if (lo >= 'A' && lo <= 'F')
+                value |= (lo - 'A' + 10);
+            else
+                value = -1;
+
+            if (value >= 0)
+            {
+                dest[di++] = (char)value;
+                si += 2;
+            }
+        }
+        else
+        {
+            dest[di++] = ch;
+        }
+    }
+    dest[di] = '\0';
+    return di;
+}
+
+static bool form_get_field(const char *body, const char *key, char *value, size_t value_size)
+{
+    if (!body || !key || !value || value_size == 0)
+        return false;
+
+    size_t key_len = strlen(key);
+    const char *ptr = body;
+    while (*ptr)
+    {
+        while (*ptr == '&')
+            ++ptr;
+
+        const char *eq = strchr(ptr, '=');
+        if (!eq)
+            break;
+
+        size_t field_len = (size_t)(eq - ptr);
+        const char *value_start = eq + 1;
+        const char *next = strchr(value_start, '&');
+        size_t value_len = next ? (size_t)(next - value_start) : strlen(value_start);
+
+        if (field_len == key_len && strncmp(ptr, key, key_len) == 0)
+        {
+            url_decode(value, value_size, value_start, value_len);
+            return true;
+        }
+
+        if (!next)
+            break;
+        ptr = next + 1;
+    }
+    return false;
+}
+
+static char *read_body(httpd_req_t *req)
+{
+    if (!req)
+        return NULL;
+
+    size_t total = req->content_len;
+    char *buffer = (char *)malloc(total + 1);
+    if (!buffer)
+        return NULL;
+
+    size_t received = 0;
+    while (received < total)
+    {
+        int len = httpd_req_recv(req, buffer + received, total - received);
+        if (len <= 0)
+        {
+            free(buffer);
+            return NULL;
+        }
+        received += (size_t)len;
+    }
+    buffer[received] = '\0';
+    return buffer;
+}
+
+static esp_err_t handle_session_info(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+
+    if (status == ADMIN_PORTAL_SESSION_BUSY)
+        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+
+    if (status == ADMIN_PORTAL_SESSION_EXPIRED)
+    {
+        admin_portal_state_clear_session(&g_state);
+        set_session_cookie(req, NULL, 0);
+        return send_json(req, "200 OK", "{\"status\":\"expired\",\"redirect\":\"/off/\"}");
+    }
+
+    if (status == ADMIN_PORTAL_SESSION_NONE)
+    {
+        ensure_session_claim(req, &status, token, sizeof(token));
+    }
+
+    bool authorized = admin_portal_state_session_authorized(&g_state);
+    bool has_password = admin_portal_state_has_password(&g_state);
+
+    char response[256];
+    snprintf(response, sizeof(response),
+             "{\"status\":\"ok\",\"authorized\":%s,\"has_password\":%s,\"ap_ssid\":\"%s\"}",
+             authorized ? "true" : "false",
+             has_password ? "true" : "false",
+             admin_portal_state_get_ssid(&g_state));
+    return send_json(req, "200 OK", response);
+}
+
+static esp_err_t handle_enroll(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+
+    if (status != ADMIN_PORTAL_SESSION_MATCH)
+    {
+        if (status == ADMIN_PORTAL_SESSION_NONE)
+            ensure_session_claim(req, &status, token, sizeof(token));
+        if (status == ADMIN_PORTAL_SESSION_BUSY)
+            return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    }
+
+    if (admin_portal_state_has_password(&g_state))
+        return send_json(req, "200 OK", "{\"status\":\"redirect\",\"redirect\":\"/auth/\"}");
+
+    char *body = read_body(req);
+    if (!body)
+        return send_json(req, "400 Bad Request", "{\"status\":\"error\",\"code\":\"invalid_request\"}");
+
+    char password[sizeof(g_state.ap_password)];
+    bool has_password = form_get_field(body, "password", password, sizeof(password));
+    free(body);
+
+    if (!has_password || !admin_portal_state_password_valid(&g_state, password))
+        return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_password\"}");
+
+    esp_err_t err = nvm_write_string(ADMIN_PORTAL_KEY_PSW, password);
+    if (err != ESP_OK)
+        return send_json(req, "500 Internal Server Error", "{\"status\":\"error\",\"code\":\"storage_failed\"}");
+
+    admin_portal_state_set_password(&g_state, password);
+    admin_portal_state_authorize_session(&g_state);
+    update_wifi_settings_password(password);
+
+    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
+}
+
+static esp_err_t handle_login(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+
+    if (status == ADMIN_PORTAL_SESSION_BUSY)
+        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+
+    if (status == ADMIN_PORTAL_SESSION_NONE)
+        ensure_session_claim(req, &status, token, sizeof(token));
+
+    if (!admin_portal_state_has_password(&g_state))
+        return send_json(req, "200 OK", "{\"status\":\"redirect\",\"redirect\":\"/enroll/\"}");
+
+    char *body = read_body(req);
+    if (!body)
+        return send_json(req, "400 Bad Request", "{\"status\":\"error\",\"code\":\"invalid_request\"}");
+
+    char password[sizeof(g_state.ap_password)];
+    bool has_password = form_get_field(body, "password", password, sizeof(password));
+    free(body);
+
+    if (!has_password || !admin_portal_state_password_matches(&g_state, password))
+        return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"wrong_password\"}");
+
+    admin_portal_state_authorize_session(&g_state);
+    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
+}
+
+static esp_err_t handle_change_password(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+    if (status == ADMIN_PORTAL_SESSION_BUSY)
+        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state))
+        return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
+
+    char *body = read_body(req);
+    if (!body)
+        return send_json(req, "400 Bad Request", "{\"status\":\"error\",\"code\":\"invalid_request\"}");
+
+    char current[sizeof(g_state.ap_password)];
+    char next[sizeof(g_state.ap_password)];
+    bool has_current = form_get_field(body, "current", current, sizeof(current));
+    bool has_next = form_get_field(body, "next", next, sizeof(next));
+    free(body);
+
+    if (!has_current || !admin_portal_state_password_matches(&g_state, current))
+        return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"wrong_password\"}");
+
+    if (!has_next || !admin_portal_state_password_valid(&g_state, next))
+        return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_new_password\"}");
+
+    esp_err_t err = nvm_write_string(ADMIN_PORTAL_KEY_PSW, next);
+    if (err != ESP_OK)
+        return send_json(req, "500 Internal Server Error", "{\"status\":\"error\",\"code\":\"storage_failed\"}");
+
+    admin_portal_state_set_password(&g_state, next);
+    admin_portal_state_authorize_session(&g_state);
+    update_wifi_settings_password(next);
+
+    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/device/\"}");
+}
+
+static esp_err_t handle_update_device(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+    if (status == ADMIN_PORTAL_SESSION_BUSY)
+        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state))
+        return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
+
+    char *body = read_body(req);
+    if (!body)
+        return send_json(req, "400 Bad Request", "{\"status\":\"error\",\"code\":\"invalid_request\"}");
+
+    char ssid[sizeof(g_state.ap_ssid)];
+    bool has_ssid = form_get_field(body, "ssid", ssid, sizeof(ssid));
+    free(body);
+
+    if (!has_ssid || ssid[0] == '\0')
+        return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_ssid\"}");
+
+    esp_err_t err = nvm_write_string(ADMIN_PORTAL_KEY_SSID, ssid);
+    if (err != ESP_OK)
+        return send_json(req, "500 Internal Server Error", "{\"status\":\"error\",\"code\":\"storage_failed\"}");
+
+    admin_portal_state_set_ssid(&g_state, ssid);
+    update_wifi_settings_ssid(ssid);
+
+    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
+}
+
+static esp_err_t handle_page_request(httpd_req_t *req)
+{
+    const admin_portal_page_descriptor_t *desc = (const admin_portal_page_descriptor_t *)req->user_ctx;
+    if (!desc)
+        return ESP_ERR_INVALID_ARG;
+
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+    admin_portal_page_t target = admin_portal_state_resolve_page(&g_state, desc->page, status);
+
+    if (target == ADMIN_PORTAL_PAGE_OFF && status == ADMIN_PORTAL_SESSION_EXPIRED)
+    {
+        admin_portal_state_clear_session(&g_state);
+        set_session_cookie(req, NULL, 0);
+    }
+
+    if (target != desc->page)
+    {
+        if (status == ADMIN_PORTAL_SESSION_NONE && target != ADMIN_PORTAL_PAGE_BUSY && target != ADMIN_PORTAL_PAGE_OFF)
+            ensure_session_claim(req, &status, token, sizeof(token));
+        return send_redirect(req, target);
+    }
+
+    if (status == ADMIN_PORTAL_SESSION_NONE && desc->page != ADMIN_PORTAL_PAGE_BUSY && desc->page != ADMIN_PORTAL_PAGE_OFF)
+        ensure_session_claim(req, &status, token, sizeof(token));
+
+    return send_page_content(req, desc);
+}
+
+static esp_err_t handle_root(httpd_req_t *req)
+{
+    const admin_portal_page_descriptor_t *main_page = &admin_portal_page_main;
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+    admin_portal_page_t target = admin_portal_state_resolve_page(&g_state, main_page->page, status);
+
+    if (target == ADMIN_PORTAL_PAGE_OFF && status == ADMIN_PORTAL_SESSION_EXPIRED)
+    {
+        admin_portal_state_clear_session(&g_state);
+        set_session_cookie(req, NULL, 0);
+    }
+
+    if (status == ADMIN_PORTAL_SESSION_NONE && target != ADMIN_PORTAL_PAGE_BUSY && target != ADMIN_PORTAL_PAGE_OFF)
+        ensure_session_claim(req, &status, token, sizeof(token));
+
+    return send_redirect(req, target);
+}
+
+static esp_err_t handle_asset_request(httpd_req_t *req)
+{
+    for (size_t i = 0; i < sizeof(g_assets) / sizeof(g_assets[0]); ++i)
+    {
+        if (strcmp(req->uri, g_assets[i].uri) == 0)
+            return send_asset(req, &g_assets[i]);
+    }
+    return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found");
+}
+
+esp_err_t admin_portal_http_service_start(httpd_handle_t server)
+{
+    if (!server)
+        return ESP_ERR_INVALID_ARG;
+
+    g_server = server;
+    load_initial_state();
+
+    httpd_uri_t root_handler = {
+        .uri = "/",
+        .method = HTTP_GET,
+        .handler = handle_root,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &root_handler));
+
+    for (size_t i = 0; i < sizeof(g_pages) / sizeof(g_pages[0]); ++i)
+    {
+        httpd_uri_t uri = {
+            .uri = g_pages[i]->route,
+            .method = HTTP_GET,
+            .handler = handle_page_request,
+            .user_ctx = (void *)g_pages[i],
+        };
+        ESP_ERROR_CHECK(httpd_register_uri_handler(server, &uri));
+        if (g_pages[i]->alternate_route)
+        {
+            httpd_uri_t alt = uri;
+            alt.uri = g_pages[i]->alternate_route;
+            ESP_ERROR_CHECK(httpd_register_uri_handler(server, &alt));
+        }
+    }
+
+    for (size_t i = 0; i < sizeof(g_assets) / sizeof(g_assets[0]); ++i)
+    {
+        httpd_uri_t asset_uri = {
+            .uri = g_assets[i].uri,
+            .method = HTTP_GET,
+            .handler = handle_asset_request,
+            .user_ctx = NULL,
+        };
+        ESP_ERROR_CHECK(httpd_register_uri_handler(server, &asset_uri));
+    }
+
+    httpd_uri_t api_session = {
+        .uri = "/api/session",
+        .method = HTTP_GET,
+        .handler = handle_session_info,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_session));
+
+    httpd_uri_t api_enroll = {
+        .uri = "/api/enroll",
+        .method = HTTP_POST,
+        .handler = handle_enroll,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_enroll));
+
+    httpd_uri_t api_login = {
+        .uri = "/api/login",
+        .method = HTTP_POST,
+        .handler = handle_login,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_login));
+
+    httpd_uri_t api_change = {
+        .uri = "/api/change-password",
+        .method = HTTP_POST,
+        .handler = handle_change_password,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_change));
+
+    httpd_uri_t api_device = {
+        .uri = "/api/device",
+        .method = HTTP_POST,
+        .handler = handle_update_device,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device));
+
+    LOGI(TAG, "Admin portal service registered");
+    return ESP_OK;
+}
+
+void admin_portal_http_service_stop(void)
+{
+    if (!g_server)
+        return;
+
+    g_server = NULL;
+    admin_portal_state_clear_session(&g_state);
+}
+
