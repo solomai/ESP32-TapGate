@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TapGate • Access Point</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="page page--ap">
+    <main class="card">
+      <header class="header">
+        <img src="/assets/logo.png" alt="TapGate" />
+        <h1>Access Point Setup</h1>
+      </header>
+      <form id="ap-form" novalidate>
+        <div class="field">
+          <label for="ssid">SSID</label>
+          <input id="ssid" name="ssid" type="text" placeholder="TapGate" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="password">AP password</label>
+          <input id="password" name="password" type="password" placeholder="Minimum 8 characters" />
+        </div>
+        <p id="status" class="status"></p>
+        <div class="actions">
+          <button class="button" type="submit">OK</button>
+          <button class="button secondary hidden" id="cancel" type="button">Cancel</button>
+        </div>
+      </form>
+    </main>
+    <script src="/ap.js" defer></script>
+  </body>
+</html>

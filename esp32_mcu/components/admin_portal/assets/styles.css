@@ -1,0 +1,171 @@
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  background: #0D1520;
+  color: #E6EEF8;
+}
+
+main.card {
+  width: min(420px, 92vw);
+  padding: 32px 24px;
+  border-radius: 20px;
+  background: rgba(17, 25, 40, 0.72);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 20px 40px rgba(9, 12, 20, 0.45);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.header img {
+  height: 72px;
+  width: auto;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.field label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.field label.focused {
+  color: #3B82F6;
+}
+
+.field input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid #2A3642;
+  background: linear-gradient(180deg, #10161D 0%, #0C1117 100%);
+  color: #E6EEF8;
+  font-size: 1rem;
+  outline: none;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.field input::placeholder {
+  color: rgba(122, 138, 159, 0.7);
+}
+
+.field input:focus {
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+}
+
+.field input.error {
+  border-color: #F87171;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.button {
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: linear-gradient(180deg, #0B1F3A 0%, #1E3A8A 55%, #4F8FF7 100%);
+  box-shadow: 0 3px 8px rgba(5, 10, 20, 0.35);
+  transition: transform 0.1s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  cursor: pointer;
+}
+
+.button:hover,
+.button:focus-visible {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 10px rgba(5, 10, 20, 0.45);
+}
+
+.button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px rgba(5, 10, 20, 0.25);
+}
+
+.button.secondary {
+  background: linear-gradient(180deg, #12263F 0%, #1C314F 55%, #2E4364 100%);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+  box-shadow: none;
+}
+
+.status {
+  min-height: 24px;
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: #F87171;
+}
+
+.status.success {
+  color: #34D399;
+}
+
+.page--main .button-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.version-label {
+  margin-top: 24px;
+  font-size: 0.75rem;
+  text-align: center;
+  color: rgba(230, 238, 248, 0.7);
+}
+
+@media (max-width: 360px) {
+  main.card {
+    padding: 24px 20px;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+  }
+}

@@ -66,6 +66,7 @@ set(_tapgate_component_sources
     ${CMAKE_CURRENT_LIST_DIR}/../components/clients/clients.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/logs/logs.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/nvm/nvm.c
+    ${CMAKE_CURRENT_LIST_DIR}/../components/admin_portal/http_service_logic.c
 )
 
 file(GLOB _tapgate_common_sources
@@ -147,4 +148,5 @@ endfunction()
 # Individual test binaries
 tapgate_add_unity_test(test_types ${CMAKE_CURRENT_LIST_DIR}/test_types.c)
 tapgate_add_unity_test(test_logs ${CMAKE_CURRENT_LIST_DIR}/test_logs.c)
+tapgate_add_unity_test(test_http_service_logic ${CMAKE_CURRENT_LIST_DIR}/test_http_service_logic.c)
 

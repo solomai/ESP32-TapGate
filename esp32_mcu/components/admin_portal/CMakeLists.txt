@@ -1,5 +1,8 @@
 # Collect all C sources in this component
-file(GLOB srcs "${CMAKE_CURRENT_LIST_DIR}/*.c")
+file(GLOB srcs
+    "${CMAKE_CURRENT_LIST_DIR}/*.c"
+    "${CMAKE_CURRENT_LIST_DIR}/pages/*.c"
+)
 
 # Path to web folder
 set(WEB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets)

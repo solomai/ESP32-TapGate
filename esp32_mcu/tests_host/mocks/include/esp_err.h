@@ -16,6 +16,8 @@ typedef int32_t esp_err_t;
 #define ESP_ERR_INVALID_ARG 0x102
 #define ESP_ERR_NOT_FOUND   0x103
 #define ESP_ERR_TIMEOUT     0x104
+#define ESP_ERR_INVALID_STATE 0x105
+#define ESP_ERR_INVALID_SIZE  0x106
 
 static inline const char *esp_err_to_name(esp_err_t code)
 {
@@ -33,6 +35,10 @@ static inline const char *esp_err_to_name(esp_err_t code)
             return "ESP_ERR_NOT_FOUND";
         case ESP_ERR_TIMEOUT:
             return "ESP_ERR_TIMEOUT";
+        case ESP_ERR_INVALID_STATE:
+            return "ESP_ERR_INVALID_STATE";
+        case ESP_ERR_INVALID_SIZE:
+            return "ESP_ERR_INVALID_SIZE";
         default:
             return "ESP_ERR_UNKNOWN";
     }
