@@ -54,6 +54,7 @@ idf_component_register(
         esp_netif
         wpa_supplicant
         wifi_manager
+        esp_timer
         common
         logs
     EMBED_TXTFILES ${WEB_HTML_FILES}

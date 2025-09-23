@@ -130,7 +130,7 @@ static void set_session_cookie(httpd_req_t *req, const char *session_id)
 {
     if (!session_id || session_id[0] == '\0')
         return;
-    char buffer[64];
+    char buffer[96];
     snprintf(buffer, sizeof(buffer), SESSION_COOKIE_NAME "=%s; Path=/; HttpOnly", session_id);
     httpd_resp_set_hdr(req, "Set-Cookie", buffer);
 }
@@ -445,7 +445,7 @@ esp_err_t admin_portal_service_handle(httpd_req_t *req)
     if (!req)
         return ESP_ERR_INVALID_ARG;
 
-    if (req->uri && strncmp(req->uri, "/assets/", 8) == 0)
+    if (strncmp(req->uri, "/assets/", 8) == 0)
     {
         esp_err_t err = serve_asset(req, req->uri);
         if (err == ESP_ERR_NOT_FOUND)
