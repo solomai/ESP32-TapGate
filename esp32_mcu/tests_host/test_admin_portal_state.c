@@ -64,6 +64,15 @@ void test_busy_state_blocks_other_clients(void)
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_BUSY, page);
 }
 
+void test_enroll_session_takeover_when_no_password(void)
+{
+    start_session("token", 1000, false);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH,
+                          admin_portal_state_check_session(&state, "token", 1000));
+    admin_portal_session_status_t status = admin_portal_state_check_session(&state, "other", 1200);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_NONE, status);
+}
+
 void test_timeout_moves_to_off_page(void)
 {
     set_password("superpass");
@@ -99,6 +108,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_main_access_when_authorized);
     RUN_TEST(test_enroll_redirects_to_auth_when_password_exists);
     RUN_TEST(test_busy_state_blocks_other_clients);
+    RUN_TEST(test_enroll_session_takeover_when_no_password);
     RUN_TEST(test_timeout_moves_to_off_page);
     RUN_TEST(test_password_validation_rules);
     RUN_TEST(test_pending_session_allows_new_client_to_claim);

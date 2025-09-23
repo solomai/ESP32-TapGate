@@ -166,7 +166,11 @@ admin_portal_session_status_t admin_portal_state_check_session(admin_portal_stat
     }
 
     if (!token || strncmp(token, state->session.token, ADMIN_PORTAL_TOKEN_MAX_LEN) != 0)
+    {
+        if (!admin_portal_state_has_password(state))
+            return ADMIN_PORTAL_SESSION_NONE;
         return ADMIN_PORTAL_SESSION_BUSY;
+    }
 
     return ADMIN_PORTAL_SESSION_MATCH;
 }
