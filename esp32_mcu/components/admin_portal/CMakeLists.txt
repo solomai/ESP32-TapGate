@@ -38,6 +38,7 @@ set(GZ_FILES "")
 foreach(src ${WEB_TEXT_SOURCES})
     get_filename_component(fname ${src} NAME)
     set(dst ${CMAKE_CURRENT_BINARY_DIR}/${fname}.gz)
+    file(TO_CMAKE_PATH "${dst}" dst_norm)
 
     add_custom_command(
         OUTPUT ${dst}
@@ -47,7 +48,7 @@ foreach(src ${WEB_TEXT_SOURCES})
         VERBATIM
     )
 
-    list(APPEND GZ_FILES ${dst})
+    list(APPEND GZ_FILES ${dst_norm})
 endforeach()
 
 if(GZ_FILES)
@@ -67,8 +68,7 @@ idf_component_register(
         esp_timer
         common
         logs
-    EMBED_TXTFILES ${WEB_TEXT_FILES}
-    EMBED_FILES ${GZ_FILES} ${WEB_BIN_FILES}
+    EMBED_FILES ${WEB_TEXT_FILES} ${GZ_FILES} ${WEB_BIN_FILES}
 )
 
 if(TARGET admin_portal_gzip)
