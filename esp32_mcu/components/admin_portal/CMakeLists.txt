@@ -4,16 +4,12 @@ list(APPEND srcs ${page_srcs})
 
 set(WEB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets)
 
-file(GLOB WEB_TEXT_FILES
+file(GLOB WEB_TEXT_SOURCES
     ${WEB_DIR}/*.html
     ${WEB_DIR}/*.css
     ${WEB_DIR}/*.js
 )
-file(GLOB WEB_HTML_FILES
-    ${WEB_DIR}/*.html
-    ${WEB_DIR}/*.css
-)
-file(GLOB WEB_BIN_FILES
+file(GLOB WEB_BIN_SOURCES
     ${WEB_DIR}/*.png
     ${WEB_DIR}/*.jpg
     ${WEB_DIR}/*.jpeg
@@ -22,10 +18,22 @@ file(GLOB WEB_BIN_FILES
     ${WEB_DIR}/*.svg
 )
 
+set(WEB_TEXT_FILES "")
+set(WEB_BIN_FILES "")
+foreach(src ${WEB_TEXT_SOURCES})
+    file(RELATIVE_PATH rel ${CMAKE_CURRENT_SOURCE_DIR} ${src})
+    list(APPEND WEB_TEXT_FILES ${rel})
+endforeach()
+
+foreach(src ${WEB_BIN_SOURCES})
+    file(RELATIVE_PATH rel ${CMAKE_CURRENT_SOURCE_DIR} ${src})
+    list(APPEND WEB_BIN_FILES ${rel})
+endforeach()
+
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 set(GZ_FILES "")
-foreach(src ${WEB_TEXT_FILES})
+foreach(src ${WEB_TEXT_SOURCES})
     get_filename_component(fname ${src} NAME)
     set(dst ${CMAKE_CURRENT_BINARY_DIR}/${fname}.gz)
 
@@ -57,7 +65,7 @@ idf_component_register(
         esp_timer
         common
         logs
-    EMBED_TXTFILES ${WEB_HTML_FILES}
+    EMBED_TXTFILES ${WEB_TEXT_FILES}
     EMBED_FILES ${GZ_FILES} ${WEB_BIN_FILES}
 )
 
