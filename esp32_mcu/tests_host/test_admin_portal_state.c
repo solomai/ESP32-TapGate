@@ -56,6 +56,8 @@ void test_busy_state_blocks_other_clients(void)
 {
     set_password("superpass");
     start_session("token", 1000, true);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH,
+                          admin_portal_state_check_session(&state, "token", 1000));
     admin_portal_session_status_t status = admin_portal_state_check_session(&state, "other", 1200);
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_BUSY, status);
     admin_portal_page_t page = admin_portal_state_resolve_page(&state, ADMIN_PORTAL_PAGE_MAIN, status);
@@ -79,6 +81,15 @@ void test_password_validation_rules(void)
     TEST_ASSERT_TRUE(admin_portal_state_password_valid(&state, "longenough"));
 }
 
+void test_pending_session_allows_new_client_to_claim(void)
+{
+    start_session("token", 0, false);
+    admin_portal_session_status_t status = admin_portal_state_check_session(&state, NULL, 0);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_NONE, status);
+    status = admin_portal_state_check_session(&state, "different", 0);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_NONE, status);
+}
+
 int main(int argc, char **argv)
 {
     UnityConfigureFromArgs(argc, (const char **)argv);
@@ -90,5 +101,6 @@ int main(int argc, char **argv)
     RUN_TEST(test_busy_state_blocks_other_clients);
     RUN_TEST(test_timeout_moves_to_off_page);
     RUN_TEST(test_password_validation_rules);
+    RUN_TEST(test_pending_session_allows_new_client_to_claim);
     return UNITY_END();
 }

@@ -667,11 +667,7 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
     }
 
     if (target != desc->page)
-    {
-        if (status == ADMIN_PORTAL_SESSION_NONE && target != ADMIN_PORTAL_PAGE_BUSY && target != ADMIN_PORTAL_PAGE_OFF)
-            ensure_session_claim(req, &status, token, sizeof(token));
         return send_redirect(req, target);
-    }
 
     if (status == ADMIN_PORTAL_SESSION_NONE && desc->page != ADMIN_PORTAL_PAGE_BUSY && desc->page != ADMIN_PORTAL_PAGE_OFF)
         ensure_session_claim(req, &status, token, sizeof(token));
@@ -691,9 +687,6 @@ static esp_err_t handle_root(httpd_req_t *req)
         admin_portal_state_clear_session(&g_state);
         set_session_cookie(req, NULL, 0);
     }
-
-    if (status == ADMIN_PORTAL_SESSION_NONE && target != ADMIN_PORTAL_PAGE_BUSY && target != ADMIN_PORTAL_PAGE_OFF)
-        ensure_session_claim(req, &status, token, sizeof(token));
 
     return send_redirect(req, target);
 }

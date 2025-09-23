@@ -30,6 +30,7 @@ typedef enum {
 typedef struct {
     bool active;
     bool authorized;
+    bool claimed;
     uint64_t last_activity_ms;
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
 } admin_portal_session_t;
@@ -55,7 +56,7 @@ bool admin_portal_state_has_password(const admin_portal_state_t *state);
 bool admin_portal_state_password_matches(const admin_portal_state_t *state, const char *password);
 bool admin_portal_state_password_valid(const admin_portal_state_t *state, const char *password);
 
-admin_portal_session_status_t admin_portal_state_check_session(const admin_portal_state_t *state,
+admin_portal_session_status_t admin_portal_state_check_session(admin_portal_state_t *state,
                                                                const char *token,
                                                                uint64_t now_ms);
 

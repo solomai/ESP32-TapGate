@@ -134,12 +134,27 @@ bool admin_portal_state_password_valid(const admin_portal_state_t *state, const 
     return true;
 }
 
-admin_portal_session_status_t admin_portal_state_check_session(const admin_portal_state_t *state,
+admin_portal_session_status_t admin_portal_state_check_session(admin_portal_state_t *state,
                                                                const char *token,
                                                                uint64_t now_ms)
 {
     if (!state || !state->session.active)
         return ADMIN_PORTAL_SESSION_NONE;
+
+    if (!state->session.claimed)
+    {
+        if (!token || token[0] == '\0')
+            return ADMIN_PORTAL_SESSION_NONE;
+
+        if (strncmp(token, state->session.token, ADMIN_PORTAL_TOKEN_MAX_LEN) == 0)
+        {
+            state->session.claimed = true;
+        }
+        else
+        {
+            return ADMIN_PORTAL_SESSION_NONE;
+        }
+    }
 
     uint64_t last_activity = state->session.last_activity_ms;
     uint64_t timeout = state->inactivity_timeout_ms;
@@ -166,6 +181,7 @@ void admin_portal_state_start_session(admin_portal_state_t *state,
 
     state->session.active = true;
     state->session.authorized = authorized;
+    state->session.claimed = false;
     state->session.last_activity_ms = now_ms;
     size_t length = strnlen_safe(token, ADMIN_PORTAL_TOKEN_MAX_LEN);
     memcpy(state->session.token, token, length);
@@ -194,7 +210,10 @@ void admin_portal_state_authorize_session(admin_portal_state_t *state)
         return;
 
     if (state->session.active)
+    {
         state->session.authorized = true;
+        state->session.claimed = true;
+    }
 }
 
 bool admin_portal_state_session_authorized(const admin_portal_state_t *state)
