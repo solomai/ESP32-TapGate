@@ -1,5 +1,5 @@
 #include "page_change_psw.h"
-#include "../page_common.h"
+#include "page_common.h"
 
 #include <stdio.h>
 #include <string.h>

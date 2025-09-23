@@ -1,5 +1,5 @@
 #include "page_clients.h"
-#include "../page_common.h"
+#include "page_common.h"
 
 extern const uint8_t _binary_assets_page_clients_html_start[];
 extern const uint8_t _binary_assets_page_clients_html_end[];

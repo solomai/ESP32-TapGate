@@ -1,5 +1,5 @@
 #include "page_device.h"
-#include "../page_common.h"
+#include "page_common.h"
 
 #include <stdio.h>
 #include <string.h>

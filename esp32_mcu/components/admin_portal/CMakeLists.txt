@@ -4,6 +4,7 @@ list(APPEND srcs ${page_srcs})
 
 set(WEB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets)
 
+file(GLOB WEB_HTML_SOURCES ${WEB_DIR}/*.html)
 file(GLOB WEB_TEXT_SOURCES
     ${WEB_DIR}/*.html
     ${WEB_DIR}/*.css
@@ -18,14 +19,14 @@ file(GLOB WEB_BIN_SOURCES
     ${WEB_DIR}/*.svg
 )
 
-set(WEB_TEXT_FILES "")
-set(WEB_BIN_FILES "")
-foreach(src ${WEB_TEXT_SOURCES})
+set(WEB_HTML_FILES "")
+foreach(src ${WEB_HTML_SOURCES})
     file(RELATIVE_PATH rel ${CMAKE_CURRENT_SOURCE_DIR} ${src})
     file(TO_CMAKE_PATH "${rel}" rel_norm)
-    list(APPEND WEB_TEXT_FILES ${rel_norm})
+    list(APPEND WEB_HTML_FILES ${rel_norm})
 endforeach()
 
+set(WEB_BIN_FILES "")
 foreach(src ${WEB_BIN_SOURCES})
     file(RELATIVE_PATH rel ${CMAKE_CURRENT_SOURCE_DIR} ${src})
     file(TO_CMAKE_PATH "${rel}" rel_norm)
@@ -43,7 +44,8 @@ foreach(src ${WEB_TEXT_SOURCES})
     add_custom_command(
         OUTPUT ${dst}
         COMMAND ${CMAKE_COMMAND} -E echo "Gzip ${fname}"
-        COMMAND ${Python3_EXECUTABLE} -c "import gzip, pathlib; src=r'''${src}'''; dst=r'''${dst}'''; data=pathlib.Path(src).read_bytes(); pathlib.Path(dst).write_bytes(gzip.compress(data, compresslevel=9))"
+        COMMAND ${Python3_EXECUTABLE} -c
+                "import gzip, pathlib; src=pathlib.Path(r'${src}'); dst=pathlib.Path(r'${dst}'); dst.write_bytes(gzip.compress(src.read_bytes(), compresslevel=9))"
         DEPENDS ${src}
         VERBATIM
     )
@@ -57,7 +59,7 @@ endif()
 
 idf_component_register(
     SRCS ${srcs}
-    INCLUDE_DIRS . pages
+    INCLUDE_DIRS .
     PRIV_INCLUDE_DIRS pages
     REQUIRES
         esp_http_server
@@ -68,7 +70,8 @@ idf_component_register(
         esp_timer
         common
         logs
-    EMBED_FILES ${WEB_TEXT_FILES} ${GZ_FILES} ${WEB_BIN_FILES}
+    EMBED_FILES ${GZ_FILES} ${WEB_BIN_FILES}
+    EMBED_TXTFILES ${WEB_HTML_FILES}
 )
 
 if(TARGET admin_portal_gzip)
