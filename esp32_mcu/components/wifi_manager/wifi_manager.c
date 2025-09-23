@@ -26,6 +26,35 @@
 
 static const char *TAG = "WIFI Manager";
 
+static EventGroupHandle_t wifi_manager_event_group;
+
+// indicate that the ESP32 is currently connected.
+const int WIFI_MANAGER_WIFI_CONNECTED_BIT = BIT0;
+
+// indicate that the APSTA currently connected.
+const int WIFI_MANAGER_AP_STA_CONNECTED_BIT = BIT1;
+
+// Set automatically once the SoftAP is started
+const int WIFI_MANAGER_AP_STARTED_BIT = BIT2;
+
+// When set, means a client requested to connect to an access point
+const int WIFI_MANAGER_REQUEST_STA_CONNECT_BIT = BIT3;
+
+// This bit is set automatically as soon as a connection was lost
+const int WIFI_MANAGER_STA_DISCONNECT_BIT = BIT4;
+
+// When set, means the wifi manager attempts to restore a previously saved connection at startup.
+const int WIFI_MANAGER_REQUEST_RESTORE_STA_BIT = BIT5;
+
+// When set, means a client requested to disconnect from currently connected AP
+const int WIFI_MANAGER_REQUEST_WIFI_DISCONNECT_BIT = BIT6;
+
+// When set, means a scan is in progress
+const int WIFI_MANAGER_SCAN_BIT = BIT7;
+
+// When set, means user requested for a disconnect
+const int WIFI_MANAGER_REQUEST_DISCONNECT_BIT = BIT8;
+
 // task handle for the main wifi_manager task
 static TaskHandle_t task_wifi_manager = NULL;
 
@@ -73,6 +102,16 @@ esp_err_t wifi_manager_set_callback(message_code_t message_code, void (*func_ptr
     return ESP_ERR_WIFI_NOT_INIT;
 }
 
+void wifi_manager_scan_async()
+{
+	wifi_manager_send_message(WM_ORDER_START_WIFI_SCAN, NULL);
+}
+
+void wifi_manager_disconnect_async()
+{
+	wifi_manager_send_message(WM_ORDER_DISCONNECT_STA, NULL);
+}
+
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
 	if (event_base == WIFI_EVENT)
@@ -102,9 +141,11 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
                 break;
             case WIFI_EVENT_AP_START:
                 LOGI(TAG, "EVENT: WIFI_EVENT_AP_START");
+                xEventGroupSetBits(wifi_manager_event_group, WIFI_MANAGER_AP_STARTED_BIT);
                 break;
             case WIFI_EVENT_AP_STOP:
                 LOGI(TAG, "EVENT: WIFI_EVENT_AP_STOP");
+                xEventGroupClearBits(wifi_manager_event_group, WIFI_MANAGER_AP_STARTED_BIT);
                 break;
             case WIFI_EVENT_AP_STACONNECTED:
                 LOGI(TAG, "EVENT: WIFI_EVENT_AP_STACONNECTED");
@@ -439,6 +480,8 @@ void wifi_manager(void * pvParameters)
 		.show_hidden = true
 	};
 
+    wifi_manager_event_group = xEventGroupCreate();
+
     // Create wifi manager message queue
     wifi_manager_queue = xQueueCreate( 3, sizeof( queue_message) );
 
@@ -451,7 +494,7 @@ void wifi_manager(void * pvParameters)
         BaseType_t xStatus = xQueueReceive( wifi_manager_queue, &msg, portMAX_DELAY );
         if(xStatus != pdPASS)
             continue;
-        LOGI(TAG, "MESSAGE: %s", message_code_to_str(msg.code));
+        LOGI(TAG, "COMMAND: %s", message_code_to_str(msg.code));
         switch(msg.code)
         {
             case WM_ORDER_LOAD_AND_RESTORE_STA:
@@ -467,6 +510,7 @@ void wifi_manager(void * pvParameters)
                 // callback
 				if(cb_ptr_arr[msg.code]) (*cb_ptr_arr[msg.code])(NULL);
                 break;
+
             case WM_ORDER_START_AP:
                 esp_err_t err = esp_wifi_set_mode(WIFI_MODE_APSTA);
                 if (err == ESP_OK)
@@ -483,12 +527,34 @@ void wifi_manager(void * pvParameters)
                 /* callback */
                 if(cb_ptr_arr[msg.code]) (*cb_ptr_arr[msg.code])(NULL);
                 break;
+
             case WM_ORDER_STOP_AP:
                 http_server_stop();
                 dns_server_stop();
                 /* callback */
                 if(cb_ptr_arr[msg.code]) (*cb_ptr_arr[msg.code])(NULL);
                 break;
+
+            case WM_ORDER_START_WIFI_SCAN:
+				// avoid scan if already in progress
+				EventBits_t uxBits = xEventGroupGetBits(wifi_manager_event_group);
+				if(! (uxBits & WIFI_MANAGER_SCAN_BIT) )
+                {
+					xEventGroupSetBits(wifi_manager_event_group, WIFI_MANAGER_SCAN_BIT);
+					ERROR_CHECK(esp_wifi_scan_start(&scan_config, false),
+                                "Failed scan WiFi");
+				}
+				/* callback */
+				if(cb_ptr_arr[msg.code]) (*cb_ptr_arr[msg.code])(NULL);
+				break;
+
+            case WM_EVENT_SCAN_DONE:
+                // TODO:
+
+				/* callback */
+				if(cb_ptr_arr[msg.code]) (*cb_ptr_arr[msg.code])( msg.param );            
+                break;
+
             default:
 				break;                
         }
@@ -519,7 +585,10 @@ void wifi_manager_stop()
 	if(wifi_manager_config_sta){
 		free(wifi_manager_config_sta);
 		wifi_manager_config_sta = NULL;
-	}    
+	}  
+
+    vEventGroupDelete(wifi_manager_event_group);
+	wifi_manager_event_group = NULL;
 }
 
 esp_netif_t* wifi_manager_get_esp_netif_ap()

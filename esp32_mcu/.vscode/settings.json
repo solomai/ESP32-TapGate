@@ -16,7 +16,8 @@
     "text_encoding": "c",
     "typeinfo": "c",
     "http_server.h": "c",
-    "esp_system.h": "c"
+    "esp_system.h": "c",
+    "esp_wifi_types.h": "c"
   },
   "idf.portWin": "COM6",
   "idf.flashType": "UART",

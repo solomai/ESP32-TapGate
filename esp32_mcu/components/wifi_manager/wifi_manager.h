@@ -151,7 +151,6 @@ typedef struct{
 	void *param;
 } queue_message;
 
-
 // Start WiFi Manager
 void wifi_manager_start(void);
 
