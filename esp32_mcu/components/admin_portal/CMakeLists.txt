@@ -50,6 +50,7 @@ idf_component_register(
         esp_http_server
         esp_wifi
         esp_netif
+        esp_timer
         wpa_supplicant
         wifi_manager
         common

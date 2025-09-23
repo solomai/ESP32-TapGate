@@ -8,6 +8,7 @@
 #include "esp_timer.h"
 #include "nvs.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -114,7 +115,7 @@ static void set_session_cookie(httpd_req_t *req, const char *token, uint32_t max
     char header[128];
     if (token && token[0])
     {
-        snprintf(header, sizeof(header), ADMIN_PORTAL_COOKIE_NAME "=%s; Max-Age=%u; Path=/; HttpOnly; SameSite=Lax", token, max_age_seconds);
+        snprintf(header, sizeof(header), ADMIN_PORTAL_COOKIE_NAME "=%s; Max-Age=%" PRIu32 "; Path=/; HttpOnly; SameSite=Lax", token, max_age_seconds);
     }
     else
     {
