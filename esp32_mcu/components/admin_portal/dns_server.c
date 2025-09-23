@@ -96,7 +96,7 @@ void dns_server(void *pvParameters)
             for(char* c=domain; *c != '\0'; c++){
             	if(*c < ' ' || *c > 'z') *c = '.'; /* technically we should test if the first two bits are 00 (e.g. if( (*c & 0xC0) == 0x00) *c = '.') but this makes the code a lot more readable */
             }
-            LOGI(TAG, "Replying to DNS request for %s from %s", domain, ip_address);
+            LOGD(TAG, "Replying to DNS request for %s from %s", domain, ip_address);
 
             /* create DNS answer at the end of the query*/
             dns_answer_t *dns_answer = (dns_answer_t*)&response[length];

@@ -224,7 +224,7 @@ static bool log_all_tasks_stack_to_buf(void)
 void diagnostic_task(void *pvParameter)
 {
     const uint32_t timeout_on_start_ms = 3000;
-    const uint32_t period_ms = 60000;
+    const uint32_t period_ms = 5 * 60000; // refresh status in minutes
 
     vTaskDelay(pdMS_TO_TICKS(timeout_on_start_ms));
 
