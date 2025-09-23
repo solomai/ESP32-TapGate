@@ -1,5 +1,5 @@
 #include "page_busy.h"
-#include "page_common.h"
+#include "../page_common.h"
 
 extern const uint8_t _binary_assets_page_busy_html_start[];
 extern const uint8_t _binary_assets_page_busy_html_end[];
