@@ -17,9 +17,15 @@ static void copy_to_buffer(char *destination, size_t capacity, const char *sourc
         return;
     }
 
-    size_t length = source ? strnlen(source, capacity - 1) : 0;
-    if (length > 0 && source) {
-        memcpy(destination, source, length);
+    size_t length = 0;
+    if (source) {
+        length = strlen(source);
+        if (length >= capacity) {
+            length = capacity - 1;
+        }
+        if (length > 0) {
+            memcpy(destination, source, length);
+        }
     }
     destination[length] = '\0';
 }
