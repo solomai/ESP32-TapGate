@@ -94,7 +94,7 @@ static esp_err_t build_error_response(httpd_req_t *req, const char *message)
 {
     char escaped[MESSAGE_BUFFER_SIZE * 2] = {0};
     escape_json(message ? message : "Unknown error", escaped, sizeof(escaped));
-    char payload[MESSAGE_BUFFER_SIZE * 2] = {0};
+    char payload[MESSAGE_BUFFER_SIZE * 2 + 64] = {0};
     snprintf(payload, sizeof(payload), "{\"status\":\"error\",\"message\":\"%s\"}", escaped);
     httpd_resp_set_status(req, "400 Bad Request");
     return send_json(req, payload);
