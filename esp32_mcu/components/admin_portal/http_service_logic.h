@@ -3,9 +3,12 @@
 #include "esp_err.h"
 #include "http_service_types.h"
 
-#define HTTP_SERVICE_URI_ROOT      "/"
-#define HTTP_SERVICE_URI_AP_PAGE   "/ap.html"
-#define HTTP_SERVICE_URI_MAIN_PAGE "/main.html"
+#define HTTP_SERVICE_URI_ROOT            "/"
+#define HTTP_SERVICE_URI_AP_PAGE         "/ap.html"
+#define HTTP_SERVICE_URI_MAIN_PAGE       "/main.html"
+#define HTTP_SERVICE_URI_AP_CONFIG       "/api/v1/ap/config"
+#define HTTP_SERVICE_URI_AP_ENDPOINT     "/api/v1/ap"
+#define HTTP_SERVICE_URI_MAIN_INFO       "/api/v1/main/info"
 
 esp_err_t http_service_logic_validate_credentials(const http_service_credentials_t *credentials,
                                                   char *message,

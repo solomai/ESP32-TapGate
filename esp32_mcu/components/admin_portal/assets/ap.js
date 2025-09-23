@@ -17,9 +17,11 @@ function setFieldError(input, hasError) {
   }
 }
 
+const API_ENDPOINT = '/api/v1/ap';
+
 async function loadConfig() {
   try {
-    const response = await fetch('/api/v1/ap/config', { cache: 'no-store' });
+    const response = await fetch(API_ENDPOINT, { cache: 'no-store' });
     if (!response.ok) {
       throw new Error('Failed to load configuration');
     }
@@ -50,7 +52,7 @@ async function saveConfig(event) {
   });
 
   try {
-    const response = await fetch('/api/v1/ap/config', {
+    const response = await fetch(API_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),

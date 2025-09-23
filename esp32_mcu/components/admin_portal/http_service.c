@@ -136,10 +136,10 @@ static esp_err_t dispatch_get(httpd_req_t *req)
     if (strncmp(uri, "/assets/", 8) == 0) {
         return handle_assets(req);
     }
-    if (strcmp(uri, "/api/v1/ap/config") == 0) {
+    if (strcmp(uri, HTTP_SERVICE_URI_AP_ENDPOINT) == 0 || strcmp(uri, HTTP_SERVICE_URI_AP_CONFIG) == 0) {
         return http_service_page_ap_get_config(req);
     }
-    if (strcmp(uri, "/api/v1/main/info") == 0) {
+    if (strcmp(uri, HTTP_SERVICE_URI_MAIN_INFO) == 0) {
         return http_service_page_main_get_info(req);
     }
 
@@ -148,7 +148,7 @@ static esp_err_t dispatch_get(httpd_req_t *req)
 
 static esp_err_t dispatch_post(httpd_req_t *req)
 {
-    if (strcmp(req->uri, "/api/v1/ap/config") == 0) {
+    if (strcmp(req->uri, HTTP_SERVICE_URI_AP_ENDPOINT) == 0 || strcmp(req->uri, HTTP_SERVICE_URI_AP_CONFIG) == 0) {
         return http_service_page_ap_post_config(req);
     }
     return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found");
