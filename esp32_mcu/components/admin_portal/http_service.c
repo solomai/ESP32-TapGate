@@ -70,6 +70,34 @@ static const admin_portal_asset_t g_assets[] = {
     { .uri = "/assets/app.js", .start = _binary_app_js_gz_start, .end = _binary_app_js_gz_end, .content_type = "application/javascript", .compressed = true },
 };
 
+static const admin_portal_page_descriptor_t *find_page_descriptor(const char *uri)
+{
+    if (!uri)
+        return NULL;
+
+    for (size_t i = 0; i < sizeof(g_pages) / sizeof(g_pages[0]); ++i)
+    {
+        if (strcmp(uri, g_pages[i]->route) == 0)
+            return g_pages[i];
+        if (g_pages[i]->alternate_route && strcmp(uri, g_pages[i]->alternate_route) == 0)
+            return g_pages[i];
+    }
+    return NULL;
+}
+
+static const admin_portal_asset_t *find_asset(const char *uri)
+{
+    if (!uri)
+        return NULL;
+
+    for (size_t i = 0; i < sizeof(g_assets) / sizeof(g_assets[0]); ++i)
+    {
+        if (strcmp(uri, g_assets[i].uri) == 0)
+            return &g_assets[i];
+    }
+    return NULL;
+}
+
 static uint64_t get_now_ms(void)
 {
     return esp_timer_get_time() / 1000ULL;
@@ -651,9 +679,8 @@ static esp_err_t handle_update_device(httpd_req_t *req)
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
 }
 
-static esp_err_t handle_page_request(httpd_req_t *req)
+static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_descriptor_t *desc)
 {
-    const admin_portal_page_descriptor_t *desc = (const admin_portal_page_descriptor_t *)req->user_ctx;
     if (!desc)
         return ESP_ERR_INVALID_ARG;
 
@@ -699,13 +726,19 @@ static esp_err_t handle_root(httpd_req_t *req)
     return send_redirect(req, target);
 }
 
-static esp_err_t handle_asset_request(httpd_req_t *req)
+static esp_err_t handle_portal_get(httpd_req_t *req)
 {
-    for (size_t i = 0; i < sizeof(g_assets) / sizeof(g_assets[0]); ++i)
-    {
-        if (strcmp(req->uri, g_assets[i].uri) == 0)
-            return send_asset(req, &g_assets[i]);
-    }
+    if (strcmp(req->uri, "/") == 0)
+        return handle_root(req);
+
+    const admin_portal_page_descriptor_t *desc = find_page_descriptor(req->uri);
+    if (desc)
+        return handle_page_request(req, desc);
+
+    const admin_portal_asset_t *asset = find_asset(req->uri);
+    if (asset)
+        return send_asset(req, asset);
+
     return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found");
 }
 
@@ -717,41 +750,14 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
     g_server = server;
     load_initial_state();
 
-    httpd_uri_t root_handler = {
-        .uri = "/",
+    httpd_uri_t portal_get = {
+        .uri = "/*",
         .method = HTTP_GET,
-        .handler = handle_root,
+        .handler = handle_portal_get,
         .user_ctx = NULL,
+        .uri_match_fn = httpd_uri_match_wildcard,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &root_handler));
-
-    for (size_t i = 0; i < sizeof(g_pages) / sizeof(g_pages[0]); ++i)
-    {
-        httpd_uri_t uri = {
-            .uri = g_pages[i]->route,
-            .method = HTTP_GET,
-            .handler = handle_page_request,
-            .user_ctx = (void *)g_pages[i],
-        };
-        ESP_ERROR_CHECK(httpd_register_uri_handler(server, &uri));
-        if (g_pages[i]->alternate_route)
-        {
-            httpd_uri_t alt = uri;
-            alt.uri = g_pages[i]->alternate_route;
-            ESP_ERROR_CHECK(httpd_register_uri_handler(server, &alt));
-        }
-    }
-
-    for (size_t i = 0; i < sizeof(g_assets) / sizeof(g_assets[0]); ++i)
-    {
-        httpd_uri_t asset_uri = {
-            .uri = g_assets[i].uri,
-            .method = HTTP_GET,
-            .handler = handle_asset_request,
-            .user_ctx = NULL,
-        };
-        ESP_ERROR_CHECK(httpd_register_uri_handler(server, &asset_uri));
-    }
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &portal_get));
 
     httpd_uri_t api_session = {
         .uri = "/api/session",
