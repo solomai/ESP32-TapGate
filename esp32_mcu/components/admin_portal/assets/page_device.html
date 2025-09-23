@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TapGate · Device</title>
+    <style>
+        :root { color-scheme: dark; font-family: "Inter", "Segoe UI", sans-serif; }
+        body { margin: 0; min-height: 100vh; background: #0D1520; color: #E6EEF8; display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .card { background: rgba(13, 21, 32, 0.92); border-radius: 18px; padding: 32px; width: min(440px, 100%); box-shadow: 0 24px 60px rgba(3, 7, 18, 0.55); }
+        h1 { margin: 0 0 24px; font-size: 26px; font-weight: 600; text-align: center; }
+        .logo { display: block; width: 120px; margin: 0 auto 24px; }
+        .form { display: flex; flex-direction: column; gap: 18px; }
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-group label { font-size: 13px; font-weight: 500; color: #9CA3AF; }
+        .input-group input { border-radius: 12px; padding: 12px 16px; background: linear-gradient(180deg, #10161D 0%, #0C1117 100%); border: 1px solid #2A3642; color: #E6EEF8; font-size: 15px; transition: border-color .2s ease, box-shadow .2s ease; }
+        .input-group input:focus { border-color: #3B82F6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35); outline: none; }
+        .input-group input.error { border-color: #F87171; }
+        .message { margin-bottom: 16px; padding: 14px; border-radius: 12px; background: rgba(248, 113, 113, 0.12); color: #F87171; text-align: center; font-size: 14px; }
+        .actions { display: flex; gap: 12px; flex-wrap: wrap; }
+        .button { display: inline-flex; justify-content: center; align-items: center; padding: 14px 18px; border-radius: 12px; border: none; text-decoration: none; color: #FFFFFF; font-size: 16px; font-weight: 600; cursor: pointer; background: linear-gradient(180deg, #15294B 0%, #1F3D70 52%, #3B82F6 100%); box-shadow: 0 4px 16px rgba(15, 23, 42, 0.4); transition: filter .15s ease, transform .15s ease, box-shadow .15s ease; }
+        .button:hover, .button:focus { filter: brightness(1.08); }
+        .button:active { transform: translateY(1px); box-shadow: 0 2px 10px rgba(15, 23, 42, 0.45); }
+        .button.secondary { background: linear-gradient(180deg, #1B2836 0%, #2A3D51 52%, #3A5069 100%); }
+        .button.ghost { background: linear-gradient(180deg, #101827 0%, #1C2839 52%, #2B3C53 100%); }
+        .footer-actions { margin-top: 18px; display: flex; }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <img class="logo" src="/assets/logo.png" alt="TapGate logo">
+        <h1>TapGate Device</h1>
+        {{MESSAGE_BLOCK}}
+        <form class="form" method="POST" action="/device">
+            <div class="input-group">
+                <label for="ssid">Access Point SSID</label>
+                <input id="ssid" type="text" name="ssid" value="{{SSID_VALUE}}"{{SSID_EXTRA}} required>
+            </div>
+            <div class="actions">
+                <button class="button" type="submit">Ok</button>
+                <a class="button secondary" href="/main">Cancel</a>
+            </div>
+        </form>
+        <div class="footer-actions">
+            <a class="button ghost" href="/psw">Change Password</a>
+        </div>
+    </main>
+</body>
+</html>

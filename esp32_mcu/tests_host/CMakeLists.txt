@@ -54,6 +54,7 @@ target_compile_features(tapgate_production
 target_include_directories(tapgate_production
     PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/../components
+        ${CMAKE_CURRENT_LIST_DIR}/../components/admin_portal
         ${CMAKE_CURRENT_LIST_DIR}/../components/rsapem
         ${CMAKE_CURRENT_LIST_DIR}/../components/clients
         ${CMAKE_CURRENT_LIST_DIR}/../components/common
@@ -62,6 +63,7 @@ target_include_directories(tapgate_production
 )
 
 set(_tapgate_component_sources
+    ${CMAKE_CURRENT_LIST_DIR}/../components/admin_portal/admin_portal_core.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/rsapem/rsapem.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/clients/clients.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/logs/logs.c
@@ -147,4 +149,5 @@ endfunction()
 # Individual test binaries
 tapgate_add_unity_test(test_types ${CMAKE_CURRENT_LIST_DIR}/test_types.c)
 tapgate_add_unity_test(test_logs ${CMAKE_CURRENT_LIST_DIR}/test_logs.c)
+tapgate_add_unity_test(test_admin_portal_core ${CMAKE_CURRENT_LIST_DIR}/test_admin_portal_core.c)
 

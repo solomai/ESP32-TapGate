@@ -1,15 +1,15 @@
-# Collect all C sources in this component
 file(GLOB srcs "${CMAKE_CURRENT_LIST_DIR}/*.c")
+file(GLOB_RECURSE page_srcs "${CMAKE_CURRENT_LIST_DIR}/pages/*.c")
+list(APPEND srcs ${page_srcs})
 
-# Path to web folder
 set(WEB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets)
 
-# Collect text assets to gzip and binary assets to embed as-is
 file(GLOB WEB_TEXT_FILES
     ${WEB_DIR}/*.html
     ${WEB_DIR}/*.css
     ${WEB_DIR}/*.js
 )
+file(GLOB WEB_HTML_FILES ${WEB_DIR}/*.html)
 file(GLOB WEB_BIN_FILES
     ${WEB_DIR}/*.png
     ${WEB_DIR}/*.jpg
@@ -19,7 +19,6 @@ file(GLOB WEB_BIN_FILES
     ${WEB_DIR}/*.svg
 )
 
-# Use Python (from ESP-IDF env) to gzip files (works on Win/Linux/macOS)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 set(GZ_FILES "")
@@ -30,17 +29,18 @@ foreach(src ${WEB_TEXT_FILES})
     add_custom_command(
         OUTPUT ${dst}
         COMMAND ${CMAKE_COMMAND} -E echo "Gzip ${fname}"
-        COMMAND ${Python3_EXECUTABLE} -c
-                "import gzip, pathlib; data = pathlib.Path(r'${src}').read_bytes(); pathlib.Path(r'${dst}').write_bytes(gzip.compress(data, compresslevel=9))"
+        COMMAND ${Python3_EXECUTABLE} -c "import gzip, pathlib; src=r'''${src}'''; dst=r'''${dst}'''; data=pathlib.Path(src).read_bytes(); pathlib.Path(dst).write_bytes(gzip.compress(data, compresslevel=9))"
         DEPENDS ${src}
         VERBATIM
     )
-    
 
     list(APPEND GZ_FILES ${dst})
 endforeach()
 
-# Register component (single idf_component_register!)
+if(GZ_FILES)
+    add_custom_target(admin_portal_gzip ALL DEPENDS ${GZ_FILES})
+endif()
+
 idf_component_register(
     SRCS ${srcs}
     INCLUDE_DIRS .
@@ -52,7 +52,11 @@ idf_component_register(
         wifi_manager
         common
         logs
-    EMBED_FILES
-        ${GZ_FILES}
-        ${WEB_BIN_FILES}
+    EMBED_TXTFILES ${WEB_HTML_FILES}
+    EMBED_FILES ${GZ_FILES} ${WEB_BIN_FILES}
 )
+
+if(TARGET admin_portal_gzip)
+    idf_component_get_property(admin_portal_lib admin_portal COMPONENT_LIB)
+    add_dependencies(${admin_portal_lib} admin_portal_gzip)
+endif()
