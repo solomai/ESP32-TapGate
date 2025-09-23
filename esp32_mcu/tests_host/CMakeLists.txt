@@ -55,6 +55,7 @@ target_include_directories(tapgate_production
     PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/../components
         ${CMAKE_CURRENT_LIST_DIR}/../components/admin_portal
+        ${CMAKE_CURRENT_LIST_DIR}/../components/admin_portal/pages
         ${CMAKE_CURRENT_LIST_DIR}/../components/rsapem
         ${CMAKE_CURRENT_LIST_DIR}/../components/clients
         ${CMAKE_CURRENT_LIST_DIR}/../components/common

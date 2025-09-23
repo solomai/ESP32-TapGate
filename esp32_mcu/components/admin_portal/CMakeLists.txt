@@ -46,7 +46,8 @@ endif()
 
 idf_component_register(
     SRCS ${srcs}
-    INCLUDE_DIRS . pages
+    INCLUDE_DIRS .
+    PRIV_INCLUDE_DIRS pages
     REQUIRES
         esp_http_server
         esp_wifi
