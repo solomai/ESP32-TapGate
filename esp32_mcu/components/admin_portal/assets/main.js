@@ -1,5 +1,6 @@
 const versionLabel = document.getElementById('version');
 const apButton = document.getElementById('ap-settings');
+const AP_PAGE = '/api/v1/ap';
 
 async function loadInfo() {
   try {
@@ -16,7 +17,7 @@ async function loadInfo() {
 
 function init() {
   apButton.addEventListener('click', () => {
-    window.location.replace('/ap.html');
+    window.location.replace(AP_PAGE);
   });
   loadInfo();
 }

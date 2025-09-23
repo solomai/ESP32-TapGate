@@ -87,7 +87,12 @@ static void escape_json(const char *value, char *buffer, size_t buffer_size)
 
 static esp_err_t build_success_response(httpd_req_t *req)
 {
-    return send_json(req, "{\"status\":\"ok\",\"redirect\":\"/main.html\"}");
+    char payload[128] = {0};
+    snprintf(payload,
+             sizeof(payload),
+             "{\"status\":\"ok\",\"redirect\":\"%s\"}",
+             HTTP_SERVICE_URI_MAIN_PAGE);
+    return send_json(req, payload);
 }
 
 static esp_err_t build_error_response(httpd_req_t *req, const char *message)

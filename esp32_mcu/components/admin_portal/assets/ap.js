@@ -17,7 +17,8 @@ function setFieldError(input, hasError) {
   }
 }
 
-const API_ENDPOINT = '/api/v1/ap';
+const API_ENDPOINT = '/api/v1/ap/config';
+const MAIN_PAGE = '/api/v1/main';
 
 async function loadConfig() {
   try {
@@ -73,7 +74,7 @@ async function saveConfig(event) {
     }
 
     setStatus('Saved', false);
-    const redirect = result.redirect || '/main.html';
+    const redirect = result.redirect || MAIN_PAGE;
     window.location.replace(redirect);
   } catch (error) {
     setStatus('Network error');
@@ -83,7 +84,7 @@ async function saveConfig(event) {
 function init() {
   form.addEventListener('submit', saveConfig);
   cancelButton.addEventListener('click', () => {
-    window.location.replace('/main.html');
+    window.location.replace(MAIN_PAGE);
   });
 
   [ssidInput, passwordInput].forEach((input) => {

@@ -118,10 +118,10 @@ static esp_err_t dispatch_get(httpd_req_t *req)
     if (strcmp(uri, HTTP_SERVICE_URI_ROOT) == 0 || strcmp(uri, "/index.html") == 0) {
         return handle_root(req);
     }
-    if (strcmp(uri, HTTP_SERVICE_URI_AP_PAGE) == 0) {
+    if (strcmp(uri, HTTP_SERVICE_URI_AP_PAGE) == 0 || strcmp(uri, HTTP_SERVICE_URI_AP_PAGE_LEGACY) == 0) {
         return send_gzip(req, _binary_ap_html_gz_start, _binary_ap_html_gz_end, "text/html");
     }
-    if (strcmp(uri, HTTP_SERVICE_URI_MAIN_PAGE) == 0) {
+    if (strcmp(uri, HTTP_SERVICE_URI_MAIN_PAGE) == 0 || strcmp(uri, HTTP_SERVICE_URI_MAIN_PAGE_LEGACY) == 0) {
         return send_gzip(req, _binary_main_html_gz_start, _binary_main_html_gz_end, "text/html");
     }
     if (strcmp(uri, "/styles.css") == 0) {
@@ -136,7 +136,7 @@ static esp_err_t dispatch_get(httpd_req_t *req)
     if (strncmp(uri, "/assets/", 8) == 0) {
         return handle_assets(req);
     }
-    if (strcmp(uri, HTTP_SERVICE_URI_AP_ENDPOINT) == 0 || strcmp(uri, HTTP_SERVICE_URI_AP_CONFIG) == 0) {
+    if (strcmp(uri, HTTP_SERVICE_URI_AP_CONFIG) == 0) {
         return http_service_page_ap_get_config(req);
     }
     if (strcmp(uri, HTTP_SERVICE_URI_MAIN_INFO) == 0) {
