@@ -102,7 +102,8 @@
     fetch(config.url, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: params.toString()
+      body: params.toString(),
+      credentials: "same-origin"
     })
       .then((response) => response.json().catch(() => null))
       .then((data) => handleActionResponse(form, config, data))
@@ -137,7 +138,7 @@
   }
 
   function refreshSession() {
-    fetch("/api/session", { method: "GET", cache: "no-store" })
+    fetch("/api/session", { method: "GET", cache: "no-store", credentials: "same-origin" })
       .then((response) => response.json().catch(() => null))
       .then((data) => {
         if (!data) return;
