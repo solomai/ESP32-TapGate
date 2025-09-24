@@ -124,7 +124,7 @@ void test_LOGW_formats_message(void)
     char output[128];
     size_t length = capture_stream_output(stderr, output, sizeof(output), invoke_LOGW, NULL);
     TEST_ASSERT_TRUE(length > 0);
-    TEST_ASSERT_EQUAL_STRING("[W] warn-tag: value=-1 text=gamma\n", output);
+    TEST_ASSERT_EQUAL_STRING("[W] ==> warn-tag: value=-1 text=gamma\n", output);
 }
 
 void test_LOGE_formats_message(void)
@@ -132,7 +132,7 @@ void test_LOGE_formats_message(void)
     char output[128];
     size_t length = capture_stream_output(stderr, output, sizeof(output), invoke_LOGE, NULL);
     TEST_ASSERT_TRUE(length > 0);
-    TEST_ASSERT_EQUAL_STRING("[E] error-tag: value=5 text=delta\n", output);
+    TEST_ASSERT_EQUAL_STRING("[E] ==> error-tag: value=5 text=delta\n", output);
 }
 
 int main(int argc, char **argv)

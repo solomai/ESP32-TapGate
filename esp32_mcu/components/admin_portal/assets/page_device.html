@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TapGate · Device</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <script defer src="/assets/app.js"></script>
+</head>
+<body class="page page-device">
+  <main class="card">
+    <img src="/assets/logo.png" alt="TapGate" class="logo">
+    <h1>TapGate Device</h1>
+    <form data-action="device" class="form-grid">
+      <label>
+        Access point name
+        <input type="text" name="ssid" data-bind="ssid" maxlength="32" autocomplete="off" required>
+      </label>
+      <div class="message" data-message></div>
+      <div class="actions">
+        <a href="/psw/" class="button-link">Change Password</a>
+        <button type="submit">Ok</button>
+        <a href="/main/" class="button-link">Cancel</a>
+      </div>
+    </form>
+  </main>
+</body>
+</html>
