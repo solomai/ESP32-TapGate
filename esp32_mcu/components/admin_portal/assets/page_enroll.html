@@ -15,11 +15,11 @@
     <form data-action="enroll" class="form-grid">
       <label>
         Portal name
-        <input type="text" data-bind="portal-name" readonly>
+        <input type="text" name="portal" data-bind="portal-name" required>
       </label>
       <label>
         New password
-        <input type="password" name="password" minlength="8" autocomplete="new-password" required>
+        <input type="password" name="password" minlength="8" autocomplete="new-password" required placeholder="Minimum 8 characters">
       </label>
       <div class="message" data-message></div>
       <button type="submit">Ok</button>

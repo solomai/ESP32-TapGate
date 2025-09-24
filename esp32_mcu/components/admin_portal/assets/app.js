@@ -11,7 +11,7 @@
   };
 
   const actionMap = {
-    enroll: { url: "/api/enroll", fields: ["password"], focus: { invalid_password: "password" } },
+    enroll: { url: "/api/enroll", fields: ["password", "portal"], focus: { invalid_password: "password" } },
     login: { url: "/api/login", fields: ["password"], focus: { wrong_password: "password" } },
     changePassword: {
       url: "/api/change-password",
@@ -84,6 +84,31 @@
     setMessage(form, "Unexpected server reply.");
   }
 
+  function runClientValidation(form, actionKey) {
+    if (actionKey === "enroll") {
+      const portalInput = form.elements["portal"];
+      if (portalInput && !portalInput.value.trim()) {
+        setFieldError(form, "portal", true);
+        setMessage(form, "Please enter a portal name.");
+        focusField(form, "portal");
+        if (typeof portalInput.select === "function") {
+          portalInput.select();
+        }
+        return false;
+      }
+
+      const passwordInput = form.elements["password"];
+      if (passwordInput && passwordInput.value.length < MIN_PASSWORD_LENGTH) {
+        setFieldError(form, "password", true);
+        passwordInput.focus();
+        setMessage(form, errorMessages.invalid_password);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   function submitForm(event) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -93,6 +118,8 @@
 
     setMessage(form, "");
     config.fields.forEach((field) => setFieldError(form, field, false));
+
+    if (!runClientValidation(form, actionKey)) return;
 
     const params = new URLSearchParams();
     config.fields.forEach((field) => {
@@ -126,10 +153,14 @@
 
   function applySession(info) {
     if (!info || info.status !== "ok") return;
-    const portalName = `${info.ap_ssid} Admin`;
+    const portalName = info.ap_ssid || "";
     document.querySelectorAll("[data-bind='portal-name']").forEach((el) => {
-      if (el.tagName === "INPUT") el.value = portalName;
-      else el.textContent = portalName;
+      if (el.tagName === "INPUT") {
+        el.value = portalName;
+        el.classList.remove("error");
+      } else {
+        el.textContent = portalName;
+      }
     });
     document.querySelectorAll("[data-bind='ssid']").forEach((el) => {
       if (el.tagName === "INPUT") el.value = info.ap_ssid;
