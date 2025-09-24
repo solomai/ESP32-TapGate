@@ -157,7 +157,8 @@
 
   function applySession(info) {
     if (!info || info.status !== "ok") return;
-    const portalName = info.ap_ssid || "";
+    const portalName = info.ap_ssid || info.portal_name || "";
+    const ssidValue = info.ap_ssid || info.portal_name || "";
     document.querySelectorAll("[data-bind='portal-name']").forEach((el) => {
       if (el.tagName === "INPUT") {
         if (el.hasAttribute("readonly") || !el.value) {
@@ -170,8 +171,8 @@
       }
     });
     document.querySelectorAll("[data-bind='ssid']").forEach((el) => {
-      if (el.tagName === "INPUT") el.value = info.ap_ssid;
-      else el.textContent = info.ap_ssid;
+      if (el.tagName === "INPUT") el.value = ssidValue;
+      else el.textContent = ssidValue;
     });
   }
 

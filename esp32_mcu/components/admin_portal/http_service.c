@@ -656,10 +656,12 @@ static esp_err_t handle_session_info(httpd_req_t *req)
     json_escape_string(admin_portal_state_get_ssid(&g_state), escaped_ssid, sizeof(escaped_ssid));
 
     char response[512];
-    snprintf(response, sizeof(response),
-             "{\"status\":\"ok\",\"authorized\":%s,\"has_password\":%s,\"ap_ssid\":\"%s\"}",
+    snprintf(response,
+             sizeof(response),
+             "{\"status\":\"ok\",\"authorized\":%s,\"has_password\":%s,\"portal_name\":\"%s\",\"ap_ssid\":\"%s\"}",
              authorized ? "true" : "false",
              has_password ? "true" : "false",
+             escaped_ssid,
              escaped_ssid);
     LOGI(TAG, "handle_session_info: API /api/session response: authorized=%s, has_password=%s, AP SSID=%s",
                 authorized ? "true" : "false",
