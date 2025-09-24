@@ -17,7 +17,10 @@
     "typeinfo": "c",
     "http_server.h": "c",
     "esp_system.h": "c",
-    "esp_wifi_types.h": "c"
+    "esp_wifi_types.h": "c",
+    "bitset": "c",
+    "string_view": "c",
+    "regex": "c"
   },
   "idf.portWin": "COM6",
   "idf.flashType": "UART",

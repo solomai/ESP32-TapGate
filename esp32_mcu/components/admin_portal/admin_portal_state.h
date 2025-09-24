@@ -6,6 +6,7 @@
 
 #define ADMIN_PORTAL_TOKEN_MAX_LEN 32
 
+// admin_portal_page_t
 typedef enum {
     ADMIN_PORTAL_PAGE_ENROLL,
     ADMIN_PORTAL_PAGE_AUTH,
@@ -19,13 +20,45 @@ typedef enum {
     ADMIN_PORTAL_PAGE_OFF,
     ADMIN_PORTAL_PAGE_COUNT
 } admin_portal_page_t;
+static inline const char* admin_portal_page_to_str(admin_portal_page_t page)
+{
+    switch (page)
+    {
+        case ADMIN_PORTAL_PAGE_ENROLL:          return "ENROLL";
+        case ADMIN_PORTAL_PAGE_AUTH:            return "AUTH";
+        case ADMIN_PORTAL_PAGE_CHANGE_PASSWORD: return "CHANGE_PASSWORD";
+        case ADMIN_PORTAL_PAGE_DEVICE:          return "DEVICE";
+        case ADMIN_PORTAL_PAGE_WIFI:            return "WIFI";
+        case ADMIN_PORTAL_PAGE_CLIENTS:         return "CLIENTS";
+        case ADMIN_PORTAL_PAGE_EVENTS:          return "EVENTS";
+        case ADMIN_PORTAL_PAGE_MAIN:            return "MAIN";
+        case ADMIN_PORTAL_PAGE_BUSY:            return "BUSY";
+        case ADMIN_PORTAL_PAGE_OFF:             return "OFF";
+        case ADMIN_PORTAL_PAGE_COUNT:           return "COUNT";
+        default:                                return "UNKNOWN";
+    }
+}
+// admin_portal_page_t
 
+// admin_portal_session_status_t
 typedef enum {
     ADMIN_PORTAL_SESSION_NONE,
     ADMIN_PORTAL_SESSION_MATCH,
     ADMIN_PORTAL_SESSION_EXPIRED,
     ADMIN_PORTAL_SESSION_BUSY,
 } admin_portal_session_status_t;
+static inline const char* admin_portal_session_status_to_str(admin_portal_session_status_t status)
+{
+    switch (status)
+    {
+        case ADMIN_PORTAL_SESSION_NONE:    return "NONE";
+        case ADMIN_PORTAL_SESSION_MATCH:   return "MATCH";
+        case ADMIN_PORTAL_SESSION_EXPIRED: return "EXPIRED";
+        case ADMIN_PORTAL_SESSION_BUSY:    return "BUSY";
+        default:                           return "UNKNOWN";
+    }
+}
+// admin_portal_session_status_t
 
 typedef struct {
     bool active;
@@ -76,6 +109,5 @@ admin_portal_page_t admin_portal_state_resolve_page(const admin_portal_state_t *
                                                     admin_portal_page_t requested_page,
                                                     admin_portal_session_status_t session_status);
 
-bool admin_portal_state_page_requires_auth(admin_portal_page_t page);
 const char *admin_portal_state_page_route(admin_portal_page_t page);
 

@@ -1,10 +1,12 @@
 #include "admin_portal_state.h"
-
+#include "logs.h"
 #include <string.h>
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif
+
+static const char *TAG = "AdminPortal";
 
 static size_t strnlen_safe(const char *str, size_t max_len)
 {
@@ -14,26 +16,6 @@ static size_t strnlen_safe(const char *str, size_t max_len)
     while (len < max_len && str[len] != '\0')
         ++len;
     return len;
-}
-
-static bool page_requires_auth(admin_portal_page_t page)
-{
-    switch (page)
-    {
-        case ADMIN_PORTAL_PAGE_MAIN:
-        case ADMIN_PORTAL_PAGE_DEVICE:
-        case ADMIN_PORTAL_PAGE_WIFI:
-        case ADMIN_PORTAL_PAGE_CLIENTS:
-        case ADMIN_PORTAL_PAGE_EVENTS:
-        case ADMIN_PORTAL_PAGE_CHANGE_PASSWORD:
-            return true;
-        case ADMIN_PORTAL_PAGE_ENROLL:
-        case ADMIN_PORTAL_PAGE_AUTH:
-        case ADMIN_PORTAL_PAGE_BUSY:
-        case ADMIN_PORTAL_PAGE_OFF:
-        default:
-            return false;
-    }
 }
 
 static const char *const page_routes[] = {
@@ -230,6 +212,16 @@ admin_portal_page_t admin_portal_state_resolve_page(const admin_portal_state_t *
                                                     admin_portal_page_t requested_page,
                                                     admin_portal_session_status_t session_status)
 {
+    bool password_set = admin_portal_state_has_password(state);
+    bool authorized = admin_portal_state_session_authorized(state);
+
+    LOGI(TAG, "Resolve page: session status: %s, requested page: %s, AP PSW: %s, authorized: %s, state obj: %s",
+        admin_portal_session_status_to_str(session_status),
+        admin_portal_page_to_str(requested_page),
+        password_set?"set":"not set",
+        authorized?"yes":"no",
+        state?"yes":"NULL");
+
     if (!state)
         return ADMIN_PORTAL_PAGE_OFF;
 
@@ -239,45 +231,31 @@ admin_portal_page_t admin_portal_state_resolve_page(const admin_portal_state_t *
     if (session_status == ADMIN_PORTAL_SESSION_EXPIRED)
         return ADMIN_PORTAL_PAGE_OFF;
 
-    bool password_set = admin_portal_state_has_password(state);
-    bool authorized = admin_portal_state_session_authorized(state);
-
-    switch (requested_page)
-    {
-        case ADMIN_PORTAL_PAGE_ENROLL:
-            return password_set ? ADMIN_PORTAL_PAGE_AUTH : ADMIN_PORTAL_PAGE_ENROLL;
-        case ADMIN_PORTAL_PAGE_AUTH:
-            if (!password_set)
-                return ADMIN_PORTAL_PAGE_ENROLL;
-            if (session_status == ADMIN_PORTAL_SESSION_MATCH && authorized)
-                return ADMIN_PORTAL_PAGE_MAIN;
-            return ADMIN_PORTAL_PAGE_AUTH;
-        case ADMIN_PORTAL_PAGE_BUSY:
-            return ADMIN_PORTAL_PAGE_BUSY;
-        case ADMIN_PORTAL_PAGE_OFF:
-            return ADMIN_PORTAL_PAGE_OFF;
-        default:
-            break;
-    }
-
+    // Enroll admin first. redirect to enroll page.
     if (!password_set)
         return ADMIN_PORTAL_PAGE_ENROLL;
 
-    if (!page_requires_auth(requested_page))
-        return requested_page;
-
-    if (session_status != ADMIN_PORTAL_SESSION_MATCH)
+    // Auth required first. redirect to auth page.
+    if (session_status != ADMIN_PORTAL_SESSION_MATCH || !authorized)
         return ADMIN_PORTAL_PAGE_AUTH;
 
-    if (!authorized)
-        return ADMIN_PORTAL_PAGE_AUTH;
+    // Enroll page could be called once. redirect to auth page.
+    if (requested_page == ADMIN_PORTAL_PAGE_ENROLL)
+    {
+        if (!password_set)
+            return ADMIN_PORTAL_PAGE_ENROLL;
+        else
+            requested_page = ADMIN_PORTAL_PAGE_AUTH;
+    }
 
+    // No reason open Auth page in the case autorized. redirect to main page.
+    if (requested_page == ADMIN_PORTAL_PAGE_AUTH)
+    {
+        if (session_status == ADMIN_PORTAL_SESSION_MATCH && authorized)
+            requested_page = ADMIN_PORTAL_PAGE_MAIN;
+    }
+        
     return requested_page;
-}
-
-bool admin_portal_state_page_requires_auth(admin_portal_page_t page)
-{
-    return page_requires_auth(page);
 }
 
 const char *admin_portal_state_page_route(admin_portal_page_t page)

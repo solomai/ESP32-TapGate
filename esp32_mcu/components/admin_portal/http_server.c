@@ -19,11 +19,15 @@ esp_err_t http_server_start()
 
     esp_err_t err = httpd_start(&httpserver_handle, &config);
     if (err != ESP_OK)
+    {
+        LOGE(TAG, "Start failed: %s", esp_err_to_name(err));
         return err;
+    }
 
     err = admin_portal_http_service_start(httpserver_handle);
     if (err != ESP_OK)
     {
+        LOGE(TAG, "Admim Portal start failed: %s", esp_err_to_name(err));
         httpd_stop(httpserver_handle);
         httpserver_handle = NULL;
         return err;
