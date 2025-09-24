@@ -11,7 +11,11 @@
   };
 
   const actionMap = {
-    enroll: { url: "/api/enroll", fields: ["password", "portal"], focus: { invalid_password: "password" } },
+    enroll: {
+      url: "/api/enroll",
+      fields: ["password", "portal"],
+      focus: { invalid_password: "password", invalid_ssid: "portal" }
+    },
     login: { url: "/api/login", fields: ["password"], focus: { wrong_password: "password" } },
     changePassword: {
       url: "/api/change-password",
@@ -156,7 +160,10 @@
     const portalName = info.ap_ssid || "";
     document.querySelectorAll("[data-bind='portal-name']").forEach((el) => {
       if (el.tagName === "INPUT") {
-        el.value = portalName;
+        if (el.hasAttribute("readonly") || !el.value) {
+          el.value = portalName;
+        }
+        el.defaultValue = portalName;
         el.classList.remove("error");
       } else {
         el.textContent = portalName;
@@ -186,8 +193,8 @@
       .catch(() => {});
   }
 
+  refreshSession();
   document.addEventListener("DOMContentLoaded", () => {
     attachForms();
-    refreshSession();
   });
 })();

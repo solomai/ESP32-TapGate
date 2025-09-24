@@ -556,14 +556,14 @@ static esp_err_t handle_session_info(httpd_req_t *req)
     admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
 
     LOGI(TAG,
-         "API /api/session: status=%s authorized=%s claimed=%s",
+         "handle_session_info: API /api/session: status=%s authorized=%s claimed=%s",
          session_status_name(status),
          admin_portal_state_session_authorized(&g_state) ? "true" : "false",
          g_state.session.claimed ? "true" : "false");
 
     if (status == ADMIN_PORTAL_SESSION_BUSY)
     {
-        LOGI(TAG, "API /api/session response: busy");
+        LOGI(TAG, "handle_session_info: API /api/session response: busy");
         return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
     }
 
@@ -571,26 +571,29 @@ static esp_err_t handle_session_info(httpd_req_t *req)
     {
         admin_portal_state_clear_session(&g_state);
         set_session_cookie(req, NULL, 0);
-        LOGI(TAG, "Session expired, redirecting to off page");
+        LOGI(TAG, "handle_session_info: Session expired, redirecting to off page");
         return send_json(req, "200 OK", "{\"status\":\"expired\",\"redirect\":\"/off/\"}");
     }
 
     if (status == ADMIN_PORTAL_SESSION_NONE)
     {
         ensure_session_claim(req, &status, token, sizeof(token));
-        LOGI(TAG, "API /api/session issued new token after claim");
+        LOGI(TAG, "handle_session_info: API /api/session issued new token after claim");
     }
 
     bool authorized = admin_portal_state_session_authorized(&g_state);
     bool has_password = admin_portal_state_has_password(&g_state);
 
-    char response[256];
+    char response[384];
     snprintf(response, sizeof(response),
              "{\"status\":\"ok\",\"authorized\":%s,\"has_password\":%s,\"ap_ssid\":\"%s\"}",
              authorized ? "true" : "false",
              has_password ? "true" : "false",
              admin_portal_state_get_ssid(&g_state));
-    LOGI(TAG, "API /api/session response: authorized=%s has_password=%s", authorized ? "true" : "false", has_password ? "true" : "false");
+    LOGI(TAG, "handle_session_info: API /api/session response: authorized=%s, has_password=%s, AP SSID=%s",
+                authorized ? "true" : "false",
+                has_password ? "true" : "false",
+                admin_portal_state_get_ssid(&g_state));
     return send_json(req, "200 OK", response);
 }
 
@@ -628,9 +631,17 @@ static esp_err_t handle_enroll(httpd_req_t *req)
         return send_json(req, "400 Bad Request", "{\"status\":\"error\",\"code\":\"invalid_request\"}");
     }
 
+    char portal_name[sizeof(g_state.ap_ssid)];
     char password[sizeof(g_state.ap_password)];
+    bool has_portal_name = form_get_field(body, "portal", portal_name, sizeof(portal_name));
     bool has_password = form_get_field(body, "password", password, sizeof(password));
     free(body);
+
+    if (!has_portal_name || portal_name[0] == '\0')
+    {
+        LOGI(TAG, "Enrollment failed: portal name missing");
+        return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_ssid\"}");
+    }
 
     if (!has_password || !admin_portal_state_password_valid(&g_state, password))
     {
@@ -640,18 +651,26 @@ static esp_err_t handle_enroll(httpd_req_t *req)
         return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_password\"}");
     }
 
-    esp_err_t err = nvm_write_string(ADMIN_PORTAL_KEY_PSW, password);
+    esp_err_t err = nvm_write_string(ADMIN_PORTAL_KEY_SSID, portal_name);
     if (err != ESP_OK)
     {
-        LOGI(TAG, "Enrollment failed: unable to store password (err=0x%x)", (unsigned)err);
+        LOGI(TAG, "Enrollment failed: unable to store AP SSID: %s", esp_err_to_name(err));
         return send_json(req, "500 Internal Server Error", "{\"status\":\"error\",\"code\":\"storage_failed\"}");
     }
 
+    err = nvm_write_string(ADMIN_PORTAL_KEY_PSW, password);
+    if (err != ESP_OK)
+    {
+        LOGI(TAG, "Enrollment failed: unable to store password: %s", esp_err_to_name(err));
+        return send_json(req, "500 Internal Server Error", "{\"status\":\"error\",\"code\":\"storage_failed\"}");
+    }
+
+    admin_portal_state_set_ssid(&g_state, portal_name);
     admin_portal_state_set_password(&g_state, password);
     admin_portal_state_authorize_session(&g_state);
     update_wifi_settings_password(password);
 
-    LOGI(TAG, "Enrollment successful, redirecting to main page");
+    LOGI(TAG, "Enrollment successful, redirecting to main page (AP SSID=\"%s\")", portal_name);
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
 }
 
