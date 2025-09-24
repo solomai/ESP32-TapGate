@@ -655,19 +655,46 @@ static esp_err_t handle_session_info(httpd_req_t *req)
     char escaped_ssid[sizeof(g_state.ap_ssid) * 6 + 1];
     json_escape_string(admin_portal_state_get_ssid(&g_state), escaped_ssid, sizeof(escaped_ssid));
 
-    char response[512];
+    static const char *response_template =
+        "{\"status\":\"ok\",\"authorized\":%s,\"has_password\":%s,\"portal_name\":\"%s\",\"ap_ssid\":\"%s\"}";
+
+    int response_length = snprintf(NULL,
+                                   0,
+                                   response_template,
+                                   authorized ? "true" : "false",
+                                   has_password ? "true" : "false",
+                                   escaped_ssid,
+                                   escaped_ssid);
+    if (response_length < 0)
+    {
+        LOGE(TAG, "handle_session_info: Failed to measure response length");
+        return ESP_FAIL;
+    }
+
+    size_t buffer_size = (size_t)response_length + 1;
+    char *response = (char *)malloc(buffer_size);
+    if (!response)
+    {
+        LOGE(TAG, "handle_session_info: Out of memory while preparing response");
+        return ESP_ERR_NO_MEM;
+    }
+
     snprintf(response,
-             sizeof(response),
-             "{\"status\":\"ok\",\"authorized\":%s,\"has_password\":%s,\"portal_name\":\"%s\",\"ap_ssid\":\"%s\"}",
+             buffer_size,
+             response_template,
              authorized ? "true" : "false",
              has_password ? "true" : "false",
              escaped_ssid,
              escaped_ssid);
+
     LOGI(TAG, "handle_session_info: API /api/session response: authorized=%s, has_password=%s, AP SSID=%s",
-                authorized ? "true" : "false",
-                has_password ? "true" : "false",
-                admin_portal_state_get_ssid(&g_state));
-    return send_json(req, "200 OK", response);
+         authorized ? "true" : "false",
+         has_password ? "true" : "false",
+         admin_portal_state_get_ssid(&g_state));
+
+    esp_err_t result = send_json(req, "200 OK", response);
+    free(response);
+    return result;
 }
 
 static esp_err_t handle_enroll(httpd_req_t *req)
