@@ -70,6 +70,11 @@ static const admin_portal_asset_t g_assets[] = {
     { .uri = "/assets/app.js", .start = _binary_app_js_gz_start, .end = _binary_app_js_gz_end, .content_type = "application/javascript", .compressed = true },
 };
 
+static void log_password_status(void)
+{
+    LOGI(TAG, "%s", admin_portal_state_has_password(&g_state) ? "AP PSW set" : "AP PSW not set");
+}
+
 static const char *session_status_name(admin_portal_session_status_t status)
 {
     switch (status)
@@ -339,6 +344,8 @@ static void load_initial_state(void)
     admin_portal_state_set_password(&g_state, password);
     if (admin_portal_state_has_password(&g_state))
         update_wifi_settings_password(password);
+
+    log_password_status();
 
     LOGI(TAG,
          "Initial state loaded: ssid=\"%s\", password_set=%s, idle_timeout=%" PRIu32 " ms",
@@ -648,6 +655,8 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     admin_portal_state_authorize_session(&g_state);
     update_wifi_settings_password(password);
 
+    log_password_status();
+
     LOGI(TAG, "Enrollment successful, redirecting to main page");
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
 }
@@ -761,6 +770,8 @@ static esp_err_t handle_change_password(httpd_req_t *req)
     admin_portal_state_authorize_session(&g_state);
     update_wifi_settings_password(next);
 
+    log_password_status();
+
     LOGI(TAG, "Change password successful, redirecting to device page");
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/device/\"}");
 }
@@ -821,9 +832,20 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
     if (!desc)
         return ESP_ERR_INVALID_ARG;
 
+    log_password_status();
+
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
     admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
     admin_portal_page_t target = admin_portal_state_resolve_page(&g_state, desc->page, status);
+
+    if (!admin_portal_state_has_password(&g_state) &&
+        target != ADMIN_PORTAL_PAGE_ENROLL &&
+        target != ADMIN_PORTAL_PAGE_BUSY &&
+        target != ADMIN_PORTAL_PAGE_OFF)
+    {
+        LOGI(TAG, "Password missing, forcing redirect to enroll page");
+        target = ADMIN_PORTAL_PAGE_ENROLL;
+    }
 
     LOGI(TAG,
          "GET %s: session=%s authorized=%s resolved=%s",
@@ -852,9 +874,19 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
 static esp_err_t handle_root(httpd_req_t *req)
 {
     const admin_portal_page_descriptor_t *main_page = &admin_portal_page_main;
+    log_password_status();
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
     admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
     admin_portal_page_t target = admin_portal_state_resolve_page(&g_state, main_page->page, status);
+
+    if (!admin_portal_state_has_password(&g_state) &&
+        target != ADMIN_PORTAL_PAGE_ENROLL &&
+        target != ADMIN_PORTAL_PAGE_BUSY &&
+        target != ADMIN_PORTAL_PAGE_OFF)
+    {
+        LOGI(TAG, "Password missing on root request, redirecting to enroll");
+        target = ADMIN_PORTAL_PAGE_ENROLL;
+    }
 
     LOGI(TAG,
          "GET /: session=%s authorized=%s resolved=%s",

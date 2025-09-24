@@ -28,6 +28,25 @@ void test_enroll_redirect_when_no_password(void)
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_ENROLL, page);
 }
 
+void test_protected_pages_redirect_to_enroll_without_password(void)
+{
+    const admin_portal_page_t pages[] = {
+        ADMIN_PORTAL_PAGE_MAIN,
+        ADMIN_PORTAL_PAGE_DEVICE,
+        ADMIN_PORTAL_PAGE_WIFI,
+        ADMIN_PORTAL_PAGE_CLIENTS,
+        ADMIN_PORTAL_PAGE_EVENTS,
+        ADMIN_PORTAL_PAGE_CHANGE_PASSWORD,
+        ADMIN_PORTAL_PAGE_AUTH,
+    };
+
+    for (size_t i = 0; i < sizeof(pages) / sizeof(pages[0]); ++i)
+    {
+        admin_portal_page_t resolved = admin_portal_state_resolve_page(&state, pages[i], ADMIN_PORTAL_SESSION_NONE);
+        TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_ENROLL, resolved);
+    }
+}
+
 void test_auth_required_when_password_set_but_not_authorized(void)
 {
     set_password("superpass");
@@ -117,6 +136,7 @@ int main(int argc, char **argv)
     UnityConfigureFromArgs(argc, (const char **)argv);
     UNITY_BEGIN();
     RUN_TEST(test_enroll_redirect_when_no_password);
+    RUN_TEST(test_protected_pages_redirect_to_enroll_without_password);
     RUN_TEST(test_auth_required_when_password_set_but_not_authorized);
     RUN_TEST(test_main_access_when_authorized);
     RUN_TEST(test_enroll_redirects_to_auth_when_password_exists);
