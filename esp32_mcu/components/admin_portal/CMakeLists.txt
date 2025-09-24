@@ -52,9 +52,10 @@ idf_component_register(
         esp_netif
         esp_timer
         wpa_supplicant
-        wifi_manager
         common
         logs
+    PRIV_REQUIRES
+        wifi_manager
     EMBED_FILES
         ${GZ_FILES}
         ${WEB_BIN_FILES}
