@@ -141,12 +141,20 @@
       .catch(() => setMessage(form, "Unable to reach device."));
   }
 
+  const sessionState = {
+    domReady: document.readyState === "interactive" || document.readyState === "complete",
+    info: null,
+  };
+
   function attachForms() {
     document.querySelectorAll("form[data-action]").forEach((form) => {
       form.addEventListener("submit", submitForm);
       Array.from(form.elements).forEach((el) => {
         if (el && el.tagName === "INPUT") {
           el.addEventListener("input", () => {
+            if (el.dataset && el.dataset.bind) {
+              el.dataset.userEdited = "true";
+            }
             el.classList.remove("error");
             setMessage(form, "");
           });
@@ -155,47 +163,62 @@
     });
   }
 
-  function applySession(info) {
-    if (!info || info.status !== "ok") return;
-    const portalName = info.ap_ssid || info.portal_name || "";
-    const ssidValue = info.ap_ssid || info.portal_name || "";
-    document.querySelectorAll("[data-bind='portal-name']").forEach((el) => {
+  function updateBoundElements(bindName, value, respectUserInput) {
+    document.querySelectorAll(`[data-bind='${bindName}']`).forEach((el) => {
       if (el.tagName === "INPUT") {
-        if (el.hasAttribute("readonly") || !el.value) {
-          el.value = portalName;
+        const shouldUpdateValue = !respectUserInput || !el.dataset || !el.dataset.userEdited;
+        if (shouldUpdateValue) {
+          el.value = value;
+          el.defaultValue = value;
         }
-        el.defaultValue = portalName;
         el.classList.remove("error");
       } else {
-        el.textContent = portalName;
+        el.textContent = value;
       }
     });
-    document.querySelectorAll("[data-bind='ssid']").forEach((el) => {
-      if (el.tagName === "INPUT") el.value = ssidValue;
-      else el.textContent = ssidValue;
-    });
+  }
+
+  function applySessionToDom() {
+    if (!sessionState.domReady || !sessionState.info || sessionState.info.status !== "ok") return;
+
+    const portalName = sessionState.info.ap_ssid || sessionState.info.portal_name || "";
+    const ssidValue = sessionState.info.ap_ssid || sessionState.info.portal_name || "";
+
+    updateBoundElements("portal-name", portalName, true);
+    updateBoundElements("ssid", ssidValue, true);
+  }
+
+  function handleSessionPayload(data) {
+    if (!data) return;
+    if (data.status === "busy") {
+      window.location.assign("/busy/");
+      return;
+    }
+    if (data.status === "expired" && data.redirect) {
+      window.location.assign(data.redirect);
+      return;
+    }
+
+    sessionState.info = data;
+    applySessionToDom();
   }
 
   function refreshSession() {
     fetch("/api/session", { method: "GET", cache: "no-store", credentials: "same-origin" })
       .then((response) => response.json().catch(() => null))
-      .then((data) => {
-        if (!data) return;
-        if (data.status === "busy") {
-          window.location.assign("/busy/");
-          return;
-        }
-        if (data.status === "expired" && data.redirect) {
-          window.location.assign(data.redirect);
-          return;
-        }
-        applySession(data);
-      })
+      .then(handleSessionPayload)
       .catch(() => {});
   }
 
   refreshSession();
-  document.addEventListener("DOMContentLoaded", () => {
+  if (!sessionState.domReady) {
+    document.addEventListener("DOMContentLoaded", () => {
+      sessionState.domReady = true;
+      attachForms();
+      applySessionToDom();
+    });
+  } else {
     attachForms();
-  });
+    applySessionToDom();
+  }
 })();
