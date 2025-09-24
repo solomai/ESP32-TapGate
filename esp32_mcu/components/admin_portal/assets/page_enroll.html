@@ -11,14 +11,17 @@
   <main class="card">
     <img src="/assets/logo.png" alt="TapGate" class="logo">
     <h1>Initial Setup</h1>
-    <p class="notice">Create an administrator password to secure the TapGate portal.</p>
+    <p class="notice">
+      Create an administrator password<br>
+      to secure the TapGate portal.
+    </p>
     <form data-action="enroll" class="form-grid">
       <label>
         Portal name
-        <input type="text" name="portal" data-bind="portal-name" required>
+        <input type="text" name="portal" data-bind="portal-name" required placeholder="Access Point name">
       </label>
       <label>
-        New password
+        Create password
         <input type="password" name="password" minlength="8" autocomplete="new-password" required placeholder="Minimum 8 characters">
       </label>
       <div class="message" data-message></div>
