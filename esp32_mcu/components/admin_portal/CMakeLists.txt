@@ -1,6 +1,6 @@
 # Collect all C sources in this component
-file(GLOB srcs "${CMAKE_CURRENT_LIST_DIR}/*.c")
-file(GLOB page_srcs "${CMAKE_CURRENT_LIST_DIR}/pages/*.c")
+file(GLOB CONFIGURE_DEPENDS srcs "${CMAKE_CURRENT_LIST_DIR}/*.c")
+file(GLOB CONFIGURE_DEPENDS page_srcs "${CMAKE_CURRENT_LIST_DIR}/pages/*.c")
 list(APPEND srcs ${page_srcs})
 
 # Path to web folder
