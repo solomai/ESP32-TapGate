@@ -210,7 +210,21 @@
       .catch(() => {});
   }
 
-  refreshSession();
+  if (typeof window !== "undefined" && window.addEventListener) {
+    window.addEventListener("tapgate-session", (event) => {
+      handleSessionPayload(event && event.detail ? event.detail : null);
+    });
+  }
+
+  const bootstrapSession =
+    typeof window !== "undefined" ? window.__TAPGATE_SESSION__ : null;
+
+  if (bootstrapSession) {
+    handleSessionPayload(bootstrapSession);
+  } else {
+    refreshSession();
+  }
+
   if (!sessionState.domReady) {
     document.addEventListener("DOMContentLoaded", () => {
       sessionState.domReady = true;

@@ -468,6 +468,70 @@ finish:
     return di;
 }
 
+static const char *session_ok_template =
+    "{\"status\":\"ok\",\"authorized\":%s,\"has_password\":%s,\"portal_name\":\"%s\",\"ap_ssid\":\"%s\"}";
+
+static char *allocate_session_ok_payload(bool authorized, bool has_password)
+{
+    char escaped_ssid[sizeof(g_state.ap_ssid) * 6 + 1];
+    json_escape_string(admin_portal_state_get_ssid(&g_state), escaped_ssid, sizeof(escaped_ssid));
+
+    int response_length = snprintf(NULL,
+                                   0,
+                                   session_ok_template,
+                                   authorized ? "true" : "false",
+                                   has_password ? "true" : "false",
+                                   escaped_ssid,
+                                   escaped_ssid);
+    if (response_length < 0)
+        return NULL;
+
+    size_t buffer_size = (size_t)response_length + 1;
+    char *response = (char *)malloc(buffer_size);
+    if (!response)
+        return NULL;
+
+    snprintf(response,
+             buffer_size,
+             session_ok_template,
+             authorized ? "true" : "false",
+             has_password ? "true" : "false",
+             escaped_ssid,
+             escaped_ssid);
+    return response;
+}
+
+static esp_err_t send_session_script(httpd_req_t *req, const char *json_payload)
+{
+    if (!json_payload)
+        return ESP_ERR_INVALID_ARG;
+
+    static const char script_prefix[] = "(function(){var data=";
+    static const char script_suffix[] =
+        ";window.__TAPGATE_SESSION__=data;if(window&&window.dispatchEvent){try{window.dispatchEvent(new CustomEvent('tapgate-session',{detail:data}));}catch(err){try{var event=document.createEvent('CustomEvent');event.initCustomEvent('tapgate-session',false,false,data);window.dispatchEvent(event);}catch(e){}}}})();";
+
+    size_t prefix_len = sizeof(script_prefix) - 1;
+    size_t suffix_len = sizeof(script_suffix) - 1;
+    size_t payload_len = strlen(json_payload);
+    size_t total_len = prefix_len + payload_len + suffix_len;
+
+    char *script = (char *)malloc(total_len + 1);
+    if (!script)
+        return ESP_ERR_NO_MEM;
+
+    memcpy(script, script_prefix, prefix_len);
+    memcpy(script + prefix_len, json_payload, payload_len);
+    memcpy(script + prefix_len + payload_len, script_suffix, suffix_len);
+    script[total_len] = '\0';
+
+    httpd_resp_set_status(req, "200 OK");
+    httpd_resp_set_type(req, "application/javascript");
+    set_cache_headers(req);
+    esp_err_t result = httpd_resp_send(req, script, HTTPD_RESP_USE_STRLEN);
+    free(script);
+    return result;
+}
+
 static admin_portal_session_status_t evaluate_session(httpd_req_t *req,
                                                       char *token_buffer,
                                                       size_t token_size)
@@ -652,40 +716,12 @@ static esp_err_t handle_session_info(httpd_req_t *req)
     bool authorized = admin_portal_state_session_authorized(&g_state);
     bool has_password = admin_portal_state_has_password(&g_state);
 
-    char escaped_ssid[sizeof(g_state.ap_ssid) * 6 + 1];
-    json_escape_string(admin_portal_state_get_ssid(&g_state), escaped_ssid, sizeof(escaped_ssid));
-
-    static const char *response_template =
-        "{\"status\":\"ok\",\"authorized\":%s,\"has_password\":%s,\"portal_name\":\"%s\",\"ap_ssid\":\"%s\"}";
-
-    int response_length = snprintf(NULL,
-                                   0,
-                                   response_template,
-                                   authorized ? "true" : "false",
-                                   has_password ? "true" : "false",
-                                   escaped_ssid,
-                                   escaped_ssid);
-    if (response_length < 0)
-    {
-        LOGE(TAG, "handle_session_info: Failed to measure response length");
-        return ESP_FAIL;
-    }
-
-    size_t buffer_size = (size_t)response_length + 1;
-    char *response = (char *)malloc(buffer_size);
+    char *response = allocate_session_ok_payload(authorized, has_password);
     if (!response)
     {
-        LOGE(TAG, "handle_session_info: Out of memory while preparing response");
-        return ESP_ERR_NO_MEM;
+        LOGE(TAG, "handle_session_info: Failed to allocate session payload");
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Unable to prepare session data");
     }
-
-    snprintf(response,
-             buffer_size,
-             response_template,
-             authorized ? "true" : "false",
-             has_password ? "true" : "false",
-             escaped_ssid,
-             escaped_ssid);
 
     LOGI(TAG, "handle_session_info: API /api/session response: authorized=%s, has_password=%s, AP SSID=%s",
          authorized ? "true" : "false",
@@ -694,6 +730,58 @@ static esp_err_t handle_session_info(httpd_req_t *req)
 
     esp_err_t result = send_json(req, "200 OK", response);
     free(response);
+    return result;
+}
+
+static esp_err_t handle_session_bootstrap(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+
+    LOGI(TAG,
+         "handle_session_bootstrap: /assets/session.js: status=%s authorized=%s claimed=%s",
+         session_status_name(status),
+         admin_portal_state_session_authorized(&g_state) ? "true" : "false",
+         g_state.session.claimed ? "true" : "false");
+
+    if (status == ADMIN_PORTAL_SESSION_BUSY)
+    {
+        LOGI(TAG, "handle_session_bootstrap: response busy");
+        return send_session_script(req, "{\"status\":\"busy\"}");
+    }
+
+    if (status == ADMIN_PORTAL_SESSION_EXPIRED)
+    {
+        admin_portal_state_clear_session(&g_state);
+        set_session_cookie(req, NULL, 0);
+        LOGI(TAG, "handle_session_bootstrap: session expired, redirecting to off page");
+        return send_session_script(req, "{\"status\":\"expired\",\"redirect\":\"/off/\"}");
+    }
+
+    if (status == ADMIN_PORTAL_SESSION_NONE)
+    {
+        ensure_session_claim(req, &status, token, sizeof(token));
+        LOGI(TAG, "handle_session_bootstrap: issued new token after claim");
+    }
+
+    bool authorized = admin_portal_state_session_authorized(&g_state);
+    bool has_password = admin_portal_state_has_password(&g_state);
+
+    char *payload = allocate_session_ok_payload(authorized, has_password);
+    if (!payload)
+    {
+        LOGE(TAG, "handle_session_bootstrap: Failed to allocate session payload");
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Unable to prepare session data");
+    }
+
+    LOGI(TAG,
+         "handle_session_bootstrap: response authorized=%s, has_password=%s, AP SSID=%s",
+         authorized ? "true" : "false",
+         has_password ? "true" : "false",
+         admin_portal_state_get_ssid(&g_state));
+
+    esp_err_t result = send_session_script(req, payload);
+    free(payload);
     return result;
 }
 
@@ -1079,6 +1167,14 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         };
         ESP_ERROR_CHECK(httpd_register_uri_handler(server, &asset_uri));
     }
+
+    httpd_uri_t session_bootstrap = {
+        .uri = "/assets/session.js",
+        .method = HTTP_GET,
+        .handler = handle_session_bootstrap,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &session_bootstrap));
 
     httpd_uri_t api_session = {
         .uri = "/api/session",
