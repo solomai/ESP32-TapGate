@@ -99,6 +99,19 @@ void test_pending_session_allows_new_client_to_claim(void)
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_NONE, status);
 }
 
+void test_authorized_session_without_cookie_remains_reclaimable(void)
+{
+    set_password("superpass");
+    start_session("token", 0, false);
+    admin_portal_state_authorize_session(&state);
+
+    admin_portal_session_status_t status = admin_portal_state_check_session(&state, NULL, 1000);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_NONE, status);
+
+    status = admin_portal_state_check_session(&state, "token", 2000);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH, status);
+}
+
 int main(int argc, char **argv)
 {
     UnityConfigureFromArgs(argc, (const char **)argv);
@@ -112,5 +125,6 @@ int main(int argc, char **argv)
     RUN_TEST(test_timeout_moves_to_off_page);
     RUN_TEST(test_password_validation_rules);
     RUN_TEST(test_pending_session_allows_new_client_to_claim);
+    RUN_TEST(test_authorized_session_without_cookie_remains_reclaimable);
     return UNITY_END();
 }

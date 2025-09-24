@@ -70,6 +70,52 @@ static const admin_portal_asset_t g_assets[] = {
     { .uri = "/assets/app.js", .start = _binary_app_js_gz_start, .end = _binary_app_js_gz_end, .content_type = "application/javascript", .compressed = true },
 };
 
+static const char *session_status_name(admin_portal_session_status_t status)
+{
+    switch (status)
+    {
+        case ADMIN_PORTAL_SESSION_NONE:
+            return "none";
+        case ADMIN_PORTAL_SESSION_MATCH:
+            return "match";
+        case ADMIN_PORTAL_SESSION_EXPIRED:
+            return "expired";
+        case ADMIN_PORTAL_SESSION_BUSY:
+            return "busy";
+        default:
+            return "unknown";
+    }
+}
+
+static const char *page_name(admin_portal_page_t page)
+{
+    switch (page)
+    {
+        case ADMIN_PORTAL_PAGE_ENROLL:
+            return "enroll";
+        case ADMIN_PORTAL_PAGE_AUTH:
+            return "auth";
+        case ADMIN_PORTAL_PAGE_CHANGE_PASSWORD:
+            return "change_password";
+        case ADMIN_PORTAL_PAGE_DEVICE:
+            return "device";
+        case ADMIN_PORTAL_PAGE_WIFI:
+            return "wifi";
+        case ADMIN_PORTAL_PAGE_CLIENTS:
+            return "clients";
+        case ADMIN_PORTAL_PAGE_EVENTS:
+            return "events";
+        case ADMIN_PORTAL_PAGE_MAIN:
+            return "main";
+        case ADMIN_PORTAL_PAGE_BUSY:
+            return "busy";
+        case ADMIN_PORTAL_PAGE_OFF:
+            return "off";
+        default:
+            return "unknown";
+    }
+}
+
 static uint64_t get_now_ms(void)
 {
     return esp_timer_get_time() / 1000ULL;
@@ -293,6 +339,12 @@ static void load_initial_state(void)
     admin_portal_state_set_password(&g_state, password);
     if (admin_portal_state_has_password(&g_state))
         update_wifi_settings_password(password);
+
+    LOGI(TAG,
+         "Initial state loaded: ssid=\"%s\", password_set=%s, idle_timeout=%" PRIu32 " ms",
+         admin_portal_state_get_ssid(&g_state),
+         admin_portal_state_has_password(&g_state) ? "true" : "false",
+         g_state.inactivity_timeout_ms);
 }
 
 static esp_err_t send_asset(httpd_req_t *req, const admin_portal_asset_t *asset)
@@ -326,6 +378,11 @@ static esp_err_t send_redirect(httpd_req_t *req, admin_portal_page_t page)
     const char *location = admin_portal_state_page_route(page);
     if (!location)
         location = "/";
+    LOGI(TAG,
+         "Redirecting request for %s to %s (page=%s)",
+         req ? req->uri : "<null>",
+         location,
+         page_name(page));
     httpd_resp_set_status(req, "302 Found");
     httpd_resp_set_hdr(req, "Location", location);
     set_cache_headers(req);
@@ -369,6 +426,10 @@ static esp_err_t ensure_session_claim(httpd_req_t *req,
     generate_session_token(new_token);
     admin_portal_state_start_session(&g_state, new_token, get_now_ms(), false);
     uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
+    LOGI(TAG,
+         "Session started for URI %s (max_age=%" PRIu32 " s)",
+         req ? req->uri : "<null>",
+         max_age);
     set_session_cookie(req, new_token, max_age);
     strncpy(token_buffer, new_token, token_size - 1);
     token_buffer[token_size - 1] = '\0';
@@ -491,19 +552,30 @@ static esp_err_t handle_session_info(httpd_req_t *req)
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
     admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
 
+    LOGI(TAG,
+         "API /api/session: status=%s authorized=%s claimed=%s",
+         session_status_name(status),
+         admin_portal_state_session_authorized(&g_state) ? "true" : "false",
+         g_state.session.claimed ? "true" : "false");
+
     if (status == ADMIN_PORTAL_SESSION_BUSY)
+    {
+        LOGI(TAG, "API /api/session response: busy");
         return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    }
 
     if (status == ADMIN_PORTAL_SESSION_EXPIRED)
     {
         admin_portal_state_clear_session(&g_state);
         set_session_cookie(req, NULL, 0);
+        LOGI(TAG, "Session expired, redirecting to off page");
         return send_json(req, "200 OK", "{\"status\":\"expired\",\"redirect\":\"/off/\"}");
     }
 
     if (status == ADMIN_PORTAL_SESSION_NONE)
     {
         ensure_session_claim(req, &status, token, sizeof(token));
+        LOGI(TAG, "API /api/session issued new token after claim");
     }
 
     bool authorized = admin_portal_state_session_authorized(&g_state);
@@ -515,6 +587,7 @@ static esp_err_t handle_session_info(httpd_req_t *req)
              authorized ? "true" : "false",
              has_password ? "true" : "false",
              admin_portal_state_get_ssid(&g_state));
+    LOGI(TAG, "API /api/session response: authorized=%s has_password=%s", authorized ? "true" : "false", has_password ? "true" : "false");
     return send_json(req, "200 OK", response);
 }
 
@@ -523,36 +596,59 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
     admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
 
+    LOGI(TAG,
+         "API /api/enroll: status=%s has_password=%s",
+         session_status_name(status),
+         admin_portal_state_has_password(&g_state) ? "true" : "false");
+
     if (status != ADMIN_PORTAL_SESSION_MATCH)
     {
         if (status == ADMIN_PORTAL_SESSION_NONE)
             ensure_session_claim(req, &status, token, sizeof(token));
         if (status == ADMIN_PORTAL_SESSION_BUSY)
+        {
+            LOGI(TAG, "Enrollment denied: portal busy");
             return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+        }
     }
 
     if (admin_portal_state_has_password(&g_state))
+    {
+        LOGI(TAG, "Enrollment redirected to auth because password already set");
         return send_json(req, "200 OK", "{\"status\":\"redirect\",\"redirect\":\"/auth/\"}");
+    }
 
     char *body = read_body(req);
     if (!body)
+    {
+        LOGI(TAG, "Enrollment failed: request body missing");
         return send_json(req, "400 Bad Request", "{\"status\":\"error\",\"code\":\"invalid_request\"}");
+    }
 
     char password[sizeof(g_state.ap_password)];
     bool has_password = form_get_field(body, "password", password, sizeof(password));
     free(body);
 
     if (!has_password || !admin_portal_state_password_valid(&g_state, password))
+    {
+        LOGI(TAG,
+             "Enrollment failed: %s",
+             has_password ? "password does not meet requirements" : "password missing");
         return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_password\"}");
+    }
 
     esp_err_t err = nvm_write_string(ADMIN_PORTAL_KEY_PSW, password);
     if (err != ESP_OK)
+    {
+        LOGI(TAG, "Enrollment failed: unable to store password (err=0x%x)", (unsigned)err);
         return send_json(req, "500 Internal Server Error", "{\"status\":\"error\",\"code\":\"storage_failed\"}");
+    }
 
     admin_portal_state_set_password(&g_state, password);
     admin_portal_state_authorize_session(&g_state);
     update_wifi_settings_password(password);
 
+    LOGI(TAG, "Enrollment successful, redirecting to main page");
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
 }
 
@@ -561,27 +657,49 @@ static esp_err_t handle_login(httpd_req_t *req)
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
     admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
 
+    LOGI(TAG,
+         "API /api/login: status=%s has_password=%s authorized=%s",
+         session_status_name(status),
+         admin_portal_state_has_password(&g_state) ? "true" : "false",
+         admin_portal_state_session_authorized(&g_state) ? "true" : "false");
+
     if (status == ADMIN_PORTAL_SESSION_BUSY)
+    {
+        LOGI(TAG, "Login denied: portal busy");
         return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    }
 
     if (status == ADMIN_PORTAL_SESSION_NONE)
+    {
         ensure_session_claim(req, &status, token, sizeof(token));
+        LOGI(TAG, "Login request claimed new session");
+    }
 
     if (!admin_portal_state_has_password(&g_state))
+    {
+        LOGI(TAG, "Login redirected to enroll because password missing");
         return send_json(req, "200 OK", "{\"status\":\"redirect\",\"redirect\":\"/enroll/\"}");
+    }
 
     char *body = read_body(req);
     if (!body)
+    {
+        LOGI(TAG, "Login failed: request body missing");
         return send_json(req, "400 Bad Request", "{\"status\":\"error\",\"code\":\"invalid_request\"}");
+    }
 
     char password[sizeof(g_state.ap_password)];
     bool has_password = form_get_field(body, "password", password, sizeof(password));
     free(body);
 
     if (!has_password || !admin_portal_state_password_matches(&g_state, password))
+    {
+        LOGI(TAG, "Login failed: wrong password");
         return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"wrong_password\"}");
+    }
 
     admin_portal_state_authorize_session(&g_state);
+    LOGI(TAG, "Login successful, redirecting to main page");
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
 }
 
@@ -589,14 +707,28 @@ static esp_err_t handle_change_password(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
     admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+    LOGI(TAG,
+         "API /api/change-password: status=%s authorized=%s",
+         session_status_name(status),
+         admin_portal_state_session_authorized(&g_state) ? "true" : "false");
+
     if (status == ADMIN_PORTAL_SESSION_BUSY)
+    {
+        LOGI(TAG, "Change password denied: portal busy");
         return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    }
     if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state))
+    {
+        LOGI(TAG, "Change password denied: unauthorized session");
         return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
+    }
 
     char *body = read_body(req);
     if (!body)
+    {
+        LOGI(TAG, "Change password failed: request body missing");
         return send_json(req, "400 Bad Request", "{\"status\":\"error\",\"code\":\"invalid_request\"}");
+    }
 
     char current[sizeof(g_state.ap_password)];
     char next[sizeof(g_state.ap_password)];
@@ -605,19 +737,31 @@ static esp_err_t handle_change_password(httpd_req_t *req)
     free(body);
 
     if (!has_current || !admin_portal_state_password_matches(&g_state, current))
+    {
+        LOGI(TAG, "Change password failed: wrong current password");
         return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"wrong_password\"}");
+    }
 
     if (!has_next || !admin_portal_state_password_valid(&g_state, next))
+    {
+        LOGI(TAG,
+             "Change password failed: %s",
+             has_next ? "new password does not meet requirements" : "new password missing");
         return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_new_password\"}");
+    }
 
     esp_err_t err = nvm_write_string(ADMIN_PORTAL_KEY_PSW, next);
     if (err != ESP_OK)
+    {
+        LOGI(TAG, "Change password failed: unable to store password (err=0x%x)", (unsigned)err);
         return send_json(req, "500 Internal Server Error", "{\"status\":\"error\",\"code\":\"storage_failed\"}");
+    }
 
     admin_portal_state_set_password(&g_state, next);
     admin_portal_state_authorize_session(&g_state);
     update_wifi_settings_password(next);
 
+    LOGI(TAG, "Change password successful, redirecting to device page");
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/device/\"}");
 }
 
@@ -625,29 +769,50 @@ static esp_err_t handle_update_device(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
     admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+    LOGI(TAG,
+         "API /api/device: status=%s authorized=%s",
+         session_status_name(status),
+         admin_portal_state_session_authorized(&g_state) ? "true" : "false");
+
     if (status == ADMIN_PORTAL_SESSION_BUSY)
+    {
+        LOGI(TAG, "Device update denied: portal busy");
         return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    }
     if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state))
+    {
+        LOGI(TAG, "Device update denied: unauthorized session");
         return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
+    }
 
     char *body = read_body(req);
     if (!body)
+    {
+        LOGI(TAG, "Device update failed: request body missing");
         return send_json(req, "400 Bad Request", "{\"status\":\"error\",\"code\":\"invalid_request\"}");
+    }
 
     char ssid[sizeof(g_state.ap_ssid)];
     bool has_ssid = form_get_field(body, "ssid", ssid, sizeof(ssid));
     free(body);
 
     if (!has_ssid || ssid[0] == '\0')
+    {
+        LOGI(TAG, "Device update failed: invalid SSID");
         return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_ssid\"}");
+    }
 
     esp_err_t err = nvm_write_string(ADMIN_PORTAL_KEY_SSID, ssid);
     if (err != ESP_OK)
+    {
+        LOGI(TAG, "Device update failed: unable to store SSID (err=0x%x)", (unsigned)err);
         return send_json(req, "500 Internal Server Error", "{\"status\":\"error\",\"code\":\"storage_failed\"}");
+    }
 
     admin_portal_state_set_ssid(&g_state, ssid);
     update_wifi_settings_ssid(ssid);
 
+    LOGI(TAG, "Device update successful, redirecting to main page (ssid=\"%s\")", ssid);
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
 }
 
@@ -660,10 +825,18 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
     admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
     admin_portal_page_t target = admin_portal_state_resolve_page(&g_state, desc->page, status);
 
+    LOGI(TAG,
+         "GET %s: session=%s authorized=%s resolved=%s",
+         desc->route,
+         session_status_name(status),
+         admin_portal_state_session_authorized(&g_state) ? "true" : "false",
+         page_name(target));
+
     if (target == ADMIN_PORTAL_PAGE_OFF && status == ADMIN_PORTAL_SESSION_EXPIRED)
     {
         admin_portal_state_clear_session(&g_state);
         set_session_cookie(req, NULL, 0);
+        LOGI(TAG, "Session expired while requesting %s; clearing cookie", desc->route);
     }
 
     if (target != desc->page)
@@ -672,6 +845,7 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
     if (status == ADMIN_PORTAL_SESSION_NONE && desc->page != ADMIN_PORTAL_PAGE_BUSY && desc->page != ADMIN_PORTAL_PAGE_OFF)
         ensure_session_claim(req, &status, token, sizeof(token));
 
+    LOGI(TAG, "Serving page %s", page_name(desc->page));
     return send_page_content(req, desc);
 }
 
@@ -682,10 +856,17 @@ static esp_err_t handle_root(httpd_req_t *req)
     admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
     admin_portal_page_t target = admin_portal_state_resolve_page(&g_state, main_page->page, status);
 
+    LOGI(TAG,
+         "GET /: session=%s authorized=%s resolved=%s",
+         session_status_name(status),
+         admin_portal_state_session_authorized(&g_state) ? "true" : "false",
+         page_name(target));
+
     if (target == ADMIN_PORTAL_PAGE_OFF && status == ADMIN_PORTAL_SESSION_EXPIRED)
     {
         admin_portal_state_clear_session(&g_state);
         set_session_cookie(req, NULL, 0);
+        LOGI(TAG, "Session expired on root request; clearing cookie");
     }
 
     return send_redirect(req, target);
@@ -706,6 +887,7 @@ static esp_err_t handle_asset_entry(httpd_req_t *req)
     if (!asset)
         return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Asset not configured");
 
+    LOGI(TAG, "Serving asset %s", asset->uri);
     return send_asset(req, asset);
 }
 

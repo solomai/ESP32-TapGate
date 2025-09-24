@@ -216,7 +216,6 @@ void admin_portal_state_authorize_session(admin_portal_state_t *state)
     if (state->session.active)
     {
         state->session.authorized = true;
-        state->session.claimed = true;
     }
 }
 
