@@ -66,6 +66,7 @@ extern const uint8_t _binary_app_js_gz_end[];
 
 static const admin_portal_asset_t g_assets[] = {
     { .uri = "/assets/logo.png", .start = _binary_logo_png_start, .end = _binary_logo_png_end, .content_type = "image/png", .compressed = false },
+    { .uri = "/favicon.ico", .start = _binary_logo_png_start, .end = _binary_logo_png_end, .content_type = "image/png", .compressed = false },
     { .uri = "/assets/styles.css", .start = _binary_styles_css_gz_start, .end = _binary_styles_css_gz_end, .content_type = "text/css", .compressed = true },
     { .uri = "/assets/app.js", .start = _binary_app_js_gz_start, .end = _binary_app_js_gz_end, .content_type = "application/javascript", .compressed = true },
 };
@@ -400,6 +401,73 @@ static esp_err_t send_json(httpd_req_t *req, const char *status_text, const char
     return httpd_resp_send(req, body, HTTPD_RESP_USE_STRLEN);
 }
 
+static size_t json_escape_string(const char *input, char *output, size_t output_size)
+{
+    if (!output || output_size == 0)
+        return 0;
+
+    size_t di = 0;
+    if (!input)
+        input = "";
+
+    while (*input && di + 1 < output_size)
+    {
+        unsigned char ch = (unsigned char)(*input++);
+        const char *escape_seq = NULL;
+        switch (ch)
+        {
+            case '\\':
+                escape_seq = "\\\\";
+                break;
+            case '\"':
+                escape_seq = "\\\"";
+                break;
+            case '\b':
+                escape_seq = "\\b";
+                break;
+            case '\f':
+                escape_seq = "\\f";
+                break;
+            case '\n':
+                escape_seq = "\\n";
+                break;
+            case '\r':
+                escape_seq = "\\r";
+                break;
+            case '\t':
+                escape_seq = "\\t";
+                break;
+            default:
+                if (ch < 0x20)
+                {
+                    if (di + 6 >= output_size)
+                        goto finish;
+                    int written = snprintf((char *)output + di, output_size - di, "\\u%04x", ch);
+                    if (written < 0 || (size_t)written >= output_size - di)
+                        goto finish;
+                    di += (size_t)written;
+                }
+                else
+                {
+                    output[di++] = (char)ch;
+                }
+                continue;
+        }
+
+        size_t escape_len = strlen(escape_seq);
+        if (di + escape_len >= output_size)
+            break;
+        memcpy(output + di, escape_seq, escape_len);
+        di += escape_len;
+    }
+
+finish:
+    if (di >= output_size)
+        di = output_size - 1;
+    output[di] = '\0';
+    return di;
+}
+
 static admin_portal_session_status_t evaluate_session(httpd_req_t *req,
                                                       char *token_buffer,
                                                       size_t token_size)
@@ -584,12 +652,15 @@ static esp_err_t handle_session_info(httpd_req_t *req)
     bool authorized = admin_portal_state_session_authorized(&g_state);
     bool has_password = admin_portal_state_has_password(&g_state);
 
-    char response[384];
+    char escaped_ssid[sizeof(g_state.ap_ssid) * 6 + 1];
+    json_escape_string(admin_portal_state_get_ssid(&g_state), escaped_ssid, sizeof(escaped_ssid));
+
+    char response[512];
     snprintf(response, sizeof(response),
              "{\"status\":\"ok\",\"authorized\":%s,\"has_password\":%s,\"ap_ssid\":\"%s\"}",
              authorized ? "true" : "false",
              has_password ? "true" : "false",
-             admin_portal_state_get_ssid(&g_state));
+             escaped_ssid);
     LOGI(TAG, "handle_session_info: API /api/session response: authorized=%s, has_password=%s, AP SSID=%s",
                 authorized ? "true" : "false",
                 has_password ? "true" : "false",
