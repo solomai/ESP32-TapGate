@@ -16,6 +16,8 @@ esp_err_t http_server_start()
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 32;
     config.lru_purge_enable = true;
+    // Browsers can send large Cookie headers; bump the limit to avoid 431 errors.
+    config.max_req_hdr_len = 1024;
 
     esp_err_t err = httpd_start(&httpserver_handle, &config);
     if (err != ESP_OK)
