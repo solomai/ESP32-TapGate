@@ -22,6 +22,11 @@ static void start_session(const char *token, uint64_t now_ms, bool authorized)
     admin_portal_state_start_session(&state, token, now_ms, authorized);
 }
 
+static void authorize_active_session(void)
+{
+    admin_portal_state_authorize_session(&state);
+}
+
 void test_enroll_redirect_when_no_password(void)
 {
     admin_portal_page_t page = admin_portal_state_resolve_page(&state, ADMIN_PORTAL_PAGE_MAIN, ADMIN_PORTAL_SESSION_NONE);
@@ -55,13 +60,44 @@ void test_auth_required_when_password_set_but_not_authorized(void)
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_AUTH, page);
 }
 
+void test_all_protected_pages_redirect_to_auth_when_unauthorized(void)
+{
+    set_password("superpass");
+    start_session("token", 0, false);
+
+    const admin_portal_page_t protected_pages[] = {
+        ADMIN_PORTAL_PAGE_MAIN,
+        ADMIN_PORTAL_PAGE_DEVICE,
+        ADMIN_PORTAL_PAGE_WIFI,
+        ADMIN_PORTAL_PAGE_CLIENTS,
+        ADMIN_PORTAL_PAGE_EVENTS,
+        ADMIN_PORTAL_PAGE_CHANGE_PASSWORD,
+    };
+
+    for (size_t i = 0; i < sizeof(protected_pages) / sizeof(protected_pages[0]); ++i)
+    {
+        admin_portal_page_t resolved =
+            admin_portal_state_resolve_page(&state, protected_pages[i], ADMIN_PORTAL_SESSION_MATCH);
+        TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_AUTH, resolved);
+    }
+}
+
 void test_main_access_when_authorized(void)
 {
     set_password("superpass");
     start_session("token", 0, false);
-    admin_portal_state_authorize_session(&state);
+    authorize_active_session();
     admin_portal_page_t page = admin_portal_state_resolve_page(&state, ADMIN_PORTAL_PAGE_MAIN, ADMIN_PORTAL_SESSION_MATCH);
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_MAIN, page);
+}
+
+void test_device_page_access_when_authorized(void)
+{
+    set_password("superpass");
+    start_session("token", 0, false);
+    authorize_active_session();
+    admin_portal_page_t page = admin_portal_state_resolve_page(&state, ADMIN_PORTAL_PAGE_DEVICE, ADMIN_PORTAL_SESSION_MATCH);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_DEVICE, page);
 }
 
 void test_enroll_redirects_to_auth_when_password_exists(void)
@@ -69,6 +105,15 @@ void test_enroll_redirects_to_auth_when_password_exists(void)
     set_password("superpass");
     admin_portal_page_t page = admin_portal_state_resolve_page(&state, ADMIN_PORTAL_PAGE_ENROLL, ADMIN_PORTAL_SESSION_NONE);
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_AUTH, page);
+}
+
+void test_auth_page_redirects_to_main_when_authorized(void)
+{
+    set_password("superpass");
+    start_session("token", 0, false);
+    authorize_active_session();
+    admin_portal_page_t page = admin_portal_state_resolve_page(&state, ADMIN_PORTAL_PAGE_AUTH, ADMIN_PORTAL_SESSION_MATCH);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_MAIN, page);
 }
 
 void test_busy_state_blocks_other_clients(void)
@@ -122,7 +167,7 @@ void test_authorized_session_without_cookie_remains_reclaimable(void)
 {
     set_password("superpass");
     start_session("token", 0, false);
-    admin_portal_state_authorize_session(&state);
+    authorize_active_session();
 
     admin_portal_session_status_t status = admin_portal_state_check_session(&state, NULL, 1000);
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_NONE, status);
@@ -138,8 +183,11 @@ int main(int argc, char **argv)
     RUN_TEST(test_enroll_redirect_when_no_password);
     RUN_TEST(test_protected_pages_redirect_to_enroll_without_password);
     RUN_TEST(test_auth_required_when_password_set_but_not_authorized);
+    RUN_TEST(test_all_protected_pages_redirect_to_auth_when_unauthorized);
     RUN_TEST(test_main_access_when_authorized);
+    RUN_TEST(test_device_page_access_when_authorized);
     RUN_TEST(test_enroll_redirects_to_auth_when_password_exists);
+    RUN_TEST(test_auth_page_redirects_to_main_when_authorized);
     RUN_TEST(test_busy_state_blocks_other_clients);
     RUN_TEST(test_enroll_session_takeover_when_no_password);
     RUN_TEST(test_timeout_moves_to_off_page);

@@ -1,12 +1,13 @@
 #include "http_service.h"
 
 #include "admin_portal_state.h"
+#include "device_bridge.h"
 #include "logs.h"
 #include "wifi_manager.h"
+#include "nvm/nvm.h"
 
 #include "esp_random.h"
 #include "esp_timer.h"
-#include "nvs.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -228,101 +229,27 @@ static bool get_session_token(httpd_req_t *req, char *token, size_t token_size)
     return found;
 }
 
-static esp_err_t nvm_open_handle(nvs_open_mode mode, nvs_handle_t *handle)
-{
-    if (!handle)
-        return ESP_ERR_INVALID_ARG;
-    return nvs_open_from_partition(NVM_WIFI_PARTITION, ADMIN_PORTAL_NAMESPACE, mode, handle);
-}
-
-static esp_err_t nvm_read_string(const char *key, char *buffer, size_t size)
-{
-    if (!key || !buffer || size == 0)
-        return ESP_ERR_INVALID_ARG;
-
-    nvs_handle_t handle;
-    esp_err_t err = nvm_open_handle(NVS_READONLY, &handle);
-    if (err != ESP_OK)
-    {
-        buffer[0] = '\0';
-        return err;
-    }
-
-    size_t length = size;
-    err = nvs_get_str(handle, key, buffer, &length);
-    if (err == ESP_ERR_NVS_NOT_FOUND)
-    {
-        buffer[0] = '\0';
-        err = ESP_OK;
-    }
-    nvs_close(handle);
-    return err;
-}
-
-static esp_err_t nvm_write_string(const char *key, const char *value)
-{
-    if (!key || !value)
-        return ESP_ERR_INVALID_ARG;
-
-    nvs_handle_t handle;
-    esp_err_t err = nvm_open_handle(NVS_READWRITE, &handle);
-    if (err != ESP_OK)
-        return err;
-
-    err = nvs_set_str(handle, key, value);
-    if (err == ESP_OK)
-        err = nvs_commit(handle);
-    nvs_close(handle);
-    return err;
-}
-
-static esp_err_t nvm_read_u32(const char *key, uint32_t *value)
-{
-    if (!key || !value)
-        return ESP_ERR_INVALID_ARG;
-
-    nvs_handle_t handle;
-    esp_err_t err = nvm_open_handle(NVS_READONLY, &handle);
-    if (err != ESP_OK)
-        return err;
-
-    err = nvs_get_u32(handle, key, value);
-    nvs_close(handle);
-    return err;
-}
-
-static void update_wifi_settings_password(const char *password)
-{
-    if (!password)
-        return;
-    size_t length = strnlen_safe(password, sizeof(wifi_settings.ap_pwd));
-    memcpy(wifi_settings.ap_pwd, password, length);
-    if (length < sizeof(wifi_settings.ap_pwd))
-        wifi_settings.ap_pwd[length] = '\0';
-}
-
-static void update_wifi_settings_ssid(const char *ssid)
-{
-    if (!ssid)
-        return;
-    size_t length = strnlen_safe(ssid, sizeof(wifi_settings.ap_ssid));
-    memcpy(wifi_settings.ap_ssid, ssid, length);
-    if (length < sizeof(wifi_settings.ap_ssid))
-        wifi_settings.ap_ssid[length] = '\0';
-}
-
 static void load_initial_state(void)
 {
     uint32_t stored_minutes = DEFAULT_IDLE_TIMEOUT_MINUTES;
-    if (nvm_read_u32(ADMIN_PORTAL_KEY_IDLE_MIN, &stored_minutes) != ESP_OK || stored_minutes == 0)
+    if (nvm_read_u32_from_partition(NVM_WIFI_PARTITION,
+                                    ADMIN_PORTAL_NAMESPACE,
+                                    ADMIN_PORTAL_KEY_IDLE_MIN,
+                                    &stored_minutes) != ESP_OK ||
+        stored_minutes == 0)
     {
         stored_minutes = DEFAULT_IDLE_TIMEOUT_MINUTES;
     }
 
     admin_portal_state_init(&g_state, (uint32_t)minutes_to_ms(stored_minutes), WPA2_MINIMUM_PASSWORD_LENGTH);
 
-    char ssid[sizeof(g_state.ap_ssid)];
-    if (nvm_read_string(ADMIN_PORTAL_KEY_SSID, ssid, sizeof(ssid)) != ESP_OK || ssid[0] == '\0')
+    char ssid[sizeof(g_state.ap_ssid)] = {0};
+    esp_err_t ssid_err = nvm_read_string_from_partition(NVM_WIFI_PARTITION,
+                                                        ADMIN_PORTAL_NAMESPACE,
+                                                        ADMIN_PORTAL_KEY_SSID,
+                                                        ssid,
+                                                        sizeof(ssid));
+    if (ssid_err != ESP_OK || ssid[0] == '\0')
     {
         size_t length = strnlen_safe((const char *)wifi_settings.ap_ssid, sizeof(wifi_settings.ap_ssid));
         if (length >= sizeof(ssid))
@@ -331,15 +258,21 @@ static void load_initial_state(void)
         ssid[length] = '\0';
     }
     admin_portal_state_set_ssid(&g_state, ssid);
+    admin_portal_device_set_ap_ssid(ssid);
 
-    char password[sizeof(g_state.ap_password)];
-    if (nvm_read_string(ADMIN_PORTAL_KEY_PSW, password, sizeof(password)) != ESP_OK)
+    char password[sizeof(g_state.ap_password)] = {0};
+    esp_err_t password_err = nvm_read_string_from_partition(NVM_WIFI_PARTITION,
+                                                            ADMIN_PORTAL_NAMESPACE,
+                                                            ADMIN_PORTAL_KEY_PSW,
+                                                            password,
+                                                            sizeof(password));
+    if (password_err != ESP_OK)
     {
         password[0] = '\0';
     }
     admin_portal_state_set_password(&g_state, password);
     if (admin_portal_state_has_password(&g_state))
-        update_wifi_settings_password(password);
+        admin_portal_device_set_ap_password(password);
 
     LOGI(TAG,
          "Initial state loaded: SSID=\"%s\", AP PSW=%s, idle timeout=%" PRIu32 " ms",
@@ -839,14 +772,20 @@ static esp_err_t handle_enroll(httpd_req_t *req)
         return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_password\"}");
     }
 
-    esp_err_t err = nvm_write_string(ADMIN_PORTAL_KEY_SSID, portal_name);
+    esp_err_t err = nvm_write_string_to_partition(NVM_WIFI_PARTITION,
+                                                  ADMIN_PORTAL_NAMESPACE,
+                                                  ADMIN_PORTAL_KEY_SSID,
+                                                  portal_name);
     if (err != ESP_OK)
     {
         LOGI(TAG, "Enrollment failed: unable to store AP SSID: %s", esp_err_to_name(err));
         return send_json(req, "500 Internal Server Error", "{\"status\":\"error\",\"code\":\"storage_failed\"}");
     }
 
-    err = nvm_write_string(ADMIN_PORTAL_KEY_PSW, password);
+    err = nvm_write_string_to_partition(NVM_WIFI_PARTITION,
+                                        ADMIN_PORTAL_NAMESPACE,
+                                        ADMIN_PORTAL_KEY_PSW,
+                                        password);
     if (err != ESP_OK)
     {
         LOGI(TAG, "Enrollment failed: unable to store password: %s", esp_err_to_name(err));
@@ -854,9 +793,10 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     }
 
     admin_portal_state_set_ssid(&g_state, portal_name);
+    admin_portal_device_set_ap_ssid(portal_name);
     admin_portal_state_set_password(&g_state, password);
     admin_portal_state_authorize_session(&g_state);
-    update_wifi_settings_password(password);
+    admin_portal_device_set_ap_password(password);
 
     LOGI(TAG, "Enrollment successful, redirecting to main page (AP SSID=\"%s\")", portal_name);
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
@@ -960,7 +900,10 @@ static esp_err_t handle_change_password(httpd_req_t *req)
         return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_new_password\"}");
     }
 
-    esp_err_t err = nvm_write_string(ADMIN_PORTAL_KEY_PSW, next);
+    esp_err_t err = nvm_write_string_to_partition(NVM_WIFI_PARTITION,
+                                                  ADMIN_PORTAL_NAMESPACE,
+                                                  ADMIN_PORTAL_KEY_PSW,
+                                                  next);
     if (err != ESP_OK)
     {
         LOGI(TAG, "Change password failed: unable to store password (err=0x%x)", (unsigned)err);
@@ -969,7 +912,7 @@ static esp_err_t handle_change_password(httpd_req_t *req)
 
     admin_portal_state_set_password(&g_state, next);
     admin_portal_state_authorize_session(&g_state);
-    update_wifi_settings_password(next);
+    admin_portal_device_set_ap_password(next);
 
     LOGI(TAG, "Change password successful, redirecting to device page");
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/device/\"}");
@@ -1012,7 +955,10 @@ static esp_err_t handle_update_device(httpd_req_t *req)
         return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_ssid\"}");
     }
 
-    esp_err_t err = nvm_write_string(ADMIN_PORTAL_KEY_SSID, ssid);
+    esp_err_t err = nvm_write_string_to_partition(NVM_WIFI_PARTITION,
+                                                  ADMIN_PORTAL_NAMESPACE,
+                                                  ADMIN_PORTAL_KEY_SSID,
+                                                  ssid);
     if (err != ESP_OK)
     {
         LOGI(TAG, "Device update failed: unable to store SSID (err=0x%x)", (unsigned)err);
@@ -1020,7 +966,7 @@ static esp_err_t handle_update_device(httpd_req_t *req)
     }
 
     admin_portal_state_set_ssid(&g_state, ssid);
-    update_wifi_settings_ssid(ssid);
+    admin_portal_device_set_ap_ssid(ssid);
 
     LOGI(TAG, "Device update successful, redirecting to main page (ssid=\"%s\")", ssid);
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
