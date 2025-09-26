@@ -187,16 +187,16 @@ static size_t escape_js_string(const char *src, char *dest, size_t dest_size)
                 replacement = "\t";
                 break;
             case '<':
-                replacement = "\u003C";
+                replacement = "\\u003C";
                 break;
             case '>':
-                replacement = "\u003E";
+                replacement = "\\u003E";
                 break;
             case '&':
-                replacement = "\u0026";
+                replacement = "\\u0026";
                 break;
             case 0x27:
-                replacement = "\u0027";
+                replacement = "\\u0027";
                 break;
             default:
                 if (*input < 0x20)
