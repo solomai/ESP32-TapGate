@@ -2,6 +2,7 @@
 #include "nvm_partition.h"
 
 #include "logs.h"
+#include "nvs.h"
 #include "nvs_flash.h"
 
 #include <stddef.h>
@@ -60,4 +61,92 @@ esp_err_t nvm_init(void)
     }
 
     return ESP_OK;
+}
+
+esp_err_t nvm_read_string(const char *partition,
+                          const char *namespace_name,
+                          const char *key,
+                          char *buffer,
+                          size_t size)
+{
+    if (!buffer || size == 0)
+        return ESP_ERR_INVALID_ARG;
+
+    buffer[0] = '\0';
+
+    if (!partition || !namespace_name || !key)
+        return ESP_ERR_INVALID_ARG;
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open_from_partition(partition, namespace_name, NVS_READONLY, &handle);
+    if (err != ESP_OK)
+        return err;
+
+    size_t length = size;
+    err = nvs_get_str(handle, key, buffer, &length);
+    if (err == ESP_ERR_NVS_NOT_FOUND)
+    {
+        buffer[0] = '\0';
+        err = ESP_OK;
+    }
+    nvs_close(handle);
+    return err;
+}
+
+esp_err_t nvm_write_string(const char *partition,
+                           const char *namespace_name,
+                           const char *key,
+                           const char *value)
+{
+    if (!partition || !namespace_name || !key || !value)
+        return ESP_ERR_INVALID_ARG;
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open_from_partition(partition, namespace_name, NVS_READWRITE, &handle);
+    if (err != ESP_OK)
+        return err;
+
+    err = nvs_set_str(handle, key, value);
+    if (err == ESP_OK)
+        err = nvs_commit(handle);
+    nvs_close(handle);
+    return err;
+}
+
+esp_err_t nvm_read_u32(const char *partition,
+                       const char *namespace_name,
+                       const char *key,
+                       uint32_t *value)
+{
+    if (!partition || !namespace_name || !key || !value)
+        return ESP_ERR_INVALID_ARG;
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open_from_partition(partition, namespace_name, NVS_READONLY, &handle);
+    if (err != ESP_OK)
+        return err;
+
+    err = nvs_get_u32(handle, key, value);
+    nvs_close(handle);
+    return err;
+}
+
+esp_err_t nvm_write_u32(const char *partition,
+                        const char *namespace_name,
+                        const char *key,
+                        uint32_t value)
+{
+    if (!partition || !namespace_name || !key)
+        return ESP_ERR_INVALID_ARG;
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open_from_partition(partition, namespace_name, NVS_READWRITE, &handle);
+    if (err != ESP_OK)
+        return err;
+
+    err = nvs_set_u32(handle, key, value);
+    if (err == ESP_OK)
+        err = nvs_commit(handle);
+    nvs_close(handle);
+    return err;
 }

@@ -175,6 +175,40 @@
     });
   }
 
+  function applyInitialData() {
+    const initialData = window.TAPGATE_INITIAL_DATA;
+    if (!initialData || !initialData.ap_ssid) {
+      console.log("No initial data from server, falling back to API");
+      refreshSession();
+      return;
+    }
+
+    console.log("Applying initial data from server:", initialData);
+
+    const portalName = initialData.ap_ssid || "";
+
+    document.querySelectorAll("[data-bind='portal-name']").forEach((el) => {
+      if (el.tagName === "INPUT") {
+        if (!el.value.trim()) {
+          el.value = portalName;
+          console.log(`Set portal input value to: "${portalName}"`);
+        }
+        el.defaultValue = portalName;
+        el.classList.remove("error");
+      } else {
+        el.textContent = portalName;
+      }
+    });
+
+    document.querySelectorAll("[data-bind='ssid']").forEach((el) => {
+      if (el.tagName === "INPUT") {
+        el.value = initialData.ap_ssid || "";
+      } else {
+        el.textContent = initialData.ap_ssid || "";
+      }
+    });
+  }
+
   function refreshSession() {
     fetch("/api/session", { method: "GET", cache: "no-store", credentials: "same-origin" })
       .then((response) => response.json().catch(() => null))
@@ -193,8 +227,11 @@
       .catch(() => {});
   }
 
-  refreshSession();
-  document.addEventListener("DOMContentLoaded", () => {
+  function initialize() {
+    console.log("Initializing app...");
     attachForms();
-  });
+    applyInitialData();
+  }
+
+  initialize();
 })();
