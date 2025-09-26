@@ -159,15 +159,17 @@ static size_t escape_js_string(const char *src, char *dest, size_t dest_size)
     {
         const char *replacement = NULL;
         char buffer[8];
-        buffer[0] = '\0';
 
         switch (*input)
         {
-            case '\':
-                replacement = "\\";
+            case '\\':
+                buffer[0] = '\\';
+                buffer[1] = '\\';
+                buffer[2] = '\0';
+                replacement = buffer;
                 break;
             case '"':
-                replacement = "\"";
+                replacement = "\\\"";
                 break;
             case '\b':
                 replacement = "\b";
@@ -193,7 +195,7 @@ static size_t escape_js_string(const char *src, char *dest, size_t dest_size)
             case '&':
                 replacement = "\u0026";
                 break;
-            case '\'':
+            case 0x27:
                 replacement = "\u0027";
                 break;
             default:
