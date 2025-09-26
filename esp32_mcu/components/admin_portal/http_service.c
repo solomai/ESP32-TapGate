@@ -860,7 +860,10 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
 
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
     admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
-    admin_portal_page_t target = admin_portal_state_resolve_page(&g_state, desc->page, status);
+    admin_portal_page_t target = admin_portal_state_resolve_page(&g_state,
+                                                                 desc->page,
+                                                                 desc->requires_auth,
+                                                                 status);
     LOGI(TAG, "Handle page request resolve page: %s", admin_portal_page_to_str(target));
 
     if (!admin_portal_state_has_password(&g_state) &&
@@ -901,7 +904,10 @@ static esp_err_t handle_root(httpd_req_t *req)
     const admin_portal_page_descriptor_t *main_page = &admin_portal_page_main;
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
     admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
-    admin_portal_page_t target = admin_portal_state_resolve_page(&g_state, main_page->page, status);
+    admin_portal_page_t target = admin_portal_state_resolve_page(&g_state,
+                                                                 main_page->page,
+                                                                 main_page->requires_auth,
+                                                                 status);
     LOGI(TAG, "Handle root resolve page: %s", admin_portal_page_to_str(target));
 
     if (!admin_portal_state_has_password(&g_state) &&

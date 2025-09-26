@@ -107,6 +107,7 @@ bool admin_portal_state_session_authorized(const admin_portal_state_t *state);
 
 admin_portal_page_t admin_portal_state_resolve_page(const admin_portal_state_t *state,
                                                     admin_portal_page_t requested_page,
+                                                    bool requested_requires_auth,
                                                     admin_portal_session_status_t session_status);
 
 const char *admin_portal_state_page_route(admin_portal_page_t page);

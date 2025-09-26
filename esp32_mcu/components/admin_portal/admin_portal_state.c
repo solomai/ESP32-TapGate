@@ -210,17 +210,20 @@ bool admin_portal_state_session_authorized(const admin_portal_state_t *state)
 
 admin_portal_page_t admin_portal_state_resolve_page(const admin_portal_state_t *state,
                                                     admin_portal_page_t requested_page,
+                                                    bool requested_requires_auth,
                                                     admin_portal_session_status_t session_status)
 {
     bool password_set = admin_portal_state_has_password(state);
     bool authorized = admin_portal_state_session_authorized(state);
 
-    LOGI(TAG, "Resolve page: session status: %s, requested page: %s, AP PSW: %s, authorized: %s, state obj: %s",
-        admin_portal_session_status_to_str(session_status),
-        admin_portal_page_to_str(requested_page),
-        password_set?"set":"not set",
-        authorized?"yes":"no",
-        state?"yes":"NULL");
+    LOGI(TAG,
+         "Resolve page: session status: %s, requested page: %s, requires auth: %s, AP PSW: %s, authorized: %s, state obj: %s",
+         admin_portal_session_status_to_str(session_status),
+         admin_portal_page_to_str(requested_page),
+         requested_requires_auth ? "yes" : "no",
+         password_set ? "set" : "not set",
+         authorized ? "yes" : "no",
+         state ? "yes" : "NULL");
 
     if (!state)
         return ADMIN_PORTAL_PAGE_OFF;
@@ -235,26 +238,27 @@ admin_portal_page_t admin_portal_state_resolve_page(const admin_portal_state_t *
     if (!password_set)
         return ADMIN_PORTAL_PAGE_ENROLL;
 
-    // Auth required first. redirect to auth page.
-    if (session_status != ADMIN_PORTAL_SESSION_MATCH || !authorized)
-        return ADMIN_PORTAL_PAGE_AUTH;
-
-    // Enroll page could be called once. redirect to auth page.
+    // Enroll page is only available when password is empty, otherwise redirect to auth/main.
     if (requested_page == ADMIN_PORTAL_PAGE_ENROLL)
     {
-        if (!password_set)
-            return ADMIN_PORTAL_PAGE_ENROLL;
-        else
-            requested_page = ADMIN_PORTAL_PAGE_AUTH;
+        if (session_status == ADMIN_PORTAL_SESSION_MATCH && authorized)
+            return ADMIN_PORTAL_PAGE_MAIN;
+        return ADMIN_PORTAL_PAGE_AUTH;
     }
 
     // No reason open Auth page in the case autorized. redirect to main page.
     if (requested_page == ADMIN_PORTAL_PAGE_AUTH)
     {
         if (session_status == ADMIN_PORTAL_SESSION_MATCH && authorized)
-            requested_page = ADMIN_PORTAL_PAGE_MAIN;
+            return ADMIN_PORTAL_PAGE_MAIN;
+        return ADMIN_PORTAL_PAGE_AUTH;
     }
-        
+
+    // Auth required first. redirect to auth page.
+    if (requested_requires_auth &&
+        (session_status != ADMIN_PORTAL_SESSION_MATCH || !authorized))
+        return ADMIN_PORTAL_PAGE_AUTH;
+
     return requested_page;
 }
 
