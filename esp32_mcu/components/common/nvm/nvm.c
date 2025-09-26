@@ -9,6 +9,14 @@
 
 static const char *TAG_NVM = "NVM";
 
+#ifndef NVM_WIFI_PARTITION
+#define NVM_WIFI_PARTITION NVM_PARTITION_DEFAULT
+#endif
+
+#ifndef NVM_WIFI_NAMESPACE
+#define NVM_WIFI_NAMESPACE "wifimanager"
+#endif
+
 static esp_err_t ensure_partition_ready(const char *partition_label)
 {
     if (!partition_label)
@@ -149,4 +157,24 @@ esp_err_t nvm_write_u32(const char *partition,
         err = nvs_commit(handle);
     nvs_close(handle);
     return err;
+}
+
+esp_err_t nvm_wifi_read_string(const char *key, char *buffer, size_t size)
+{
+    return nvm_read_string(NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, key, buffer, size);
+}
+
+esp_err_t nvm_wifi_write_string(const char *key, const char *value)
+{
+    return nvm_write_string(NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, key, value);
+}
+
+esp_err_t nvm_wifi_read_u32(const char *key, uint32_t *value)
+{
+    return nvm_read_u32(NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, key, value);
+}
+
+esp_err_t nvm_wifi_write_u32(const char *key, uint32_t value)
+{
+    return nvm_write_u32(NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, key, value);
 }

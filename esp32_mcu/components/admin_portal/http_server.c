@@ -1,6 +1,7 @@
 #include "http_server.h"
 
 #include "esp_http_server.h"
+#include "http_service.h"
 #include "logs.h"
 
 static const char TAG[] = "HTTP Server";
@@ -23,6 +24,14 @@ esp_err_t http_server_start()
         return err;
     }
 
+    esp_err_t svc_err = admin_portal_http_service_start(httpserver_handle);
+    if (svc_err != ESP_OK)
+    {
+        LOGE(TAG, "Failed to start admin portal service: %s", esp_err_to_name(svc_err));
+        http_server_stop();
+        return svc_err;
+    }
+
     LOGI(TAG, "HTTP server started");
     return ESP_OK;
 }
@@ -32,6 +41,7 @@ void http_server_stop()
     if (httpserver_handle == NULL)
         return;
 
+    admin_portal_http_service_stop();
     httpd_stop(httpserver_handle);
     httpserver_handle = NULL;
     LOGI(TAG, "HTTP server stopped");
