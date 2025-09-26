@@ -1,5 +1,4 @@
 #include "http_server.h"
-#include "http_service.h"
 
 #include "esp_http_server.h"
 #include "logs.h"
@@ -24,15 +23,6 @@ esp_err_t http_server_start()
         return err;
     }
 
-    err = admin_portal_http_service_start(httpserver_handle);
-    if (err != ESP_OK)
-    {
-        LOGE(TAG, "Admim Portal start failed: %s", esp_err_to_name(err));
-        httpd_stop(httpserver_handle);
-        httpserver_handle = NULL;
-        return err;
-    }
-
     LOGI(TAG, "HTTP server started");
     return ESP_OK;
 }
@@ -42,7 +32,6 @@ void http_server_stop()
     if (httpserver_handle == NULL)
         return;
 
-    admin_portal_http_service_stop();
     httpd_stop(httpserver_handle);
     httpserver_handle = NULL;
     LOGI(TAG, "HTTP server stopped");
