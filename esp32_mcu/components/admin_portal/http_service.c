@@ -703,7 +703,14 @@ static esp_err_t handle_time_probe(httpd_req_t *req)
 
 static bool ensure_content_type_form(httpd_req_t *req)
 {
-    char content_type[32];
+    size_t len = httpd_req_get_hdr_value_len(req, "Content-Type");
+    if (len == 0)
+        return false;
+
+    char content_type[96];
+    if (len >= sizeof(content_type))
+        return false;
+
     if (httpd_req_get_hdr_value_str(req, "Content-Type", content_type, sizeof(content_type)) != ESP_OK)
         return false;
     return strstr(content_type, "application/x-www-form-urlencoded") != NULL;
