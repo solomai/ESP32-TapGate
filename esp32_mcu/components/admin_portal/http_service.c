@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 
 #include "pages/page_auth.h"
 #include "pages/page_busy.h"
@@ -120,6 +122,30 @@ static const char *page_name(admin_portal_page_t page)
 static uint64_t get_now_ms(void)
 {
     return esp_timer_get_time() / 1000ULL;
+}
+
+// Get client IP address from HTTP request
+static bool get_client_ip(httpd_req_t *req, char *ip_buffer, size_t buffer_size)
+{
+    if (!req || !ip_buffer || buffer_size < 16)
+        return false;
+
+    // Get socket descriptor from request
+    int sockfd = httpd_req_to_sockfd(req);
+    if (sockfd < 0)
+        return false;
+
+    // Get peer address
+    struct sockaddr_in addr;
+    socklen_t addr_len = sizeof(addr);
+    if (getpeername(sockfd, (struct sockaddr*)&addr, &addr_len) != 0)
+        return false;
+
+    // Convert IP to string
+    if (inet_ntop(AF_INET, &addr.sin_addr, ip_buffer, buffer_size) == NULL)
+        return false;
+
+    return true;
 }
 
 static uint64_t minutes_to_ms(uint32_t minutes)
@@ -505,6 +531,34 @@ static admin_portal_session_status_t evaluate_session(httpd_req_t *req,
     {
         admin_portal_state_update_session(&g_state, now);
         LOGI(TAG, "Session updated with current timestamp");
+    }
+    
+    return status;
+}
+
+// New IP-based session evaluation (no cookies needed)
+static admin_portal_session_status_t evaluate_session_by_ip(httpd_req_t *req)
+{
+    char client_ip[16];
+    if (!get_client_ip(req, client_ip, sizeof(client_ip)))
+    {
+        LOGE(TAG, "Failed to get client IP address");
+        return ADMIN_PORTAL_SESSION_NONE;
+    }
+    
+    uint64_t now = get_now_ms();
+    
+    LOGI(TAG, "Evaluating IP-based session: client_ip=%s, now=%" PRIu64 "ms", 
+         client_ip, now);
+    
+    admin_portal_session_status_t status = admin_portal_state_check_session_by_ip(&g_state, client_ip, now);
+    
+    LOGI(TAG, "IP-based session evaluation result: status=%s", session_status_name(status));
+    
+    if (status == ADMIN_PORTAL_SESSION_MATCH)
+    {
+        admin_portal_state_update_session(&g_state, now);
+        LOGI(TAG, "IP-based session updated with current timestamp");
     }
     
     return status;
