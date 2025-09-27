@@ -705,6 +705,7 @@ static esp_err_t send_success_with_session(httpd_req_t *req, const char* token, 
     set_session_cookie(req, token, DEFAULT_SESSION_MAX_AGE);
     char response[256];
     snprintf(response, sizeof(response), "{\"status\":\"ok\",\"redirect\":\"%s\"}", redirect_to);
+    LOGI(TAG, "Sending success response: %s", response);
     return send_json(req, "200 OK", response);
 }
 

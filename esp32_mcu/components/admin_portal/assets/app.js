@@ -132,29 +132,50 @@
 
     fetch(config.url, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: { 
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json"
+      },
       body: params.toString(),
       credentials: "same-origin"
     })
       .then((response) => {
+        console.log('Response status:', response.status);
+        console.log('Content-Type:', response.headers.get('Content-Type'));
+        
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        const contentType = response.headers.get('Content-Type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error(`Invalid content type: ${contentType}`);
+        }
+        
         return response.json();
       })
       .then((data) => {
+        console.log('Received response:', data);
         if (!data) {
           throw new Error('Empty response');
         }
         // Check for successful redirect first
         if (data.status === "ok" && data.redirect) {
-          window.location.href = data.redirect;
+          console.log('Redirecting to:', data.redirect);
+          window.location.replace(data.redirect);
           return;
         }
         handleActionResponse(form, config, data);
       })
       .catch((error) => {
         console.error('Request failed:', error);
+        // Don't show error if we're already redirecting
+        const currentPath = document.location.pathname;
+        console.log('Current path:', currentPath);
+        if (currentPath !== '/auth/') {
+          console.log('Ignoring error, seems we are redirecting');
+          return;
+        }
         setMessage(form, "Unable to reach device.");
       });
   }
