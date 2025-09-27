@@ -685,6 +685,10 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     admin_portal_state_authorize_session(&g_state);
     admin_portal_device_set_ap_password(password);
 
+    // Set session cookie after authorization to ensure authorized session is maintained
+    uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
+    set_session_cookie(req, token, max_age);
+
     LOGI(TAG, "Enrollment successful, redirecting to main page (AP SSID=\"%s\")", portal_name);
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
 }
@@ -736,6 +740,11 @@ static esp_err_t handle_login(httpd_req_t *req)
     }
 
     admin_portal_state_authorize_session(&g_state);
+    
+    // Set session cookie after authorization to ensure authorized session is maintained
+    uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
+    set_session_cookie(req, token, max_age);
+    
     LOGI(TAG, "Login successful, redirecting to main page");
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
 }
