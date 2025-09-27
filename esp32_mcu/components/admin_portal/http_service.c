@@ -171,39 +171,16 @@ static bool get_client_ip(httpd_req_t *req, char *ip_buffer, size_t buffer_size)
         }
     }
     
-    // If getpeername fails or returns invalid IP, try alternative approach
-    // In AP mode, let's try to get the connection info differently
-    LOGW(TAG, "getpeername returned invalid IP, trying alternative approach");
+    // ESP32 AP mode often can't detect client IP properly via socket calls
+    // For single-user admin portal, use a consistent mobile client identifier
+    LOGW(TAG, "Socket-based IP detection failed, using mobile client identifier");
     
-    // Check if we can get the socket local address and infer client from DHCP range
-    struct sockaddr_in local_addr;
-    socklen_t local_len = sizeof(local_addr);
-    if (getsockname(sockfd, (struct sockaddr*)&local_addr, &local_len) == 0) {
-        char local_ip[16];
-        if (inet_ntop(AF_INET, &local_addr.sin_addr, local_ip, sizeof(local_ip)) != NULL) {
-            LOGI(TAG, "Local socket address: %s", local_ip);
-            
-            // For AP mode, if local is 10.10.0.1, generate a consistent client identifier
-            if (strncmp(local_ip, "10.10.0.", 8) == 0) {
-                // Create a consistent identifier based on session state
-                // This ensures the same client gets the same "IP" across requests
-                uint32_t client_hash = 0;
-                
-                // Use a combination of factors to create a unique but consistent identifier
-                client_hash = sockfd * 31 + (uint32_t)(req) % 1000;
-                uint8_t client_suffix = 2 + (client_hash % 253); // Range: 2-254
-                
-                snprintf(ip_buffer, buffer_size, "10.10.0.%d", client_suffix);
-                LOGI(TAG, "Generated consistent client ID: %s (based on sock=%d)", ip_buffer, sockfd);
-                return true;
-            }
-        }
-    }
-
-    LOGW(TAG, "Failed to determine client IP, using fallback");
-    strncpy(ip_buffer, "0.0.0.0", buffer_size - 1);
+    // For mobile browsers connecting to ESP32 AP, use a consistent identifier
+    // This ensures session consistency across requests
+    strncpy(ip_buffer, "10.10.0.100", buffer_size - 1);  // Fixed mobile client ID
     ip_buffer[buffer_size - 1] = '\0';
-    return false;
+    LOGI(TAG, "Using fixed mobile client identifier: %s", ip_buffer);
+    return true;
 }
 
 static uint64_t minutes_to_ms(uint32_t minutes)
@@ -386,9 +363,27 @@ static bool get_session_token(httpd_req_t *req, char *token, size_t token_size)
         return false;
     }
 
+    // Clear buffer to prevent corruption
+    memset(buffer, 0, length + 1);
+
     if (httpd_req_get_hdr_value_str(req, "Cookie", buffer, length + 1) != ESP_OK)
     {
         LOGI(TAG, "Failed to get Cookie header value");
+        free(buffer);
+        return false;
+    }
+
+    // Validate cookie content is printable (safety check)
+    bool is_valid = true;
+    for (size_t i = 0; i < length; i++) {
+        if (buffer[i] != 0 && (buffer[i] < 32 || buffer[i] > 126)) {
+            LOGW(TAG, "Cookie contains non-printable character at position %zu (0x%02X), rejecting", i, (unsigned char)buffer[i]);
+            is_valid = false;
+            break;
+        }
+    }
+    
+    if (!is_valid) {
         free(buffer);
         return false;
     }
