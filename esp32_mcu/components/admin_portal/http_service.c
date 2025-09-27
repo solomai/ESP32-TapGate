@@ -564,6 +564,7 @@ static admin_portal_session_status_t evaluate_session_by_ip(httpd_req_t *req)
     return status;
 }
 
+// Create session using hybrid approach (IP-based + cookie fallback)
 static esp_err_t ensure_session_claim(httpd_req_t *req,
                                       admin_portal_session_status_t *status,
                                       char *token_buffer,
@@ -578,16 +579,31 @@ static esp_err_t ensure_session_claim(httpd_req_t *req,
         return ESP_OK;
     }
 
-    LOGI(TAG, "Creating new session claim");
+    LOGI(TAG, "Creating new hybrid session claim (IP + cookie)");
+    
+    // Try to get client IP for IP-based session
+    char client_ip[16];
+    bool has_ip = get_client_ip(req, client_ip, sizeof(client_ip));
+    
+    uint64_t now = get_now_ms();
+    
+    if (has_ip)
+    {
+        // Create IP-based session (mobile-friendly)
+        admin_portal_state_start_session_by_ip(&g_state, client_ip, now, false);
+        LOGI(TAG, "Created IP-based session for client: %s", client_ip);
+    }
+    
+    // Also create cookie-based session for desktop browsers
     char new_token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
     generate_session_token(new_token);
-    LOGI(TAG, "Generated new session token: %.8s...", new_token);
+    LOGI(TAG, "Generated session token: %.8s...", new_token);
     
-    admin_portal_state_start_session(&g_state, new_token, get_now_ms(), false);
+    admin_portal_state_start_session(&g_state, new_token, now, false);
     uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
     
     // For API endpoints, cookie will be set after authorization to avoid duplicate headers
-    // For GET requests (pages), set cookie immediately
+    // For GET requests (pages), set cookie immediately for desktop compatibility
     bool is_api_request = req && req->uri[0] != '\0' && strstr(req->uri, "/api/") != NULL;
     
     if (!is_api_request)
@@ -601,14 +617,15 @@ static esp_err_t ensure_session_claim(httpd_req_t *req,
     }
     
     LOGI(TAG,
-         "Session started for URI %s (max_age=%" PRIu32 " s)",
+         "Hybrid session started for URI %s (IP=%s, max_age=%" PRIu32 " s)",
          req ? req->uri : "<null>",
+         has_ip ? client_ip : "unavailable",
          max_age);
     
     strncpy(token_buffer, new_token, token_size - 1);
     token_buffer[token_size - 1] = '\0';
     *status = ADMIN_PORTAL_SESSION_MATCH;
-    LOGI(TAG, "Session claim completed successfully");
+    LOGI(TAG, "Hybrid session claim completed successfully");
     return ESP_OK;
 }
 
@@ -1143,8 +1160,21 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
 static esp_err_t handle_root(httpd_req_t *req)
 {
     const admin_portal_page_descriptor_t *main_page = &admin_portal_page_main;
+    
+    // Try IP-based session first (mobile-friendly), fallback to cookies (desktop)
+    admin_portal_session_status_t status = evaluate_session_by_ip(req);
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+    
+    if (status == ADMIN_PORTAL_SESSION_NONE)
+    {
+        status = evaluate_session(req, token, sizeof(token));
+        LOGI(TAG, "IP-based session failed for root, trying cookie-based: %s", session_status_name(status));
+    }
+    else
+    {
+        LOGI(TAG, "Using IP-based session for root: %s", session_status_name(status));
+    }
+    
     admin_portal_page_t target = admin_portal_state_resolve_page(&g_state, main_page->page, status);
     LOGI(TAG, "Handle root resolve page: %s", admin_portal_page_to_str(target));
 
