@@ -6,6 +6,15 @@
 
 static const char TAG[] = "HTTP Server";
 
+static esp_err_t favicon_get_handler(httpd_req_t *req)
+{
+    extern const uint8_t favicon_ico_start[] asm("_binary_favicon_ico_start");
+    extern const uint8_t favicon_ico_end[] asm("_binary_favicon_ico_end");
+    
+    httpd_resp_set_type(req, "image/x-icon");
+    return httpd_resp_send(req, (const char *)favicon_ico_start, favicon_ico_end - favicon_ico_start);
+}
+
 static httpd_handle_t httpserver_handle = NULL;
 
 esp_err_t http_server_start()
@@ -22,6 +31,21 @@ esp_err_t http_server_start()
     {
         LOGE(TAG, "Start failed: %s", esp_err_to_name(err));
         return err;
+    }
+
+    // Register favicon handler
+    extern const uint8_t favicon_ico_start[] asm("_binary_favicon_ico_start");
+    extern const uint8_t favicon_ico_end[] asm("_binary_favicon_ico_end");
+    httpd_uri_t favicon_uri = {
+        .uri = "/favicon.ico",
+        .method = HTTP_GET,
+        .handler = favicon_get_handler,
+        .user_ctx = NULL
+    };
+    err = httpd_register_uri_handler(httpserver_handle, &favicon_uri);
+    if (err != ESP_OK) {
+        LOGW(TAG, "Failed to register favicon handler: %s", esp_err_to_name(err));
+        // Continue anyway as this is not critical
     }
 
     err = admin_portal_http_service_start(httpserver_handle);
