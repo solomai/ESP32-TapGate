@@ -152,6 +152,8 @@ static admin_portal_asset_t g_assets[] = {
 };
 
 static const admin_portal_page_descriptor_t *g_pages[ADMIN_PORTAL_PAGE_COUNT];
+static char g_page_trimmed_uris[ADMIN_PORTAL_PAGE_COUNT][64];
+static bool g_page_trimmed_uris_valid[ADMIN_PORTAL_PAGE_COUNT];
 
 static void ensure_assets_initialized(void)
 {
@@ -177,6 +179,19 @@ static void ensure_pages_initialized(void)
     g_pages[ADMIN_PORTAL_PAGE_CHANGE_PASSWORD] = admin_portal_page_change_psw_descriptor();
     g_pages[ADMIN_PORTAL_PAGE_BUSY] = admin_portal_page_busy_descriptor();
     g_pages[ADMIN_PORTAL_PAGE_OFF] = admin_portal_page_off_descriptor();
+
+    for (size_t i = 0; i < sizeof(g_pages) / sizeof(g_pages[0]); ++i)
+    {
+        const char *uri = g_pages[i]->uri;
+        size_t len = strlen(uri);
+        size_t trimmed_len = trim_trailing_slashes(uri, len);
+        if (trimmed_len < len && trimmed_len > 0 && trimmed_len < sizeof(g_page_trimmed_uris[i]))
+        {
+            memcpy(g_page_trimmed_uris[i], uri, trimmed_len);
+            g_page_trimmed_uris[i][trimmed_len] = '\0';
+            g_page_trimmed_uris_valid[i] = true;
+        }
+    }
 }
 
 static size_t trim_trailing_slashes(const char *uri, size_t len)
@@ -199,11 +214,6 @@ static bool match_page_uri_exact_or_trimmed(const char *template_uri, const char
         return false;
 
     return strncmp(template_uri, requested_uri, template_len) == 0;
-}
-
-static bool page_uri_match_fn(const char *template_uri, const char *requested_uri, size_t requested_len)
-{
-    return match_page_uri_exact_or_trimmed(template_uri, requested_uri, requested_len);
 }
 
 static const admin_portal_page_descriptor_t *find_page_by_uri(const char *uri)
@@ -912,13 +922,26 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
             .method = HTTP_GET,
             .handler = handle_page_request,
             .user_ctx = (void *)g_pages[i],
-            .uri_match_fn = page_uri_match_fn,
         };
         err = httpd_register_uri_handler(server, &page_uri);
         if (err != ESP_OK)
         {
             LOGE(TAG, "Failed to register page %s: %s", g_pages[i]->uri, esp_err_to_name(err));
             return err;
+        }
+
+        if (g_page_trimmed_uris_valid[i])
+        {
+            httpd_uri_t alt_uri = page_uri;
+            alt_uri.uri = g_page_trimmed_uris[i];
+            err = httpd_register_uri_handler(server, &alt_uri);
+            if (err == ESP_ERR_HTTPD_URI_ALREADY_REGISTERED)
+                err = ESP_OK;
+            if (err != ESP_OK)
+            {
+                LOGE(TAG, "Failed to register alt page %s: %s", alt_uri.uri, esp_err_to_name(err));
+                return err;
+            }
         }
     }
 
