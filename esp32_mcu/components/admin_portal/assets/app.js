@@ -2,27 +2,12 @@
   const MIN_PASSWORD_LENGTH = 8;
 
   const errorMessages = {
-    invalid_password: `Password must be at least ${MIN_PASSWORD_LENGTH} characters long.` ,
+    invalid_password: `Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`,
     wrong_password: "Password is incorrect. Try again.",
-    invalid_new_password: `New password must be at least ${MIN_PASSWORD_LENGTH} characters long.` ,
+    invalid_new_password: `New password must be at least ${MIN_PASSWORD_LENGTH} characters long.`,
     invalid_ssid: "Please enter a valid network name.",
     storage_failed: "Unable to save changes. Please try again.",
     invalid_request: "Request could not be processed."
-  };
-
-  const actionMap = {
-    enroll: {
-      url: "/api/enroll",
-      fields: ["password", "portal"],
-      focus: { invalid_password: "password", invalid_ssid: "portal" }
-    },
-    login: { url: "/api/login", fields: ["password"], focus: { wrong_password: "password" } },
-    changePassword: {
-      url: "/api/change-password",
-      fields: ["current", "next"],
-      focus: { wrong_password: "current", invalid_new_password: "next" }
-    },
-    device: { url: "/api/device", fields: ["ssid"], focus: { invalid_ssid: "ssid" } }
   };
 
   function setMessage(form, text) {
@@ -45,76 +30,19 @@
     if (field) field.focus();
   }
 
-  function showError(form, code, config) {
+  function showError(form, code) {
     const message = errorMessages[code] || "Unexpected error.";
     setMessage(form, message);
-    Array.from(form.elements).forEach((element) => {
-      if (element && element.name) {
-        setFieldError(form, element.name, false);
-      }
+  }
+
+  // Simple form validation before submit
+  function validateForm(form, actionKey) {
+    // Clear previous errors
+    setMessage(form, "");
+    Array.from(form.elements).forEach(el => {
+      if (el.classList) el.classList.remove("error");
     });
-    if (config && config.focus && config.focus[code]) {
-      setFieldError(form, config.focus[code], true);
-      focusField(form, config.focus[code]);
-    }
-  }
 
-  function handleActionResponse(form, config, data) {
-    console.log('handleActionResponse called with:', data);
-    
-    if (!data) {
-      setMessage(form, "Connection problem. Try again.");
-      return;
-    }
-
-    if (data.status === "busy") {
-      console.log('Redirecting to busy page');
-      window.location.assign("/busy/");
-      return;
-    }
-
-    if (data.status === "redirect" && data.redirect) {
-      console.log('Redirecting to:', data.redirect);
-      window.location.assign(data.redirect);
-      return;
-    }
-
-    if (data.status === "ok" && data.redirect) {
-      console.log('Success redirect to:', data.redirect);
-      console.log('Current document.cookie before redirect:', document.cookie);
-      
-      // Force set cookie from JSON response
-      if (data.session_token) {
-        console.log('Setting cookie from JSON response:', data.session_token);
-        document.cookie = `tg_session=${data.session_token}; Path=/; SameSite=Lax; Max-Age=900`;
-        console.log('Cookie set. New document.cookie:', document.cookie);
-      }
-      
-      // Check if cookie exists, if not, try to read it from server response
-      if (!document.cookie.includes('tg_session')) {
-        console.error('Cookie STILL not found in document.cookie after manual setting!');
-      } else {
-        console.log('SUCCESS: Cookie found in document.cookie');
-      }
-      
-      // Force page reload to ensure cookies are properly set
-      // Use window.location.href instead of assign() for full page reload
-      setTimeout(() => {
-        console.log('Performing redirect to:', data.redirect);
-        window.location.href = data.redirect;
-      }, 300);  // Increased delay to ensure cookie processing
-      return;
-    }
-
-    if (data.status === "error" && data.code) {
-      showError(form, data.code, config);
-      return;
-    }
-
-    setMessage(form, "Unexpected server reply.");
-  }
-
-  function runClientValidation(form, actionKey) {
     if (actionKey === "enroll") {
       const portalInput = form.elements["portal"];
       if (portalInput && !portalInput.value.trim()) {
@@ -130,8 +58,56 @@
       const passwordInput = form.elements["password"];
       if (passwordInput && passwordInput.value.length < MIN_PASSWORD_LENGTH) {
         setFieldError(form, "password", true);
-        passwordInput.focus();
         setMessage(form, errorMessages.invalid_password);
+        focusField(form, "password");
+        if (typeof passwordInput.select === "function") {
+          passwordInput.select();
+        }
+        return false;
+      }
+    }
+
+    if (actionKey === "login") {
+      const passwordInput = form.elements["password"];
+      if (passwordInput && !passwordInput.value) {
+        setFieldError(form, "password", true);
+        setMessage(form, "Please enter password.");
+        focusField(form, "password");
+        return false;
+      }
+    }
+
+    if (actionKey === "changePassword") {
+      const currentInput = form.elements["current"];
+      const nextInput = form.elements["next"];
+      
+      if (currentInput && !currentInput.value) {
+        setFieldError(form, "current", true);
+        setMessage(form, "Please enter current password.");
+        focusField(form, "current");
+        return false;
+      }
+      
+      if (nextInput && nextInput.value.length < MIN_PASSWORD_LENGTH) {
+        setFieldError(form, "next", true);
+        setMessage(form, errorMessages.invalid_new_password);
+        focusField(form, "next");
+        if (typeof nextInput.select === "function") {
+          nextInput.select();
+        }
+        return false;
+      }
+    }
+
+    if (actionKey === "device") {
+      const ssidInput = form.elements["ssid"];
+      if (ssidInput && !ssidInput.value.trim()) {
+        setFieldError(form, "ssid", true);
+        setMessage(form, "Please enter network name.");
+        focusField(form, "ssid");
+        if (typeof ssidInput.select === "function") {
+          ssidInput.select();
+        }
         return false;
       }
     }
@@ -139,59 +115,34 @@
     return true;
   }
 
-  function submitForm(event) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const actionKey = form.dataset.action;
-    const config = actionMap[actionKey];
-    if (!config) return;
-
-    setMessage(form, "");
-    config.fields.forEach((field) => setFieldError(form, field, false));
-
-    if (!runClientValidation(form, actionKey)) return;
-
-    const params = new URLSearchParams();
-    config.fields.forEach((field) => {
-      params.set(field, form.elements[field] ? form.elements[field].value : "");
-    });
-
-    console.log(`Submitting form for ${config.url} with data:`, params.toString());
+  function handleFormSubmit(event) {
+    const form = event.target;
+    const actionKey = form.getAttribute("data-action");
     
-    fetch(config.url, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: params.toString(),
-      credentials: "include"  // Ensure cookies are included and saved
-    })
-      .then((response) => {
-        console.log(`Response for ${config.url}: status=${response.status}, ok=${response.ok}`);
-        console.log('Response headers:', [...response.headers.entries()]);
-        console.log('Current document.cookie before:', document.cookie);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        return response.json().catch((err) => {
-          console.error('JSON parse error:', err);
-          throw new Error('Invalid JSON response');
-        });
-      })
-      .then((data) => {
-        console.log(`JSON response for ${config.url}:`, data);
-        console.log('Current document.cookie after response:', document.cookie);
-        handleActionResponse(form, config, data);
-      })
-      .catch((error) => {
-        console.error(`Fetch error for ${config.url}:`, error);
-        setMessage(form, "Connection problem. Try again.");
-      });
+    if (!actionKey) {
+      console.warn("Form missing data-action attribute");
+      return true; // Allow normal submit
+    }
+
+    console.log(`Validating form for action: ${actionKey}`);
+    
+    // Validate form before submit
+    if (!validateForm(form, actionKey)) {
+      event.preventDefault(); // Prevent submit if validation fails
+      return false;
+    }
+
+    // Allow normal form submission - no AJAX, no fetch, simple POST
+    console.log(`Form validation passed, submitting to: ${form.action}`);
+    return true;
   }
 
-  function attachForms() {
+  function attachFormHandlers() {
     document.querySelectorAll("form[data-action]").forEach((form) => {
-      form.addEventListener("submit", submitForm);
+      console.log(`Attaching handler to form with action: ${form.getAttribute("data-action")}`);
+      form.addEventListener("submit", handleFormSubmit);
+      
+      // Clear errors on input
       Array.from(form.elements).forEach((el) => {
         if (el && el.tagName === "INPUT") {
           el.addEventListener("input", () => {
@@ -203,83 +154,22 @@
     });
   }
 
-  function applySession(info) {
-    if (!info || info.status !== "ok") return;
-    const portalName = info.ap_ssid || "";
-    document.querySelectorAll("[data-bind='portal-name']").forEach((el) => {
-      if (el.tagName === "INPUT") {
-        if (el.hasAttribute("readonly") || !el.value) {
-          el.value = portalName;
-        }
-        el.defaultValue = portalName;
-        el.classList.remove("error");
-      } else {
-        el.textContent = portalName;
-      }
-    });
-    document.querySelectorAll("[data-bind='ssid']").forEach((el) => {
-      if (el.tagName === "INPUT") el.value = info.ap_ssid;
-      else el.textContent = info.ap_ssid;
+  function ensureRequiredElements() {
+    document.querySelectorAll("[data-message]").forEach((msg) => {
+      if (!msg.textContent) msg.textContent = "";
     });
   }
 
-  function applyInitialData() {
-    const initialData = window.TAPGATE_INITIAL_DATA;
-    if (!initialData || !initialData.ap_ssid) {
-      console.log("No initial data from server, falling back to API");
-      refreshSession();
-      return;
-    }
-
-    console.log("Applying initial data from server:", initialData);
-
-    const portalName = initialData.ap_ssid || "";
-
-    document.querySelectorAll("[data-bind='portal-name']").forEach((el) => {
-      if (el.tagName === "INPUT") {
-        if (!el.value.trim()) {
-          el.value = portalName;
-          console.log(`Set portal input value to: "${portalName}"`);
-        }
-        el.defaultValue = portalName;
-        el.classList.remove("error");
-      } else {
-        el.textContent = portalName;
-      }
-    });
-
-    document.querySelectorAll("[data-bind='ssid']").forEach((el) => {
-      if (el.tagName === "INPUT") {
-        el.value = initialData.ap_ssid || "";
-      } else {
-        el.textContent = initialData.ap_ssid || "";
-      }
-    });
+  function initializePage() {
+    console.log("Initializing simple form handling (no AJAX)");
+    ensureRequiredElements();
+    attachFormHandlers();
   }
 
-  function refreshSession() {
-    fetch("/api/session", { method: "GET", cache: "no-store", credentials: "same-origin" })
-      .then((response) => response.json().catch(() => null))
-      .then((data) => {
-        if (!data) return;
-        if (data.status === "busy") {
-          window.location.assign("/busy/");
-          return;
-        }
-        if (data.status === "expired" && data.redirect) {
-          window.location.assign(data.redirect);
-          return;
-        }
-        applySession(data);
-      })
-      .catch(() => {});
+  // Initialize when DOM is ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializePage);
+  } else {
+    initializePage();
   }
-
-  function initialize() {
-    console.log("Initializing app...");
-    attachForms();
-    applyInitialData();
-  }
-
-  initialize();
 })();

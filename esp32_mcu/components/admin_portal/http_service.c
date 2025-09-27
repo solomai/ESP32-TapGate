@@ -771,36 +771,53 @@ static esp_err_t handle_session_info(httpd_req_t *req)
 
 static esp_err_t handle_enroll(httpd_req_t *req)
 {
-    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+    // Use IP-based session evaluation with cookie fallback
+    admin_portal_session_status_t status = evaluate_session_by_ip(req);
+    
+    // If IP-based fails, try cookie-based for desktop browsers
+    if (status == ADMIN_PORTAL_SESSION_NONE)
+    {
+        char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+        status = evaluate_session(req, token, sizeof(token));
+    }
 
     LOGI(TAG,
          "API /api/enroll: status=%s has_password=%s",
          session_status_name(status),
          admin_portal_state_has_password(&g_state) ? "true" : "false");
 
-    if (status != ADMIN_PORTAL_SESSION_MATCH)
+    // Handle busy portal
+    if (status == ADMIN_PORTAL_SESSION_BUSY)
     {
-        if (status == ADMIN_PORTAL_SESSION_NONE)
-            ensure_session_claim(req, &status, token, sizeof(token));
-        if (status == ADMIN_PORTAL_SESSION_BUSY)
+        LOGI(TAG, "Enrollment denied: portal busy");
+        return send_redirect(req, ADMIN_PORTAL_PAGE_BUSY);
+    }
+
+    // Start IP-based session if needed
+    if (status == ADMIN_PORTAL_SESSION_NONE)
+    {
+        char client_ip[16];
+        if (get_client_ip(req, client_ip, sizeof(client_ip)))
         {
-            LOGI(TAG, "Enrollment denied: portal busy");
-            return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+            uint64_t now = get_now_ms();
+            admin_portal_state_start_session_by_ip(&g_state, client_ip, now, false);
+            LOGI(TAG, "Started IP-based session for client: %s", client_ip);
         }
     }
 
+    // Redirect to auth if password already exists
     if (admin_portal_state_has_password(&g_state))
     {
         LOGI(TAG, "Enrollment redirected to auth because password already set");
-        return send_json(req, "200 OK", "{\"status\":\"redirect\",\"redirect\":\"/auth/\"}");
+        return send_redirect(req, ADMIN_PORTAL_PAGE_AUTH);
     }
 
     char *body = read_body(req);
     if (!body)
     {
         LOGI(TAG, "Enrollment failed: request body missing");
-        return send_json(req, "400 Bad Request", "{\"status\":\"error\",\"code\":\"invalid_request\"}");
+        // Return to enroll page with error - could be handled by query param
+        return send_redirect(req, ADMIN_PORTAL_PAGE_ENROLL);
     }
 
     char portal_name[sizeof(g_state.ap_ssid)];
@@ -821,7 +838,7 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     if (!has_portal_name || portal_name[0] == '\0')
     {
         LOGI(TAG, "Enrollment failed: portal name missing");
-        return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_ssid\"}");
+        return send_redirect(req, ADMIN_PORTAL_PAGE_ENROLL);
     }
 
     if (!has_password || !admin_portal_state_password_valid(&g_state, password))
@@ -829,21 +846,21 @@ static esp_err_t handle_enroll(httpd_req_t *req)
         LOGI(TAG,
              "Enrollment failed: %s",
              has_password ? "password does not meet requirements" : "password missing");
-        return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_password\"}");
+        return send_redirect(req, ADMIN_PORTAL_PAGE_ENROLL);
     }
 
     esp_err_t err = nvm_write_string(NVM_WIFI_PARTITION, ADMIN_PORTAL_NAMESPACE, ADMIN_PORTAL_KEY_SSID, portal_name);
     if (err != ESP_OK)
     {
         LOGI(TAG, "Enrollment failed: unable to store AP SSID: %s", esp_err_to_name(err));
-        return send_json(req, "500 Internal Server Error", "{\"status\":\"error\",\"code\":\"storage_failed\"}");
+        return send_redirect(req, ADMIN_PORTAL_PAGE_ENROLL);
     }
 
     err = nvm_write_string(NVM_WIFI_PARTITION, ADMIN_PORTAL_NAMESPACE, ADMIN_PORTAL_KEY_PSW, password);
     if (err != ESP_OK)
     {
         LOGI(TAG, "Enrollment failed: unable to store password: %s", esp_err_to_name(err));
-        return send_json(req, "500 Internal Server Error", "{\"status\":\"error\",\"code\":\"storage_failed\"}");
+        return send_redirect(req, ADMIN_PORTAL_PAGE_ENROLL);
     }
 
     admin_portal_state_set_ssid(&g_state, portal_name);
@@ -857,20 +874,15 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     
     admin_portal_device_set_ap_password(password);
 
-    // Set session cookie BEFORE sending response to ensure authorized session is maintained
+    // Set session cookie for desktop browsers (mobile will use IP-based session)
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
+    generate_session_token(token);
     uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
-    LOGI(TAG, "About to set session cookie for token: %.8s...", token);
     set_session_cookie(req, token, max_age);
 
     LOGI(TAG, "Enrollment successful, redirecting to main page (AP SSID=\"%s\")", portal_name);
     
-    // Include cookie value in JSON response for manual setting
-    char response[256];
-    snprintf(response, sizeof(response), 
-             "{\"status\":\"ok\",\"redirect\":\"/main/\",\"session_token\":\"%s\"}", 
-             token);
-    
-    return send_json(req, "200 OK", response);
+    return send_redirect(req, ADMIN_PORTAL_PAGE_MAIN);
 }
 
 static esp_err_t handle_login(httpd_req_t *req)
