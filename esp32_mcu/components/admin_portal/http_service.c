@@ -490,12 +490,8 @@ static esp_err_t send_redirect(httpd_req_t *req, admin_portal_page_t page)
     
     set_cache_headers(req);
     
-    // For mobile browsers, also return location in response body for JavaScript access
-    char response_body[128];
-    snprintf(response_body, sizeof(response_body), "{\"redirect\":\"%s\"}", location);
-    
-    httpd_resp_set_type(req, "application/json");
-    return httpd_resp_send(req, response_body, HTTPD_RESP_USE_STRLEN);
+    LOGI(TAG, "Redirect response headers set, sending empty body");
+    return httpd_resp_send(req, "", 0);
 }
 
 // CORS preflight handler for mobile browser compatibility

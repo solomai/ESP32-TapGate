@@ -119,6 +119,12 @@
     const form = event.target;
     const actionKey = form.getAttribute("data-action");
     
+    console.log("=== FORM SUBMIT START ===");
+    console.log("Form:", form);
+    console.log("Action key:", actionKey);
+    console.log("Form action:", form.action);
+    console.log("Form method:", form.method);
+    
     if (!actionKey) {
       console.warn("Form missing data-action attribute");
       return true; // Allow normal submit
@@ -128,12 +134,16 @@
     
     // Validate form before submit
     if (!validateForm(form, actionKey)) {
+      console.log("Validation failed, preventing submit");
       event.preventDefault(); // Prevent submit if validation fails
       return false;
     }
 
+    console.log("Validation passed");
+    
     // For mobile compatibility: prevent default submit and handle manually
     event.preventDefault();
+    console.log("Default prevented, handling manually");
     
     console.log(`Form validation passed, submitting manually to: ${form.action}`);
     
@@ -143,11 +153,14 @@
     if (submitButton) {
       submitButton.disabled = true;
       submitButton.textContent = 'Processing...';
+      console.log("Submit button disabled, showing 'Processing...'");
     }
     
     // Create form data and submit via fetch for better control
     const formData = new FormData(form);
+    console.log("Form data created:", Array.from(formData.entries()));
     
+    console.log("Starting fetch request...");
     fetch(form.action, {
       method: 'POST',
       body: formData,
@@ -155,26 +168,36 @@
       redirect: 'manual'  // Handle redirects manually
     })
     .then(response => {
-      console.log(`Response status: ${response.status}, redirected: ${response.redirected}`);
+      console.log("=== FETCH RESPONSE ===");
+      console.log(`Response status: ${response.status}`);
+      console.log(`Response statusText: ${response.statusText}`);
+      console.log(`Response redirected: ${response.redirected}`);
+      console.log(`Response headers:`, Object.fromEntries(response.headers.entries()));
       
       // Handle redirects manually for mobile compatibility
       if (response.status === 302) {
+        console.log("Got 302 redirect response");
         const location = response.headers.get('Location');
+        console.log(`Location header: ${location}`);
+        
         if (location) {
-          console.log(`Got redirect location from header: ${location}`);
+          console.log(`Redirecting to location from header: ${location}`);
           window.location.href = location;
           return;
         }
         
+        console.log("No Location header, trying JSON response...");
         // Fallback: try to read JSON response for redirect URL
         return response.json().then(data => {
+          console.log("JSON response data:", data);
           if (data && data.redirect) {
             console.log(`Got redirect location from JSON: ${data.redirect}`);
             window.location.href = data.redirect;
             return;
           }
           throw new Error('Redirect response without location');
-        }).catch(() => {
+        }).catch(err => {
+          console.log("JSON parsing failed:", err);
           // Final fallback: use expected redirect
           const location = getExpectedRedirect(actionKey);
           console.log(`Using expected redirect location: ${location}`);
@@ -183,6 +206,7 @@
       }
       
       if (response.ok) {
+        console.log("Got OK response, navigating to expected page");
         // Success without redirect - navigate to expected page
         const location = getExpectedRedirect(actionKey);
         console.log(`Success response, navigating to: ${location}`);
@@ -190,9 +214,11 @@
         return;
       }
       
+      console.log("Response not OK and not redirect");
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     })
     .catch(error => {
+      console.log("=== FETCH ERROR ===");
       console.error('Form submission error:', error);
       setMessage(form, "Connection problem. Try again.");
       
@@ -200,9 +226,11 @@
       if (submitButton) {
         submitButton.disabled = false;
         submitButton.textContent = originalText;
+        console.log("Submit button restored");
       }
     });
     
+    console.log("=== FORM SUBMIT END ===");
     return false; // Prevent default form submission
   }
   
