@@ -887,8 +887,15 @@ static esp_err_t handle_enroll(httpd_req_t *req)
 
 static esp_err_t handle_login(httpd_req_t *req)
 {
-    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+    // Use IP-based session evaluation with cookie fallback
+    admin_portal_session_status_t status = evaluate_session_by_ip(req);
+    
+    // If IP-based fails, try cookie-based for desktop browsers
+    if (status == ADMIN_PORTAL_SESSION_NONE)
+    {
+        char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+        status = evaluate_session(req, token, sizeof(token));
+    }
 
     LOGI(TAG,
          "API /api/login: status=%s has_password=%s authorized=%s",
@@ -899,26 +906,32 @@ static esp_err_t handle_login(httpd_req_t *req)
     if (status == ADMIN_PORTAL_SESSION_BUSY)
     {
         LOGI(TAG, "Login denied: portal busy");
-        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+        return send_redirect(req, ADMIN_PORTAL_PAGE_BUSY);
     }
 
+    // Start IP-based session if needed
     if (status == ADMIN_PORTAL_SESSION_NONE)
     {
-        ensure_session_claim(req, &status, token, sizeof(token));
-        LOGI(TAG, "Login request claimed new session");
+        char client_ip[16];
+        if (get_client_ip(req, client_ip, sizeof(client_ip)))
+        {
+            uint64_t now = get_now_ms();
+            admin_portal_state_start_session_by_ip(&g_state, client_ip, now, false);
+            LOGI(TAG, "Started IP-based session for login client: %s", client_ip);
+        }
     }
 
     if (!admin_portal_state_has_password(&g_state))
     {
         LOGI(TAG, "Login redirected to enroll because password missing");
-        return send_json(req, "200 OK", "{\"status\":\"redirect\",\"redirect\":\"/enroll/\"}");
+        return send_redirect(req, ADMIN_PORTAL_PAGE_ENROLL);
     }
 
     char *body = read_body(req);
     if (!body)
     {
         LOGI(TAG, "Login failed: request body missing");
-        return send_json(req, "400 Bad Request", "{\"status\":\"error\",\"code\":\"invalid_request\"}");
+        return send_redirect(req, ADMIN_PORTAL_PAGE_AUTH);
     }
 
     char password[sizeof(g_state.ap_password)];
@@ -935,7 +948,7 @@ static esp_err_t handle_login(httpd_req_t *req)
     {
         LOGI(TAG, "Login failed: %s", 
              !has_password ? "password missing" : "wrong password");
-        return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"wrong_password\"}");
+        return send_redirect(req, ADMIN_PORTAL_PAGE_AUTH);
     }
 
     LOGI(TAG, "Authorizing session after login");
@@ -944,20 +957,15 @@ static esp_err_t handle_login(httpd_req_t *req)
     bool is_authorized = admin_portal_state_session_authorized(&g_state);
     LOGI(TAG, "Session authorization status: %s", is_authorized ? "authorized" : "not_authorized");
     
-    // Set session cookie BEFORE sending response to ensure authorized session is maintained
+    // Set session cookie for desktop browsers (mobile will use IP-based session)
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
+    generate_session_token(token);
     uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
-    LOGI(TAG, "About to set session cookie for token: %.8s...", token);
     set_session_cookie(req, token, max_age);
     
     LOGI(TAG, "Login successful, redirecting to main page");
     
-    // Include cookie value in JSON response for manual setting
-    char response[256];
-    snprintf(response, sizeof(response), 
-             "{\"status\":\"ok\",\"redirect\":\"/main/\",\"session_token\":\"%s\"}", 
-             token);
-    
-    return send_json(req, "200 OK", response);
+    return send_redirect(req, ADMIN_PORTAL_PAGE_MAIN);
 }
 
 static esp_err_t handle_change_password(httpd_req_t *req)
@@ -1082,8 +1090,20 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
     if (!desc)
         return ESP_ERR_INVALID_ARG;
 
+    // Try IP-based session first (mobile-friendly), fallback to cookies (desktop)
+    admin_portal_session_status_t status = evaluate_session_by_ip(req);
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+    
+    if (status == ADMIN_PORTAL_SESSION_NONE)
+    {
+        status = evaluate_session(req, token, sizeof(token));
+        LOGI(TAG, "IP-based session failed, trying cookie-based: %s", session_status_name(status));
+    }
+    else
+    {
+        LOGI(TAG, "Using IP-based session: %s", session_status_name(status));
+    }
+    
     admin_portal_page_t target = admin_portal_state_resolve_page(&g_state, desc->page, status);
     LOGI(TAG, "Handle page request resolve page: %s", admin_portal_page_to_str(target));
 
