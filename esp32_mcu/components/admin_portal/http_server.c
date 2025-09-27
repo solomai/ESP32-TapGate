@@ -14,7 +14,7 @@ esp_err_t http_server_start()
         return ESP_ERR_INVALID_STATE;
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.max_uri_handlers = 32;
+    config.max_uri_handlers = 64;
     config.lru_purge_enable = true;
     config.max_req_hdr_len = 1024;
 
