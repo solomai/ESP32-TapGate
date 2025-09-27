@@ -14,8 +14,9 @@
 #include "pages/page_off.h"
 #include "pages/page_wifi.h"
 
-#include "esp_timer.h"
+#include "esp_err.h"
 #include "esp_random.h"
+#include "esp_timer.h"
 
 #include <ctype.h>
 #include <inttypes.h>
@@ -97,18 +98,24 @@ static void generate_session_token(char *buffer, size_t buffer_len)
     if (!buffer || buffer_len == 0)
         return;
 
-    uint8_t raw[ADMIN_PORTAL_SESSION_TOKEN_LENGTH / 2] = {0};
-    esp_fill_random(raw, sizeof(raw));
-
     static const char hex[] = "0123456789abcdef";
     size_t pos = 0;
-    for (size_t i = 0; i < sizeof(raw) && pos + 1 < buffer_len; ++i)
+    const size_t digits_needed = ADMIN_PORTAL_SESSION_TOKEN_LENGTH;
+
+    while (pos < digits_needed && pos + 1 < buffer_len)
     {
-        buffer[pos++] = hex[(raw[i] >> 4) & 0x0F];
-        if (pos < buffer_len - 1)
-            buffer[pos++] = hex[raw[i] & 0x0F];
+        uint32_t rnd = esp_random();
+        for (size_t nibble = 0; nibble < sizeof(rnd) * 2 && pos < digits_needed && pos + 1 < buffer_len; ++nibble)
+        {
+            uint8_t value = (uint8_t)((rnd >> 28) & 0x0F);
+            rnd <<= 4;
+            buffer[pos++] = hex[value];
+        }
     }
-    buffer[pos < buffer_len ? pos : buffer_len - 1] = '\0';
+
+    if (pos >= buffer_len)
+        pos = buffer_len - 1;
+    buffer[pos] = '\0';
 }
 
 typedef struct {
