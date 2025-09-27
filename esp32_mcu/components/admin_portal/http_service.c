@@ -496,11 +496,26 @@ static esp_err_t ensure_session_claim(httpd_req_t *req,
     
     admin_portal_state_start_session(&g_state, new_token, get_now_ms(), false);
     uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
+    
+    // For API endpoints, cookie will be set after authorization to avoid duplicate headers
+    // For GET requests (pages), set cookie immediately
+    bool is_api_request = req && req->uri && strstr(req->uri, "/api/") != NULL;
+    
+    if (!is_api_request)
+    {
+        LOGI(TAG, "Setting session cookie for page request: %s", req ? req->uri : "<null>");
+        set_session_cookie(req, new_token, max_age);
+    }
+    else
+    {
+        LOGI(TAG, "API request detected, cookie will be set after authorization: %s", req ? req->uri : "<null>");
+    }
+    
     LOGI(TAG,
          "Session started for URI %s (max_age=%" PRIu32 " s)",
          req ? req->uri : "<null>",
          max_age);
-    set_session_cookie(req, new_token, max_age);
+    
     strncpy(token_buffer, new_token, token_size - 1);
     token_buffer[token_size - 1] = '\0';
     *status = ADMIN_PORTAL_SESSION_MATCH;
