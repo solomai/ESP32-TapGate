@@ -686,7 +686,12 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     admin_portal_device_set_ap_password(password);
 
     LOGI(TAG, "Enrollment successful, redirecting to main page (AP SSID=\"%s\")", portal_name);
-    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
+    
+    // Send proper HTTP redirect instead of JSON response
+    httpd_resp_set_status(req, "302 Found");
+    httpd_resp_set_hdr(req, "Location", "/main/");
+    httpd_resp_send(req, NULL, 0);
+    return ESP_OK;
 }
 
 static esp_err_t handle_login(httpd_req_t *req)
@@ -737,7 +742,12 @@ static esp_err_t handle_login(httpd_req_t *req)
 
     admin_portal_state_authorize_session(&g_state);
     LOGI(TAG, "Login successful, redirecting to main page");
-    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
+    
+    // Send proper HTTP redirect instead of JSON response
+    httpd_resp_set_status(req, "302 Found");
+    httpd_resp_set_hdr(req, "Location", "/main/");
+    httpd_resp_send(req, NULL, 0);
+    return ESP_OK;
 }
 
 static esp_err_t handle_change_password(httpd_req_t *req)
