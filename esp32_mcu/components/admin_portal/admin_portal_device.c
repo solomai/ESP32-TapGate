@@ -56,6 +56,7 @@ esp_err_t admin_portal_device_load(admin_portal_state_t *state)
             LOGW(TAG, "Using default inactivity timeout due to read error: %s", esp_err_to_name(timeout_err));
         }
         timeout_minutes = ADMIN_PORTAL_DEFAULT_IDLE_TIMEOUT_MIN;
+        timeout_err = ESP_OK;
     }
     admin_portal_state_update_timeout(state, minutes_to_ms(timeout_minutes));
 

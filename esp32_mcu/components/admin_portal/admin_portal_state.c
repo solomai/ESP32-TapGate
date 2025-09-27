@@ -2,6 +2,16 @@
 
 #include <string.h>
 
+static size_t strnlen_safe(const char *str, size_t max_len)
+{
+    if (!str)
+        return 0;
+    size_t len = 0;
+    while (len < max_len && str[len])
+        ++len;
+    return len;
+}
+
 static bool page_requires_authorization(admin_portal_page_t page)
 {
     switch (page)
@@ -48,7 +58,7 @@ void admin_portal_state_set_ssid(admin_portal_state_t *state, const char *ssid)
         return;
     }
 
-    size_t length = strnlen(ssid, MAX_SSID_SIZE - 1);
+    size_t length = strnlen_safe(ssid, MAX_SSID_SIZE - 1);
     memcpy(state->ap_ssid, ssid, length);
     state->ap_ssid[length] = '\0';
 }
@@ -72,7 +82,7 @@ void admin_portal_state_set_password(admin_portal_state_t *state, const char *pa
         return;
     }
 
-    size_t length = strnlen(password, MAX_PASSWORD_SIZE - 1);
+    size_t length = strnlen_safe(password, MAX_PASSWORD_SIZE - 1);
     memcpy(state->ap_password, password, length);
     state->ap_password[length] = '\0';
     state->password_length = length;
@@ -86,7 +96,7 @@ bool admin_portal_state_verify_password(const admin_portal_state_t *state, const
         return false;
     if (!state->password_length)
         return false;
-    size_t length = strnlen(password, MAX_PASSWORD_SIZE - 1);
+    size_t length = strnlen_safe(password, MAX_PASSWORD_SIZE - 1);
     if (length != state->password_length)
         return false;
     return memcmp(state->ap_password, password, length) == 0;
@@ -103,7 +113,7 @@ bool admin_portal_state_password_valid(const admin_portal_state_t *state, const 
 {
     if (!state || !password)
         return false;
-    size_t length = strnlen(password, MAX_PASSWORD_SIZE);
+    size_t length = strnlen_safe(password, MAX_PASSWORD_SIZE);
     if (length >= MAX_PASSWORD_SIZE)
         return false;
     return length >= state->min_password_length;
@@ -135,7 +145,7 @@ void admin_portal_state_start_session(admin_portal_state_t *state,
     if (!token || !token[0])
         return;
 
-    size_t length = strnlen(token, ADMIN_PORTAL_SESSION_TOKEN_LENGTH);
+    size_t length = strnlen_safe(token, ADMIN_PORTAL_SESSION_TOKEN_LENGTH);
     memcpy(state->session.token, token, length);
     state->session.token[length] = '\0';
     state->session.active = true;
@@ -197,9 +207,9 @@ admin_portal_session_status_t admin_portal_state_check_session(admin_portal_stat
     if (!token || !token[0])
         return ADMIN_PORTAL_SESSION_NONE;
 
-    size_t length = strnlen(token, ADMIN_PORTAL_SESSION_TOKEN_LENGTH);
-    if (strncmp(state->session.token, token, length) == 0 &&
-        strnlen(state->session.token, ADMIN_PORTAL_SESSION_TOKEN_LENGTH) == length)
+    size_t length = strnlen_safe(token, ADMIN_PORTAL_SESSION_TOKEN_LENGTH);
+    size_t stored_length = strnlen_safe(state->session.token, ADMIN_PORTAL_SESSION_TOKEN_LENGTH);
+    if (length == stored_length && strncmp(state->session.token, token, length) == 0)
     {
         state->session.last_activity_ms = now_ms;
         return ADMIN_PORTAL_SESSION_MATCH;

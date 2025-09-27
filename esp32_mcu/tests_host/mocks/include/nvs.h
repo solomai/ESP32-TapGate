@@ -27,6 +27,8 @@ esp_err_t nvs_set_u32(nvs_handle_t handle, const char *key, uint32_t value);
 esp_err_t nvs_commit(nvs_handle_t handle);
 void nvs_close(nvs_handle_t handle);
 
+void nvs_mock_reset(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -31,10 +31,12 @@ target_include_directories(unity
 
 # Interface library exposing ESP-IDF shims used when compiling production
 # sources on the host.
-add_library(tapgate_idf_mocks INTERFACE)
+add_library(tapgate_idf_mocks STATIC
+    ${CMAKE_CURRENT_LIST_DIR}/mocks/nvs_mock.c
+)
 
 target_include_directories(tapgate_idf_mocks
-    INTERFACE
+    PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/mocks/include
 )
 
@@ -66,7 +68,8 @@ set(_tapgate_component_sources
     ${CMAKE_CURRENT_LIST_DIR}/../components/rsapem/rsapem.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/clients/clients.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/logs/logs.c
-    ${CMAKE_CURRENT_LIST_DIR}/../components/nvm/nvm.c
+    ${CMAKE_CURRENT_LIST_DIR}/../components/common/nvm/nvm.c
+    ${CMAKE_CURRENT_LIST_DIR}/../components/admin_portal/admin_portal_device.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/admin_portal/admin_portal_state.c
 )
 
@@ -150,4 +153,5 @@ endfunction()
 tapgate_add_unity_test(test_types ${CMAKE_CURRENT_LIST_DIR}/test_types.c)
 tapgate_add_unity_test(test_logs ${CMAKE_CURRENT_LIST_DIR}/test_logs.c)
 tapgate_add_unity_test(test_admin_portal_state ${CMAKE_CURRENT_LIST_DIR}/test_admin_portal_state.c)
+tapgate_add_unity_test(test_admin_portal_device ${CMAKE_CURRENT_LIST_DIR}/test_admin_portal_device.c)
 
