@@ -65,7 +65,6 @@ typedef struct {
     bool authorized;
     bool claimed;
     uint64_t last_activity_ms;
-    char client_ip[16]; // Store client IP address (IPv4: "xxx.xxx.xxx.xxx")
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
 } admin_portal_session_t;
 
@@ -94,19 +93,10 @@ admin_portal_session_status_t admin_portal_state_check_session(admin_portal_stat
                                                                const char *token,
                                                                uint64_t now_ms);
 
-admin_portal_session_status_t admin_portal_state_check_session_by_ip(admin_portal_state_t *state,
-                                                                     const char *client_ip,
-                                                                     uint64_t now_ms);
-
 void admin_portal_state_start_session(admin_portal_state_t *state,
                                       const char *token,
                                       uint64_t now_ms,
                                       bool authorized);
-
-void admin_portal_state_start_session_by_ip(admin_portal_state_t *state,
-                                            const char *client_ip,
-                                            uint64_t now_ms,
-                                            bool authorized);
 
 void admin_portal_state_update_session(admin_portal_state_t *state, uint64_t now_ms);
 

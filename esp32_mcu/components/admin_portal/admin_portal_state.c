@@ -174,56 +174,6 @@ void admin_portal_state_start_session(admin_portal_state_t *state,
     state->session.token[length] = '\0';
 }
 
-void admin_portal_state_start_session_by_ip(admin_portal_state_t *state,
-                                            const char *client_ip,
-                                            uint64_t now_ms,
-                                            bool authorized)
-{
-    if (!state || !client_ip)
-        return;
-
-    state->session.active = true;
-    state->session.authorized = authorized;
-    state->session.claimed = false;
-    state->session.last_activity_ms = now_ms;
-    
-    // Store client IP instead of token
-    size_t ip_length = strnlen_safe(client_ip, sizeof(state->session.client_ip) - 1);
-    memcpy(state->session.client_ip, client_ip, ip_length);
-    state->session.client_ip[ip_length] = '\0';
-    
-    // Clear token when using IP-based session
-    memset(state->session.token, 0, sizeof(state->session.token));
-}
-
-admin_portal_session_status_t admin_portal_state_check_session_by_ip(admin_portal_state_t *state,
-                                                                     const char *client_ip,
-                                                                     uint64_t now_ms)
-{
-    if (!state || !client_ip)
-        return ADMIN_PORTAL_SESSION_NONE;
-
-    if (!state->session.active)
-        return ADMIN_PORTAL_SESSION_NONE;
-
-    // Check if session is from the same IP
-    if (strcmp(state->session.client_ip, client_ip) != 0)
-        return ADMIN_PORTAL_SESSION_BUSY; // Different client has session
-
-    // Check timeout
-    if (state->inactivity_timeout_ms > 0)
-    {
-        uint64_t elapsed = now_ms - state->session.last_activity_ms;
-        if (elapsed > state->inactivity_timeout_ms)
-        {
-            admin_portal_state_clear_session(state);
-            return ADMIN_PORTAL_SESSION_EXPIRED;
-        }
-    }
-
-    return ADMIN_PORTAL_SESSION_MATCH;
-}
-
 void admin_portal_state_update_session(admin_portal_state_t *state, uint64_t now_ms)
 {
     if (!state || !state->session.active)
