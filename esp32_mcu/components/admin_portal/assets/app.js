@@ -134,36 +134,26 @@
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params.toString(),
-      credentials: "same-origin",
-      redirect: "manual" // Don't auto-follow redirects, let us handle them
+      credentials: "same-origin"
     })
       .then((response) => {
-        // Handle redirects first
-        if (response.type === "opaqueredirect" || response.status === 302) {
-          const location = response.headers.get("Location");
-          if (location) {
-            window.location.assign(location);
-            return null;
-          }
-        }
-
-        // For non-redirect responses, expect JSON
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        return response.json().then(data => {
-          if (!data) {
-            throw new Error('Empty response');
-          }
-          handleActionResponse(form, config, data);
-        });
+        return response.json();
+      })
+      .then((data) => {
+        if (!data) {
+          throw new Error('Empty response');
+        }
+        // Check for successful redirect first
+        if (data.status === "ok" && data.redirect) {
+          window.location.href = data.redirect;
+          return;
+        }
+        handleActionResponse(form, config, data);
       })
       .catch((error) => {
-        // Don't show error for redirects
-        if (error.message === "Failed to fetch" && window.location.href.includes("/main/")) {
-          return; // Redirect is happening
-        }
         console.error('Request failed:', error);
         setMessage(form, "Unable to reach device.");
       });

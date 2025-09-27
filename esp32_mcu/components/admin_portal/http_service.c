@@ -701,6 +701,13 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     return ESP_OK;
 }
 
+static esp_err_t send_success_with_session(httpd_req_t *req, const char* token, const char* redirect_to) {
+    set_session_cookie(req, token, DEFAULT_SESSION_MAX_AGE);
+    char response[256];
+    snprintf(response, sizeof(response), "{\"status\":\"ok\",\"redirect\":\"%s\"}", redirect_to);
+    return send_json(req, "200 OK", response);
+}
+
 static esp_err_t handle_login(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
@@ -747,7 +754,10 @@ static esp_err_t handle_login(httpd_req_t *req)
         return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"wrong_password\"}");
     }
 
-    // Ensure we have a valid session token
+    admin_portal_state_authorize_session(&g_state);
+    admin_portal_state_update_session(&g_state, get_now_ms());
+    LOGI(TAG, "Login successful, sending response with redirect to main page");
+    return send_success_with_session(req, token, "/main/");
     ensure_session_claim(req, &status, token, sizeof(token));
     
     admin_portal_state_authorize_session(&g_state);
@@ -909,11 +919,16 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
         LOGI(TAG, "Session expired while requesting %s; clearing cookie", desc->route);
     }
 
-    if (target != desc->page)
-        return send_redirect(req, target);
-
-    if (status == ADMIN_PORTAL_SESSION_NONE && desc->page != ADMIN_PORTAL_PAGE_BUSY && desc->page != ADMIN_PORTAL_PAGE_OFF)
+    // First ensure we have a valid session
+    if (status == ADMIN_PORTAL_SESSION_NONE && desc->page != ADMIN_PORTAL_PAGE_BUSY && desc->page != ADMIN_PORTAL_PAGE_OFF) {
         ensure_session_claim(req, &status, token, sizeof(token));
+    }
+
+    // Then check if we need to redirect
+    if (target != desc->page) {
+        set_session_cookie(req, token, DEFAULT_SESSION_MAX_AGE);  // Ensure cookie is set before redirect
+        return send_redirect(req, target);
+    }
 
     LOGI(TAG, "Serving page %s", page_name(desc->page));
     return send_page_content(req, desc);
