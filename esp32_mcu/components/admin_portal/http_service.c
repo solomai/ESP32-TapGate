@@ -232,12 +232,13 @@ static void set_session_cookie(httpd_req_t *req, const char *token, uint32_t max
     char header[128];
     if (token && token[0])
     {
-        snprintf(header, sizeof(header), ADMIN_PORTAL_COOKIE_NAME "=%s; Max-Age=%" PRIu32 "; Path=/; HttpOnly; SameSite=Lax", token, max_age_seconds);
+        // Remove HttpOnly to allow JavaScript access for debugging
+        snprintf(header, sizeof(header), ADMIN_PORTAL_COOKIE_NAME "=%s; Max-Age=%" PRIu32 "; Path=/; SameSite=Lax", token, max_age_seconds);
         LOGI(TAG, "Setting session cookie: token=%.8s..., max_age=%" PRIu32 "s", token, max_age_seconds);
     }
     else
     {
-        snprintf(header, sizeof(header), ADMIN_PORTAL_COOKIE_NAME "=deleted; Max-Age=0; Path=/; HttpOnly; SameSite=Lax");
+        snprintf(header, sizeof(header), ADMIN_PORTAL_COOKIE_NAME "=deleted; Max-Age=0; Path=/; SameSite=Lax");
         LOGI(TAG, "Clearing session cookie");
     }
     
@@ -445,6 +446,12 @@ static esp_err_t send_json(httpd_req_t *req, const char *status_text, const char
     
     httpd_resp_set_status(req, status_text);
     httpd_resp_set_type(req, "application/json");
+    
+    // Add CORS headers to allow credentials
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
+    httpd_resp_set_hdr(req, "Access-Control-Expose-Headers", "Set-Cookie");
+    
     set_cache_headers(req);
     
     esp_err_t result = httpd_resp_send(req, body, HTTPD_RESP_USE_STRLEN);
@@ -774,7 +781,14 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     set_session_cookie(req, token, max_age);
 
     LOGI(TAG, "Enrollment successful, redirecting to main page (AP SSID=\"%s\")", portal_name);
-    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
+    
+    // Include cookie value in JSON response for manual setting
+    char response[256];
+    snprintf(response, sizeof(response), 
+             "{\"status\":\"ok\",\"redirect\":\"/main/\",\"session_token\":\"%s\"}", 
+             token);
+    
+    return send_json(req, "200 OK", response);
 }
 
 static esp_err_t handle_login(httpd_req_t *req)
@@ -842,7 +856,14 @@ static esp_err_t handle_login(httpd_req_t *req)
     set_session_cookie(req, token, max_age);
     
     LOGI(TAG, "Login successful, redirecting to main page");
-    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
+    
+    // Include cookie value in JSON response for manual setting
+    char response[256];
+    snprintf(response, sizeof(response), 
+             "{\"status\":\"ok\",\"redirect\":\"/main/\",\"session_token\":\"%s\"}", 
+             token);
+    
+    return send_json(req, "200 OK", response);
 }
 
 static esp_err_t handle_change_password(httpd_req_t *req)

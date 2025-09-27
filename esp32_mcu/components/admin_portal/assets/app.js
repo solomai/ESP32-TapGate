@@ -81,11 +81,28 @@
 
     if (data.status === "ok" && data.redirect) {
       console.log('Success redirect to:', data.redirect);
+      console.log('Current document.cookie before redirect:', document.cookie);
+      
+      // Force set cookie from JSON response
+      if (data.session_token) {
+        console.log('Setting cookie from JSON response:', data.session_token);
+        document.cookie = `tg_session=${data.session_token}; Path=/; SameSite=Lax; Max-Age=900`;
+        console.log('Cookie set. New document.cookie:', document.cookie);
+      }
+      
+      // Check if cookie exists, if not, try to read it from server response
+      if (!document.cookie.includes('tg_session')) {
+        console.error('Cookie STILL not found in document.cookie after manual setting!');
+      } else {
+        console.log('SUCCESS: Cookie found in document.cookie');
+      }
+      
       // Force page reload to ensure cookies are properly set
       // Use window.location.href instead of assign() for full page reload
       setTimeout(() => {
+        console.log('Performing redirect to:', data.redirect);
         window.location.href = data.redirect;
-      }, 100);  // Small delay to ensure response is processed
+      }, 300);  // Increased delay to ensure cookie processing
       return;
     }
 
@@ -150,19 +167,7 @@
       .then((response) => {
         console.log(`Response for ${config.url}: status=${response.status}, ok=${response.ok}`);
         console.log('Response headers:', [...response.headers.entries()]);
-        
-        // Extract Set-Cookie header and set it manually if present
-        const setCookie = response.headers.get('set-cookie');
-        if (setCookie) {
-          console.log('Found Set-Cookie header:', setCookie);
-          // Extract cookie name and value
-          const cookieMatch = setCookie.match(/tg_session=([^;]+)/);
-          if (cookieMatch) {
-            const cookieValue = cookieMatch[1];
-            console.log('Setting cookie manually:', cookieValue);
-            document.cookie = `tg_session=${cookieValue}; Path=/; SameSite=Lax; Max-Age=900`;
-          }
-        }
+        console.log('Current document.cookie before:', document.cookie);
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -175,6 +180,7 @@
       })
       .then((data) => {
         console.log(`JSON response for ${config.url}:`, data);
+        console.log('Current document.cookie after response:', document.cookie);
         handleActionResponse(form, config, data);
       })
       .catch((error) => {
