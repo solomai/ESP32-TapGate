@@ -687,7 +687,10 @@ static esp_err_t handle_enroll(httpd_req_t *req)
 
     LOGI(TAG, "Enrollment successful, redirecting to main page (AP SSID=\"%s\")", portal_name);
     
-    // Send proper HTTP redirect instead of JSON response
+    // First set the session cookie
+    set_session_cookie(req, token, DEFAULT_SESSION_MAX_AGE);
+    
+    // Then send HTTP redirect
     httpd_resp_set_status(req, "302 Found");
     httpd_resp_set_hdr(req, "Location", "/main/");
     httpd_resp_send(req, NULL, 0);
@@ -743,7 +746,10 @@ static esp_err_t handle_login(httpd_req_t *req)
     admin_portal_state_authorize_session(&g_state);
     LOGI(TAG, "Login successful, redirecting to main page");
     
-    // Send proper HTTP redirect instead of JSON response
+    // First set the session cookie
+    set_session_cookie(req, token, DEFAULT_SESSION_MAX_AGE);
+    
+    // Then send HTTP redirect
     httpd_resp_set_status(req, "302 Found");
     httpd_resp_set_hdr(req, "Location", "/main/");
     httpd_resp_send(req, NULL, 0);
