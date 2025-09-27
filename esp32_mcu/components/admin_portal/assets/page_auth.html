@@ -16,7 +16,7 @@
       Enter the administrator password<br>
       to access the TapGate portal
     </p>
-    <form data-action="login" class="form-grid">
+    <form data-action="login" action="/api/login" method="POST" class="form-grid">
       <label>
         Portal name
         <input type="text" data-bind="portal-name" readonly>
