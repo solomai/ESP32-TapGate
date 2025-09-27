@@ -499,7 +499,7 @@ static esp_err_t ensure_session_claim(httpd_req_t *req,
     
     // For API endpoints, cookie will be set after authorization to avoid duplicate headers
     // For GET requests (pages), set cookie immediately
-    bool is_api_request = req && req->uri && strstr(req->uri, "/api/") != NULL;
+    bool is_api_request = req && req->uri[0] != '\0' && strstr(req->uri, "/api/") != NULL;
     
     if (!is_api_request)
     {
