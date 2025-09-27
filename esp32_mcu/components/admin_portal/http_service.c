@@ -15,9 +15,10 @@
 #include "pages/page_wifi.h"
 
 #include "esp_timer.h"
-#include "esp_system.h"
+#include "esp_random.h"
 
 #include <ctype.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,7 +56,7 @@ static void set_session_cookie(httpd_req_t *req, const char *token)
         max_age = ADMIN_PORTAL_DEFAULT_IDLE_TIMEOUT_MIN * 60U;
     char buffer[128];
     snprintf(buffer, sizeof(buffer),
-             "tg_session=%s; Path=/; Max-Age=%u; HttpOnly; SameSite=Lax",
+             "tg_session=%s; Path=/; Max-Age=%" PRIu32 "; HttpOnly; SameSite=Lax",
              token, max_age);
     httpd_resp_set_hdr(req, "Set-Cookie", buffer);
 }
@@ -112,7 +113,8 @@ static void generate_session_token(char *buffer, size_t buffer_len)
 
 typedef struct {
     const char *path;
-    const uint8_t *data;
+    const uint8_t *start;
+    const uint8_t *end;
     size_t size;
     const char *content_type;
     bool compressed;
@@ -137,33 +139,49 @@ extern const uint8_t _binary_wifi2_svg_end[];
 extern const uint8_t _binary_wifi3_svg_start[];
 extern const uint8_t _binary_wifi3_svg_end[];
 
-static const admin_portal_asset_t g_assets[] = {
-    {"/assets/app.js", _binary_app_js_gz_start, (size_t)(_binary_app_js_gz_end - _binary_app_js_gz_start), "application/javascript", true},
-    {"/assets/styles.css", _binary_styles_css_gz_start, (size_t)(_binary_styles_css_gz_end - _binary_styles_css_gz_start), "text/css", true},
-    {"/assets/logo.png", _binary_logo_png_start, (size_t)(_binary_logo_png_end - _binary_logo_png_start), "image/png", false},
-    {"/assets/settings.svg", _binary_settings_svg_start, (size_t)(_binary_settings_svg_end - _binary_settings_svg_start), "image/svg+xml", false},
-    {"/assets/lock.svg", _binary_lock_svg_start, (size_t)(_binary_lock_svg_end - _binary_lock_svg_start), "image/svg+xml", false},
-    {"/assets/wifi0.svg", _binary_wifi0_svg_start, (size_t)(_binary_wifi0_svg_end - _binary_wifi0_svg_start), "image/svg+xml", false},
-    {"/assets/wifi1.svg", _binary_wifi1_svg_start, (size_t)(_binary_wifi1_svg_end - _binary_wifi1_svg_start), "image/svg+xml", false},
-    {"/assets/wifi2.svg", _binary_wifi2_svg_start, (size_t)(_binary_wifi2_svg_end - _binary_wifi2_svg_start), "image/svg+xml", false},
-    {"/assets/wifi3.svg", _binary_wifi3_svg_start, (size_t)(_binary_wifi3_svg_end - _binary_wifi3_svg_start), "image/svg+xml", false},
+static admin_portal_asset_t g_assets[] = {
+    {"/assets/app.js", _binary_app_js_gz_start, _binary_app_js_gz_end, 0, "application/javascript", true},
+    {"/assets/styles.css", _binary_styles_css_gz_start, _binary_styles_css_gz_end, 0, "text/css", true},
+    {"/assets/logo.png", _binary_logo_png_start, _binary_logo_png_end, 0, "image/png", false},
+    {"/assets/settings.svg", _binary_settings_svg_start, _binary_settings_svg_end, 0, "image/svg+xml", false},
+    {"/assets/lock.svg", _binary_lock_svg_start, _binary_lock_svg_end, 0, "image/svg+xml", false},
+    {"/assets/wifi0.svg", _binary_wifi0_svg_start, _binary_wifi0_svg_end, 0, "image/svg+xml", false},
+    {"/assets/wifi1.svg", _binary_wifi1_svg_start, _binary_wifi1_svg_end, 0, "image/svg+xml", false},
+    {"/assets/wifi2.svg", _binary_wifi2_svg_start, _binary_wifi2_svg_end, 0, "image/svg+xml", false},
+    {"/assets/wifi3.svg", _binary_wifi3_svg_start, _binary_wifi3_svg_end, 0, "image/svg+xml", false},
 };
 
-static const admin_portal_page_descriptor_t *g_pages[] = {
-    admin_portal_page_auth_descriptor(),
-    admin_portal_page_busy_descriptor(),
-    admin_portal_page_change_psw_descriptor(),
-    admin_portal_page_clients_descriptor(),
-    admin_portal_page_device_descriptor(),
-    admin_portal_page_enroll_descriptor(),
-    admin_portal_page_events_descriptor(),
-    admin_portal_page_main_descriptor(),
-    admin_portal_page_off_descriptor(),
-    admin_portal_page_wifi_descriptor(),
-};
+static const admin_portal_page_descriptor_t *g_pages[ADMIN_PORTAL_PAGE_COUNT];
+
+static void ensure_assets_initialized(void)
+{
+    for (size_t i = 0; i < sizeof(g_assets) / sizeof(g_assets[0]); ++i)
+    {
+        if (g_assets[i].size == 0 && g_assets[i].start && g_assets[i].end)
+            g_assets[i].size = (size_t)(g_assets[i].end - g_assets[i].start);
+    }
+}
+
+static void ensure_pages_initialized(void)
+{
+    if (g_pages[ADMIN_PORTAL_PAGE_ENROLL])
+        return;
+
+    g_pages[ADMIN_PORTAL_PAGE_ENROLL] = admin_portal_page_enroll_descriptor();
+    g_pages[ADMIN_PORTAL_PAGE_AUTH] = admin_portal_page_auth_descriptor();
+    g_pages[ADMIN_PORTAL_PAGE_MAIN] = admin_portal_page_main_descriptor();
+    g_pages[ADMIN_PORTAL_PAGE_DEVICE] = admin_portal_page_device_descriptor();
+    g_pages[ADMIN_PORTAL_PAGE_WIFI] = admin_portal_page_wifi_descriptor();
+    g_pages[ADMIN_PORTAL_PAGE_CLIENTS] = admin_portal_page_clients_descriptor();
+    g_pages[ADMIN_PORTAL_PAGE_EVENTS] = admin_portal_page_events_descriptor();
+    g_pages[ADMIN_PORTAL_PAGE_CHANGE_PASSWORD] = admin_portal_page_change_psw_descriptor();
+    g_pages[ADMIN_PORTAL_PAGE_BUSY] = admin_portal_page_busy_descriptor();
+    g_pages[ADMIN_PORTAL_PAGE_OFF] = admin_portal_page_off_descriptor();
+}
 
 static const admin_portal_page_descriptor_t *find_page_by_uri(const char *uri)
 {
+    ensure_pages_initialized();
     if (!uri)
         return NULL;
     for (size_t i = 0; i < sizeof(g_pages) / sizeof(g_pages[0]); ++i)
@@ -176,6 +194,7 @@ static const admin_portal_page_descriptor_t *find_page_by_uri(const char *uri)
 
 static const admin_portal_page_descriptor_t *find_page_by_type(admin_portal_page_t page)
 {
+    ensure_pages_initialized();
     for (size_t i = 0; i < sizeof(g_pages) / sizeof(g_pages[0]); ++i)
     {
         if (g_pages[i]->page == page)
@@ -184,20 +203,23 @@ static const admin_portal_page_descriptor_t *find_page_by_type(admin_portal_page
     return NULL;
 }
 
-static esp_err_t send_asset(httpd_req_t *req, const admin_portal_asset_t *asset)
+static esp_err_t send_asset(httpd_req_t *req, admin_portal_asset_t *asset)
 {
+    ensure_assets_initialized();
     if (!asset)
         return ESP_ERR_NOT_FOUND;
     httpd_resp_set_type(req, asset->content_type);
     if (asset->compressed)
         httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
     set_cache_headers_static(req);
-    return httpd_resp_send(req, (const char *)asset->data, asset->size);
+    if (asset->size == 0 && asset->start && asset->end)
+        asset->size = (size_t)(asset->end - asset->start);
+    return httpd_resp_send(req, (const char *)asset->start, asset->size);
 }
 
 static esp_err_t handle_asset(httpd_req_t *req)
 {
-    const admin_portal_asset_t *asset = (const admin_portal_asset_t *)req->user_ctx;
+    admin_portal_asset_t *asset = (admin_portal_asset_t *)req->user_ctx;
     if (!asset)
     {
         httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not Found");
@@ -208,6 +230,7 @@ static esp_err_t handle_asset(httpd_req_t *req)
 
 static esp_err_t send_page_response(httpd_req_t *req, const admin_portal_page_descriptor_t *descriptor)
 {
+    ensure_pages_initialized();
     if (!descriptor)
     {
         httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not Found");
@@ -218,6 +241,44 @@ static esp_err_t send_page_response(httpd_req_t *req, const admin_portal_page_de
     if (descriptor->compressed)
         httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
     set_no_cache_headers(req);
+    if (descriptor->size == 0 && descriptor->data)
+    {
+        switch (descriptor->page)
+        {
+        case ADMIN_PORTAL_PAGE_AUTH:
+            admin_portal_page_auth_descriptor();
+            break;
+        case ADMIN_PORTAL_PAGE_BUSY:
+            admin_portal_page_busy_descriptor();
+            break;
+        case ADMIN_PORTAL_PAGE_CHANGE_PASSWORD:
+            admin_portal_page_change_psw_descriptor();
+            break;
+        case ADMIN_PORTAL_PAGE_CLIENTS:
+            admin_portal_page_clients_descriptor();
+            break;
+        case ADMIN_PORTAL_PAGE_DEVICE:
+            admin_portal_page_device_descriptor();
+            break;
+        case ADMIN_PORTAL_PAGE_ENROLL:
+            admin_portal_page_enroll_descriptor();
+            break;
+        case ADMIN_PORTAL_PAGE_EVENTS:
+            admin_portal_page_events_descriptor();
+            break;
+        case ADMIN_PORTAL_PAGE_MAIN:
+            admin_portal_page_main_descriptor();
+            break;
+        case ADMIN_PORTAL_PAGE_OFF:
+            admin_portal_page_off_descriptor();
+            break;
+        case ADMIN_PORTAL_PAGE_WIFI:
+            admin_portal_page_wifi_descriptor();
+            break;
+        default:
+            break;
+        }
+    }
     return httpd_resp_send(req, (const char *)descriptor->data, descriptor->size);
 }
 
@@ -771,6 +832,9 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
                             ADMIN_PORTAL_DEFAULT_IDLE_TIMEOUT_MIN * 60U * 1000U,
                             WPA2_MINIMUM_PASSWORD_LENGTH);
     admin_portal_device_load(&g_state);
+
+    ensure_assets_initialized();
+    ensure_pages_initialized();
 
     esp_err_t err;
 
