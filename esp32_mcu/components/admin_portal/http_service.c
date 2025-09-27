@@ -685,7 +685,7 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     admin_portal_state_authorize_session(&g_state);
     admin_portal_device_set_ap_password(password);
 
-    // Set session cookie after authorization to ensure authorized session is maintained
+    // Set session cookie BEFORE sending response to ensure authorized session is maintained
     uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
     set_session_cookie(req, token, max_age);
 
@@ -741,7 +741,7 @@ static esp_err_t handle_login(httpd_req_t *req)
 
     admin_portal_state_authorize_session(&g_state);
     
-    // Set session cookie after authorization to ensure authorized session is maintained
+    // Set session cookie BEFORE sending response to ensure authorized session is maintained
     uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
     set_session_cookie(req, token, max_age);
     
@@ -807,7 +807,7 @@ static esp_err_t handle_change_password(httpd_req_t *req)
     admin_portal_state_authorize_session(&g_state);
     admin_portal_device_set_ap_password(next);
 
-    // Set session cookie after authorization to ensure authorized session is maintained
+    // Set session cookie BEFORE sending response to ensure authorized session is maintained
     uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
     set_session_cookie(req, token, max_age);
 
