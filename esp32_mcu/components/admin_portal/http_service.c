@@ -233,12 +233,19 @@ static void set_session_cookie(httpd_req_t *req, const char *token, uint32_t max
     if (token && token[0])
     {
         snprintf(header, sizeof(header), ADMIN_PORTAL_COOKIE_NAME "=%s; Max-Age=%" PRIu32 "; Path=/; HttpOnly; SameSite=Lax", token, max_age_seconds);
+        LOGI(TAG, "Setting session cookie: token=%.8s..., max_age=%" PRIu32 "s", token, max_age_seconds);
     }
     else
     {
         snprintf(header, sizeof(header), ADMIN_PORTAL_COOKIE_NAME "=deleted; Max-Age=0; Path=/; HttpOnly; SameSite=Lax");
+        LOGI(TAG, "Clearing session cookie");
     }
-    httpd_resp_set_hdr(req, "Set-Cookie", header);
+    
+    esp_err_t result = httpd_resp_set_hdr(req, "Set-Cookie", header);
+    LOGI(TAG, "Session cookie header set: result=%s", esp_err_to_name(result));
+#ifdef DIAGNOSTIC_VERSION
+    LOGI(TAG, "Cookie header: %s", header);
+#endif
 }
 
 static bool parse_cookie_value(const char *cookies, const char *name, char *value, size_t value_size)
@@ -281,19 +288,40 @@ static bool get_session_token(httpd_req_t *req, char *token, size_t token_size)
 
     size_t length = httpd_req_get_hdr_value_len(req, "Cookie");
     if (length == 0)
+    {
+        LOGI(TAG, "No Cookie header found in request");
         return false;
+    }
 
     char *buffer = (char *)malloc(length + 1);
     if (!buffer)
+    {
+        LOGI(TAG, "Failed to allocate buffer for cookie header");
         return false;
+    }
 
     if (httpd_req_get_hdr_value_str(req, "Cookie", buffer, length + 1) != ESP_OK)
     {
+        LOGI(TAG, "Failed to get Cookie header value");
         free(buffer);
         return false;
     }
 
+    LOGI(TAG, "Cookie header received: length=%zu", length);
+#ifdef DIAGNOSTIC_VERSION
+    LOGI(TAG, "Cookie header content: %s", buffer);
+#endif
+
     bool found = parse_cookie_value(buffer, ADMIN_PORTAL_COOKIE_NAME, token, token_size);
+    if (found)
+    {
+        LOGI(TAG, "Session token found: %.8s...", token);
+    }
+    else
+    {
+        LOGI(TAG, "Session token not found in cookies");
+    }
+    
     free(buffer);
     return found;
 }
@@ -409,10 +437,19 @@ static esp_err_t send_redirect(httpd_req_t *req, admin_portal_page_t page)
 
 static esp_err_t send_json(httpd_req_t *req, const char *status_text, const char *body)
 {
+    LOGI(TAG, "Sending JSON response: status=%s, body_length=%zu", 
+         status_text, body ? strlen(body) : 0);
+#ifdef DIAGNOSTIC_VERSION
+    LOGI(TAG, "JSON Response body: %s", body ? body : "<null>");
+#endif
+    
     httpd_resp_set_status(req, status_text);
     httpd_resp_set_type(req, "application/json");
     set_cache_headers(req);
-    return httpd_resp_send(req, body, HTTPD_RESP_USE_STRLEN);
+    
+    esp_err_t result = httpd_resp_send(req, body, HTTPD_RESP_USE_STRLEN);
+    LOGI(TAG, "JSON response sent: result=%s", esp_err_to_name(result));
+    return result;
 }
 
 static admin_portal_session_status_t evaluate_session(httpd_req_t *req,
@@ -421,11 +458,20 @@ static admin_portal_session_status_t evaluate_session(httpd_req_t *req,
 {
     bool has_token = get_session_token(req, token_buffer, token_size);
     uint64_t now = get_now_ms();
+    
+    LOGI(TAG, "Evaluating session: has_token=%s, now=%" PRIu64 "ms", 
+         has_token ? "yes" : "no", now);
+    
     admin_portal_session_status_t status = admin_portal_state_check_session(&g_state, has_token ? token_buffer : NULL, now);
+    
+    LOGI(TAG, "Session evaluation result: status=%s", session_status_name(status));
+    
     if (status == ADMIN_PORTAL_SESSION_MATCH)
     {
         admin_portal_state_update_session(&g_state, now);
+        LOGI(TAG, "Session updated with current timestamp");
     }
+    
     return status;
 }
 
@@ -438,10 +484,16 @@ static esp_err_t ensure_session_claim(httpd_req_t *req,
         return ESP_ERR_INVALID_ARG;
 
     if (*status != ADMIN_PORTAL_SESSION_NONE)
+    {
+        LOGI(TAG, "Session already exists, not creating new session");
         return ESP_OK;
+    }
 
+    LOGI(TAG, "Creating new session claim");
     char new_token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
     generate_session_token(new_token);
+    LOGI(TAG, "Generated new session token: %.8s...", new_token);
+    
     admin_portal_state_start_session(&g_state, new_token, get_now_ms(), false);
     uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
     LOGI(TAG,
@@ -452,6 +504,7 @@ static esp_err_t ensure_session_claim(httpd_req_t *req,
     strncpy(token_buffer, new_token, token_size - 1);
     token_buffer[token_size - 1] = '\0';
     *status = ADMIN_PORTAL_SESSION_MATCH;
+    LOGI(TAG, "Session claim completed successfully");
     return ESP_OK;
 }
 
@@ -650,6 +703,15 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     char password[sizeof(g_state.ap_password)];
     bool has_portal_name = form_get_field(body, "portal", portal_name, sizeof(portal_name));
     bool has_password = form_get_field(body, "password", password, sizeof(password));
+    
+    LOGI(TAG, "Enrollment form data: has_portal_name=%s, has_password=%s", 
+         has_portal_name ? "yes" : "no", has_password ? "yes" : "no");
+#ifdef DIAGNOSTIC_VERSION
+    LOGI(TAG, "Portal name: \"%s\", password length: %zu", 
+         has_portal_name ? portal_name : "<missing>", 
+         has_password ? strlen(password) : 0);
+#endif
+    
     free(body);
 
     if (!has_portal_name || portal_name[0] == '\0')
@@ -682,11 +744,18 @@ static esp_err_t handle_enroll(httpd_req_t *req)
 
     admin_portal_state_set_ssid(&g_state, portal_name);
     admin_portal_state_set_password(&g_state, password);
+    
+    LOGI(TAG, "Authorizing session after enrollment");
     admin_portal_state_authorize_session(&g_state);
+    
+    bool is_authorized = admin_portal_state_session_authorized(&g_state);
+    LOGI(TAG, "Session authorization status: %s", is_authorized ? "authorized" : "not_authorized");
+    
     admin_portal_device_set_ap_password(password);
 
     // Set session cookie BEFORE sending response to ensure authorized session is maintained
     uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
+    LOGI(TAG, "About to set session cookie for token: %.8s...", token);
     set_session_cookie(req, token, max_age);
 
     LOGI(TAG, "Enrollment successful, redirecting to main page (AP SSID=\"%s\")", portal_name);
@@ -731,18 +800,30 @@ static esp_err_t handle_login(httpd_req_t *req)
 
     char password[sizeof(g_state.ap_password)];
     bool has_password = form_get_field(body, "password", password, sizeof(password));
+    
+    LOGI(TAG, "Login form data: has_password=%s", has_password ? "yes" : "no");
+#ifdef DIAGNOSTIC_VERSION
+    LOGI(TAG, "Password length: %zu", has_password ? strlen(password) : 0);
+#endif
+    
     free(body);
 
     if (!has_password || !admin_portal_state_password_matches(&g_state, password))
     {
-        LOGI(TAG, "Login failed: wrong password");
+        LOGI(TAG, "Login failed: %s", 
+             !has_password ? "password missing" : "wrong password");
         return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"wrong_password\"}");
     }
 
+    LOGI(TAG, "Authorizing session after login");
     admin_portal_state_authorize_session(&g_state);
+    
+    bool is_authorized = admin_portal_state_session_authorized(&g_state);
+    LOGI(TAG, "Session authorization status: %s", is_authorized ? "authorized" : "not_authorized");
     
     // Set session cookie BEFORE sending response to ensure authorized session is maintained
     uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
+    LOGI(TAG, "About to set session cookie for token: %.8s...", token);
     set_session_cookie(req, token, max_age);
     
     LOGI(TAG, "Login successful, redirecting to main page");
