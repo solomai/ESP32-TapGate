@@ -807,6 +807,10 @@ static esp_err_t handle_change_password(httpd_req_t *req)
     admin_portal_state_authorize_session(&g_state);
     admin_portal_device_set_ap_password(next);
 
+    // Set session cookie after authorization to ensure authorized session is maintained
+    uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
+    set_session_cookie(req, token, max_age);
+
     LOGI(TAG, "Change password successful, redirecting to device page");
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/device/\"}");
 }
