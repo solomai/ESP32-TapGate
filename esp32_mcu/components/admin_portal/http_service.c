@@ -774,12 +774,7 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     set_session_cookie(req, token, max_age);
 
     LOGI(TAG, "Enrollment successful, redirecting to main page (AP SSID=\"%s\")", portal_name);
-    
-    // Use HTTP redirect instead of JSON redirect to ensure cookies are preserved
-    httpd_resp_set_status(req, "302 Found");
-    httpd_resp_set_hdr(req, "Location", "/main/");
-    set_cache_headers(req);
-    return httpd_resp_send(req, "", 0);
+    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
 }
 
 static esp_err_t handle_login(httpd_req_t *req)
@@ -847,12 +842,7 @@ static esp_err_t handle_login(httpd_req_t *req)
     set_session_cookie(req, token, max_age);
     
     LOGI(TAG, "Login successful, redirecting to main page");
-    
-    // Use HTTP redirect instead of JSON redirect to ensure cookies are preserved
-    httpd_resp_set_status(req, "302 Found");
-    httpd_resp_set_hdr(req, "Location", "/main/");
-    set_cache_headers(req);
-    return httpd_resp_send(req, "", 0);
+    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
 }
 
 static esp_err_t handle_change_password(httpd_req_t *req)

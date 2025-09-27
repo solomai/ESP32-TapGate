@@ -60,22 +60,27 @@
   }
 
   function handleActionResponse(form, config, data) {
+    console.log('handleActionResponse called with:', data);
+    
     if (!data) {
       setMessage(form, "Connection problem. Try again.");
       return;
     }
 
     if (data.status === "busy") {
+      console.log('Redirecting to busy page');
       window.location.assign("/busy/");
       return;
     }
 
     if (data.status === "redirect" && data.redirect) {
+      console.log('Redirecting to:', data.redirect);
       window.location.assign(data.redirect);
       return;
     }
 
     if (data.status === "ok" && data.redirect) {
+      console.log('Success redirect to:', data.redirect);
       window.location.assign(data.redirect);
       return;
     }
@@ -130,15 +135,35 @@
       params.set(field, form.elements[field] ? form.elements[field].value : "");
     });
 
+    console.log(`Submitting form for ${config.url} with data:`, params.toString());
+    
     fetch(config.url, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params.toString(),
-      credentials: "same-origin"
+      credentials: "include"  // Ensure cookies are included and saved
     })
-      .then((response) => response.json().catch(() => null))
-      .then((data) => handleActionResponse(form, config, data))
-      .catch(() => setMessage(form, "Unable to reach device."));
+      .then((response) => {
+        console.log(`Response for ${config.url}: status=${response.status}, ok=${response.ok}`);
+        console.log('Response headers:', [...response.headers.entries()]);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response.json().catch((err) => {
+          console.error('JSON parse error:', err);
+          throw new Error('Invalid JSON response');
+        });
+      })
+      .then((data) => {
+        console.log(`JSON response for ${config.url}:`, data);
+        handleActionResponse(form, config, data);
+      })
+      .catch((error) => {
+        console.error(`Fetch error for ${config.url}:`, error);
+        setMessage(form, "Connection problem. Try again.");
+      });
   }
 
   function attachForms() {
