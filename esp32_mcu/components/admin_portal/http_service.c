@@ -179,6 +179,33 @@ static void ensure_pages_initialized(void)
     g_pages[ADMIN_PORTAL_PAGE_OFF] = admin_portal_page_off_descriptor();
 }
 
+static size_t trim_trailing_slashes(const char *uri, size_t len)
+{
+    while (len > 1 && uri[len - 1] == '/')
+        --len;
+    return len;
+}
+
+static bool match_page_uri_exact_or_trimmed(const char *template_uri, const char *requested_uri, size_t requested_len)
+{
+    if (!template_uri || !requested_uri)
+        return false;
+
+    size_t template_len = trim_trailing_slashes(template_uri, strlen(template_uri));
+    size_t actual_len = requested_len ? trim_trailing_slashes(requested_uri, requested_len)
+                                      : trim_trailing_slashes(requested_uri, strlen(requested_uri));
+
+    if (template_len != actual_len)
+        return false;
+
+    return strncmp(template_uri, requested_uri, template_len) == 0;
+}
+
+static bool page_uri_match_fn(const char *template_uri, const char *requested_uri, size_t requested_len)
+{
+    return match_page_uri_exact_or_trimmed(template_uri, requested_uri, requested_len);
+}
+
 static const admin_portal_page_descriptor_t *find_page_by_uri(const char *uri)
 {
     ensure_pages_initialized();
@@ -186,7 +213,7 @@ static const admin_portal_page_descriptor_t *find_page_by_uri(const char *uri)
         return NULL;
     for (size_t i = 0; i < sizeof(g_pages) / sizeof(g_pages[0]); ++i)
     {
-        if (strcmp(g_pages[i]->uri, uri) == 0)
+        if (match_page_uri_exact_or_trimmed(g_pages[i]->uri, uri, 0))
             return g_pages[i];
     }
     return NULL;
@@ -657,6 +684,23 @@ static esp_err_t handle_root(httpd_req_t *req)
     return handle_page_request(req);
 }
 
+static esp_err_t handle_favicon(httpd_req_t *req)
+{
+    set_no_cache_headers(req);
+    httpd_resp_set_status(req, "204 No Content");
+    return httpd_resp_send(req, NULL, 0);
+}
+
+static esp_err_t handle_time_probe(httpd_req_t *req)
+{
+    set_no_cache_headers(req);
+    httpd_resp_set_type(req, "application/json");
+    uint64_t now_ms = current_time_ms();
+    char payload[64];
+    snprintf(payload, sizeof(payload), "{\"epoch\":%llu}", (unsigned long long)(now_ms / 1000ULL));
+    return httpd_resp_send(req, payload, HTTPD_RESP_USE_STRLEN);
+}
+
 static bool ensure_content_type_form(httpd_req_t *req)
 {
     char content_type[32];
@@ -861,6 +905,7 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
             .method = HTTP_GET,
             .handler = handle_page_request,
             .user_ctx = (void *)g_pages[i],
+            .uri_match_fn = page_uri_match_fn,
         };
         err = httpd_register_uri_handler(server, &page_uri);
         if (err != ESP_OK)
@@ -933,6 +978,24 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .handler = handle_update_device,
     };
     err = httpd_register_uri_handler(server, &device_uri);
+    if (err != ESP_OK)
+        return err;
+
+    httpd_uri_t favicon_uri = {
+        .uri = "/favicon.ico",
+        .method = HTTP_GET,
+        .handler = handle_favicon,
+    };
+    err = httpd_register_uri_handler(server, &favicon_uri);
+    if (err != ESP_OK)
+        return err;
+
+    httpd_uri_t time_uri = {
+        .uri = "/time/1/current",
+        .method = HTTP_GET,
+        .handler = handle_time_probe,
+    };
+    err = httpd_register_uri_handler(server, &time_uri);
     if (err != ESP_OK)
         return err;
 
