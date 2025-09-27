@@ -1202,46 +1202,14 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device));
 
-    // Register OPTIONS handlers for CORS preflight (mobile browser compatibility)
-    httpd_uri_t api_session_options = {
-        .uri = "/api/session",
+    // Register single wildcard OPTIONS handler for all API endpoints (mobile browser compatibility)
+    httpd_uri_t api_options_wildcard = {
+        .uri = "/api/*",
         .method = HTTP_OPTIONS,
         .handler = handle_options,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_session_options));
-
-    httpd_uri_t api_enroll_options = {
-        .uri = "/api/enroll",
-        .method = HTTP_OPTIONS,
-        .handler = handle_options,
-        .user_ctx = NULL,
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_enroll_options));
-
-    httpd_uri_t api_login_options = {
-        .uri = "/api/login",
-        .method = HTTP_OPTIONS,
-        .handler = handle_options,
-        .user_ctx = NULL,
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_login_options));
-
-    httpd_uri_t api_change_options = {
-        .uri = "/api/change-password",
-        .method = HTTP_OPTIONS,
-        .handler = handle_options,
-        .user_ctx = NULL,
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_change_options));
-
-    httpd_uri_t api_device_options = {
-        .uri = "/api/device",
-        .method = HTTP_OPTIONS,
-        .handler = handle_options,
-        .user_ctx = NULL,
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device_options));
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_options_wildcard));
 
     LOGI(TAG, "Admin portal service registered");
     return ESP_OK;
