@@ -81,7 +81,11 @@
 
     if (data.status === "ok" && data.redirect) {
       console.log('Success redirect to:', data.redirect);
-      window.location.assign(data.redirect);
+      // Force page reload to ensure cookies are properly set
+      // Use window.location.href instead of assign() for full page reload
+      setTimeout(() => {
+        window.location.href = data.redirect;
+      }, 100);  // Small delay to ensure response is processed
       return;
     }
 
@@ -146,6 +150,19 @@
       .then((response) => {
         console.log(`Response for ${config.url}: status=${response.status}, ok=${response.ok}`);
         console.log('Response headers:', [...response.headers.entries()]);
+        
+        // Extract Set-Cookie header and set it manually if present
+        const setCookie = response.headers.get('set-cookie');
+        if (setCookie) {
+          console.log('Found Set-Cookie header:', setCookie);
+          // Extract cookie name and value
+          const cookieMatch = setCookie.match(/tg_session=([^;]+)/);
+          if (cookieMatch) {
+            const cookieValue = cookieMatch[1];
+            console.log('Setting cookie manually:', cookieValue);
+            document.cookie = `tg_session=${cookieValue}; Path=/; SameSite=Lax; Max-Age=900`;
+          }
+        }
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
