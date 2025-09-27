@@ -289,7 +289,27 @@ static bool get_session_token(httpd_req_t *req, char *token, size_t token_size)
     size_t length = httpd_req_get_hdr_value_len(req, "Cookie");
     if (length == 0)
     {
-        LOGI(TAG, "No Cookie header found in request");
+        LOGI(TAG, "No Cookie header found in request for URI: %s", req->uri);
+        
+        // Log all headers for debugging
+        LOGI(TAG, "Request headers for %s:", req->uri);
+        char header_name[64];
+        char header_value[256];
+        for (int i = 0; i < 10; i++) // Check first 10 headers
+        {
+            if (httpd_req_get_hdr_name_str(req, i, header_name, sizeof(header_name)) == ESP_OK)
+            {
+                if (httpd_req_get_hdr_value_str(req, header_name, header_value, sizeof(header_value)) == ESP_OK)
+                {
+                    LOGI(TAG, "  %s: %s", header_name, header_value);
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
+        
         return false;
     }
 
@@ -774,7 +794,12 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     set_session_cookie(req, token, max_age);
 
     LOGI(TAG, "Enrollment successful, redirecting to main page (AP SSID=\"%s\")", portal_name);
-    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
+    
+    // Use HTTP redirect instead of JSON redirect to ensure cookies are preserved
+    httpd_resp_set_status(req, "302 Found");
+    httpd_resp_set_hdr(req, "Location", "/main/");
+    set_cache_headers(req);
+    return httpd_resp_send(req, "", 0);
 }
 
 static esp_err_t handle_login(httpd_req_t *req)
@@ -842,7 +867,12 @@ static esp_err_t handle_login(httpd_req_t *req)
     set_session_cookie(req, token, max_age);
     
     LOGI(TAG, "Login successful, redirecting to main page");
-    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
+    
+    // Use HTTP redirect instead of JSON redirect to ensure cookies are preserved
+    httpd_resp_set_status(req, "302 Found");
+    httpd_resp_set_hdr(req, "Location", "/main/");
+    set_cache_headers(req);
+    return httpd_resp_send(req, "", 0);
 }
 
 static esp_err_t handle_change_password(httpd_req_t *req)
