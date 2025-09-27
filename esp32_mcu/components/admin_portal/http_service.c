@@ -232,13 +232,14 @@ static void set_session_cookie(httpd_req_t *req, const char *token, uint32_t max
     char header[128];
     if (token && token[0])
     {
-        // Remove HttpOnly to allow JavaScript access for debugging
-        snprintf(header, sizeof(header), ADMIN_PORTAL_COOKIE_NAME "=%s; Max-Age=%" PRIu32 "; Path=/; SameSite=Lax", token, max_age_seconds);
+        // Mobile-compatible cookie: omit SameSite to allow cross-site usage
+        // Remove HttpOnly to allow JavaScript access for mobile browsers
+        snprintf(header, sizeof(header), ADMIN_PORTAL_COOKIE_NAME "=%s; Max-Age=%" PRIu32 "; Path=/", token, max_age_seconds);
         LOGI(TAG, "Setting session cookie: token=%.8s..., max_age=%" PRIu32 "s", token, max_age_seconds);
     }
     else
     {
-        snprintf(header, sizeof(header), ADMIN_PORTAL_COOKIE_NAME "=deleted; Max-Age=0; Path=/; SameSite=Lax");
+        snprintf(header, sizeof(header), ADMIN_PORTAL_COOKIE_NAME "=deleted; Max-Age=0; Path=/");
         LOGI(TAG, "Clearing session cookie");
     }
     
@@ -416,6 +417,11 @@ static esp_err_t send_page_content(httpd_req_t *req, const admin_portal_page_des
     set_cache_headers(req);
     httpd_resp_set_type(req, desc->content_type);
     httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+    
+    // Add CORS headers for mobile compatibility
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "http://10.10.0.1");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
+    
     size_t length = (size_t)(desc->asset_end - desc->asset_start);
     return httpd_resp_send(req, (const char *)desc->asset_start, length);
 }
@@ -432,7 +438,27 @@ static esp_err_t send_redirect(httpd_req_t *req, admin_portal_page_t page)
          page_name(page));
     httpd_resp_set_status(req, "302 Found");
     httpd_resp_set_hdr(req, "Location", location);
+    
+    // Add CORS headers for mobile compatibility
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "http://10.10.0.1");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
+    
     set_cache_headers(req);
+    return httpd_resp_send(req, "", 0);
+}
+
+// CORS preflight handler for mobile browser compatibility
+static esp_err_t handle_options(httpd_req_t *req)
+{
+    LOGI(TAG, "Handling OPTIONS request for CORS preflight: %s", req->uri);
+    
+    httpd_resp_set_status(req, "200 OK");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "http://10.10.0.1");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Cookie, Authorization");
+    httpd_resp_set_hdr(req, "Access-Control-Max-Age", "86400"); // 24 hours
+    
     return httpd_resp_send(req, "", 0);
 }
 
@@ -447,10 +473,12 @@ static esp_err_t send_json(httpd_req_t *req, const char *status_text, const char
     httpd_resp_set_status(req, status_text);
     httpd_resp_set_type(req, "application/json");
     
-    // Add CORS headers to allow credentials
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    // Add CORS headers to allow credentials (mobile-compatible)
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "http://10.10.0.1");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
     httpd_resp_set_hdr(req, "Access-Control-Expose-Headers", "Set-Cookie");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Cookie");
     
     set_cache_headers(req);
     
@@ -1173,6 +1201,47 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device));
+
+    // Register OPTIONS handlers for CORS preflight (mobile browser compatibility)
+    httpd_uri_t api_session_options = {
+        .uri = "/api/session",
+        .method = HTTP_OPTIONS,
+        .handler = handle_options,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_session_options));
+
+    httpd_uri_t api_enroll_options = {
+        .uri = "/api/enroll",
+        .method = HTTP_OPTIONS,
+        .handler = handle_options,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_enroll_options));
+
+    httpd_uri_t api_login_options = {
+        .uri = "/api/login",
+        .method = HTTP_OPTIONS,
+        .handler = handle_options,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_login_options));
+
+    httpd_uri_t api_change_options = {
+        .uri = "/api/change-password",
+        .method = HTTP_OPTIONS,
+        .handler = handle_options,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_change_options));
+
+    httpd_uri_t api_device_options = {
+        .uri = "/api/device",
+        .method = HTTP_OPTIONS,
+        .handler = handle_options,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device_options));
 
     LOGI(TAG, "Admin portal service registered");
     return ESP_OK;
