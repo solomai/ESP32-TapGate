@@ -33,6 +33,7 @@ static const char *TAG = "AdminPortal";
 #define ADMIN_PORTAL_KEY_IDLE_MIN    "AP_IDLE_TIMEOUT"
 #define ADMIN_PORTAL_COOKIE_NAME     "tg_session"
 #define DEFAULT_IDLE_TIMEOUT_MINUTES 15U
+#define DEFAULT_SESSION_MAX_AGE 900U  // 15 minutes in seconds
 
 typedef struct {
     const char *uri;
@@ -687,7 +688,10 @@ static esp_err_t handle_enroll(httpd_req_t *req)
 
     LOGI(TAG, "Enrollment successful, redirecting to main page (AP SSID=\"%s\")", portal_name);
     
-    // First set the session cookie
+    // Ensure we have a valid session token for enrollment
+    ensure_session_claim(req, &status, token, sizeof(token));
+    
+    // Set the session cookie
     set_session_cookie(req, token, DEFAULT_SESSION_MAX_AGE);
     
     // Then send HTTP redirect
@@ -743,10 +747,13 @@ static esp_err_t handle_login(httpd_req_t *req)
         return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"wrong_password\"}");
     }
 
+    // Ensure we have a valid session token
+    ensure_session_claim(req, &status, token, sizeof(token));
+    
     admin_portal_state_authorize_session(&g_state);
     LOGI(TAG, "Login successful, redirecting to main page");
     
-    // First set the session cookie
+    // Set the session cookie
     set_session_cookie(req, token, DEFAULT_SESSION_MAX_AGE);
     
     // Then send HTTP redirect
