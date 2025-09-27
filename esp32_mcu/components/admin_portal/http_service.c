@@ -481,12 +481,21 @@ static esp_err_t send_redirect(httpd_req_t *req, admin_portal_page_t page)
     httpd_resp_set_status(req, "302 Found");
     httpd_resp_set_hdr(req, "Location", location);
     
-    // Add CORS headers for mobile compatibility
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "http://10.10.0.1");
+    // Add CORS headers for mobile compatibility (allow JavaScript to read Location header)
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
+    httpd_resp_set_hdr(req, "Access-Control-Expose-Headers", "Location, Set-Cookie");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Cookie, Authorization");
     
     set_cache_headers(req);
-    return httpd_resp_send(req, "", 0);
+    
+    // For mobile browsers, also return location in response body for JavaScript access
+    char response_body[128];
+    snprintf(response_body, sizeof(response_body), "{\"redirect\":\"%s\"}", location);
+    
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_send(req, response_body, HTTPD_RESP_USE_STRLEN);
 }
 
 // CORS preflight handler for mobile browser compatibility

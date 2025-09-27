@@ -132,9 +132,92 @@
       return false;
     }
 
-    // Allow normal form submission - no AJAX, no fetch, simple POST
-    console.log(`Form validation passed, submitting to: ${form.action}`);
-    return true;
+    // For mobile compatibility: prevent default submit and handle manually
+    event.preventDefault();
+    
+    console.log(`Form validation passed, submitting manually to: ${form.action}`);
+    
+    // Show loading state
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalText = submitButton ? submitButton.textContent : '';
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = 'Processing...';
+    }
+    
+    // Create form data and submit via fetch for better control
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+      redirect: 'manual'  // Handle redirects manually
+    })
+    .then(response => {
+      console.log(`Response status: ${response.status}, redirected: ${response.redirected}`);
+      
+      // Handle redirects manually for mobile compatibility
+      if (response.status === 302) {
+        const location = response.headers.get('Location');
+        if (location) {
+          console.log(`Got redirect location from header: ${location}`);
+          window.location.href = location;
+          return;
+        }
+        
+        // Fallback: try to read JSON response for redirect URL
+        return response.json().then(data => {
+          if (data && data.redirect) {
+            console.log(`Got redirect location from JSON: ${data.redirect}`);
+            window.location.href = data.redirect;
+            return;
+          }
+          throw new Error('Redirect response without location');
+        }).catch(() => {
+          // Final fallback: use expected redirect
+          const location = getExpectedRedirect(actionKey);
+          console.log(`Using expected redirect location: ${location}`);
+          window.location.href = location;
+        });
+      }
+      
+      if (response.ok) {
+        // Success without redirect - navigate to expected page
+        const location = getExpectedRedirect(actionKey);
+        console.log(`Success response, navigating to: ${location}`);
+        window.location.href = location;
+        return;
+      }
+      
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    })
+    .catch(error => {
+      console.error('Form submission error:', error);
+      setMessage(form, "Connection problem. Try again.");
+      
+      // Restore button state
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+      }
+    });
+    
+    return false; // Prevent default form submission
+  }
+  
+  function getExpectedRedirect(actionKey) {
+    switch(actionKey) {
+      case 'enroll':
+      case 'login':
+        return '/main/';
+      case 'changePassword':
+        return '/device/';
+      case 'device':
+        return '/main/';
+      default:
+        return '/';
+    }
   }
 
   function attachFormHandlers() {
