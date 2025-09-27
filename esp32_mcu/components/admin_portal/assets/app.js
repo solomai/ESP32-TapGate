@@ -126,7 +126,7 @@
     console.log("Form method:", form.method);
     
     if (!actionKey) {
-      console.warn("Form missing data-action attribute");
+      console.warn("Form missing data-action attribute, allowing normal submit");
       return true; // Allow normal submit
     }
 
@@ -141,11 +141,32 @@
 
     console.log("Validation passed");
     
-    // For mobile compatibility: prevent default submit and handle manually
-    event.preventDefault();
-    console.log("Default prevented, handling manually");
+    // For mobile browsers, try allowing natural form submission first
+    // If the action and method are set properly, let browser handle it
+    if (form.action && form.method && form.method.toLowerCase() === 'post') {
+      console.log("Allowing natural form submission - browser will handle redirect");
+      
+      // Show loading state
+      const submitButton = form.querySelector('button[type="submit"]');
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Processing...';
+        console.log("Submit button disabled, showing 'Processing...'");
+      }
+      
+      // Allow browser to handle the submission naturally
+      return true; // Let the form submit normally
+    }
     
-    console.log(`Form validation passed, submitting manually to: ${form.action}`);
+    // Fallback: manual handling for forms without proper action/method
+    console.log("Form missing action/method, handling manually");
+    event.preventDefault();
+    handleManualSubmit(form, actionKey);
+    return false;
+  }
+  
+  function handleManualSubmit(form, actionKey) {
+    console.log("=== MANUAL SUBMIT START ===");
     
     // Show loading state
     const submitButton = form.querySelector('button[type="submit"]');
@@ -156,70 +177,59 @@
       console.log("Submit button disabled, showing 'Processing...'");
     }
     
-    // Create form data and submit via fetch for better control
+    // Create form data and submit via fetch
     const formData = new FormData(form);
     console.log("Form data created:", Array.from(formData.entries()));
     
-    console.log("Starting fetch request...");
-    fetch(form.action, {
+    const targetAction = form.action || `/api/${actionKey}`;
+    console.log(`Starting manual fetch request to: ${targetAction}`);
+    
+    fetch(targetAction, {
       method: 'POST',
       body: formData,
-      credentials: 'include',
-      redirect: 'manual'  // Handle redirects manually
+      credentials: 'include'
     })
     .then(response => {
-      console.log("=== FETCH RESPONSE ===");
+      console.log("=== MANUAL FETCH RESPONSE ===");
       console.log(`Response status: ${response.status}`);
       console.log(`Response statusText: ${response.statusText}`);
       console.log(`Response redirected: ${response.redirected}`);
+      console.log(`Final response URL: ${response.url}`);
       console.log(`Response headers:`, Object.fromEntries(response.headers.entries()));
       
-      // Handle redirects manually for mobile compatibility
-      if (response.status === 302) {
-        console.log("Got 302 redirect response");
-        const location = response.headers.get('Location');
-        console.log(`Location header: ${location}`);
-        
-        if (location) {
-          console.log(`Redirecting to location from header: ${location}`);
-          window.location.href = location;
-          return;
-        }
-        
-        console.log("No Location header, trying JSON response...");
-        // Fallback: try to read JSON response for redirect URL
-        return response.json().then(data => {
-          console.log("JSON response data:", data);
-          if (data && data.redirect) {
-            console.log(`Got redirect location from JSON: ${data.redirect}`);
-            window.location.href = data.redirect;
-            return;
-          }
-          throw new Error('Redirect response without location');
-        }).catch(err => {
-          console.log("JSON parsing failed:", err);
-          // Final fallback: use expected redirect
-          const location = getExpectedRedirect(actionKey);
-          console.log(`Using expected redirect location: ${location}`);
-          window.location.href = location;
-        });
+      // Check if the response was redirected to the expected page
+      if (response.redirected) {
+        console.log("Browser followed redirect automatically");
+        window.location.href = response.url;
+        return;
       }
       
       if (response.ok) {
         console.log("Got OK response, navigating to expected page");
-        // Success without redirect - navigate to expected page
         const location = getExpectedRedirect(actionKey);
         console.log(`Success response, navigating to: ${location}`);
         window.location.href = location;
         return;
       }
       
-      console.log("Response not OK and not redirect");
+      // Handle manual redirects
+      if ([301, 302, 303, 307, 308].includes(response.status)) {
+        const location = response.headers.get('Location');
+        console.log(`Got ${response.status} redirect, Location header: ${location}`);
+        
+        if (location) {
+          console.log(`Manually redirecting to: ${location}`);
+          window.location.href = location;
+          return;
+        }
+      }
+      
+      console.log("Unhandled response");
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     })
     .catch(error => {
-      console.log("=== FETCH ERROR ===");
-      console.error('Form submission error:', error);
+      console.log("=== MANUAL FETCH ERROR ===");
+      console.error('Manual form submission error:', error);
       setMessage(form, "Connection problem. Try again.");
       
       // Restore button state
@@ -230,8 +240,7 @@
       }
     });
     
-    console.log("=== FORM SUBMIT END ===");
-    return false; // Prevent default form submission
+    console.log("=== MANUAL SUBMIT END ===");
   }
   
   function getExpectedRedirect(actionKey) {
