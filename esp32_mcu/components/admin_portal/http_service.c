@@ -155,6 +155,8 @@ static const admin_portal_page_descriptor_t *g_pages[ADMIN_PORTAL_PAGE_COUNT];
 static char g_page_trimmed_uris[ADMIN_PORTAL_PAGE_COUNT][64];
 static bool g_page_trimmed_uris_valid[ADMIN_PORTAL_PAGE_COUNT];
 
+static size_t trim_trailing_slashes(const char *uri, size_t len);
+
 static void ensure_assets_initialized(void)
 {
     for (size_t i = 0; i < sizeof(g_assets) / sizeof(g_assets[0]); ++i)
@@ -935,8 +937,10 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
             httpd_uri_t alt_uri = page_uri;
             alt_uri.uri = g_page_trimmed_uris[i];
             err = httpd_register_uri_handler(server, &alt_uri);
+#ifdef ESP_ERR_HTTPD_URI_ALREADY_REGISTERED
             if (err == ESP_ERR_HTTPD_URI_ALREADY_REGISTERED)
                 err = ESP_OK;
+#endif
             if (err != ESP_OK)
             {
                 LOGE(TAG, "Failed to register alt page %s: %s", alt_uri.uri, esp_err_to_name(err));
