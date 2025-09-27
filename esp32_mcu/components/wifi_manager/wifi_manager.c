@@ -332,7 +332,7 @@ bool wifi_manager_fetch_wifi_sta_config()
     size_t blob_ssid_size = sizeof(wifi_manager_config_sta->sta.ssid);
     err = nvs_get_blob(handle, STORE_NVM_SSID, blob_buff, &blob_ssid_size);
     if(err != ESP_OK){
-        LOGE(TAG,"Failed read WiFi %s from NVM \"%s\":\"%s\"", STORE_NVM_SSID, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
+        LOGE(TAG,"Failed read STA WiFi %s from NVM \"%s\":\"%s\"", STORE_NVM_SSID, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
 		free(wifi_manager_config_sta);
 		wifi_manager_config_sta = NULL;
         nvs_close(handle);
@@ -344,7 +344,7 @@ bool wifi_manager_fetch_wifi_sta_config()
     size_t blob_psw_size = sizeof(wifi_manager_config_sta->sta.password);
     err = nvs_get_blob(handle, STORE_NVM_PSW, blob_buff, &blob_psw_size);
     if(err != ESP_OK){
-        LOGE(TAG,"Failed read WiFi %s from NVM \"%s\":\"%s\"", STORE_NVM_PSW, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
+        LOGE(TAG,"Failed read STA WiFi %s from NVM \"%s\":\"%s\"", STORE_NVM_PSW, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
 		free(wifi_manager_config_sta);
 		wifi_manager_config_sta = NULL;
         nvs_close(handle);
@@ -356,7 +356,7 @@ bool wifi_manager_fetch_wifi_sta_config()
     size_t blob_setting_size = sizeof(wifi_settings);
     err = nvs_get_blob(handle, STORE_NVM_SETTINGS, blob_buff, &blob_setting_size);
     if(err != ESP_OK){
-        LOGE(TAG,"Failed read WiFi %s from NVM \"%s\":\"%s\"", STORE_NVM_SETTINGS, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
+        LOGE(TAG,"Failed read STA WiFi %s from NVM \"%s\":\"%s\"", STORE_NVM_SETTINGS, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
 		free(wifi_manager_config_sta);
 		wifi_manager_config_sta = NULL;
         nvs_close(handle);
