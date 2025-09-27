@@ -15,6 +15,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <errno.h>
 
 #include "pages/page_auth.h"
 #include "pages/page_busy.h"
@@ -130,21 +131,36 @@ static bool get_client_ip(httpd_req_t *req, char *ip_buffer, size_t buffer_size)
     if (!req || !ip_buffer || buffer_size < 16)
         return false;
 
-    // Get socket descriptor from request
-    int sockfd = httpd_req_to_sockfd(req);
-    if (sockfd < 0)
-        return false;
+    // Try ESP-IDF specific way first
+    size_t len = httpd_req_get_hdr_value_len(req, "X-Forwarded-For");
+    if (len > 0 && len < buffer_size) {
+        if (httpd_req_get_hdr_value_str(req, "X-Forwarded-For", ip_buffer, buffer_size) == ESP_OK) {
+            LOGI(TAG, "Got client IP from X-Forwarded-For: %s", ip_buffer);
+            return true;
+        }
+    }
 
-    // Get peer address
+    // Fallback to socket method
+    int sockfd = httpd_req_to_sockfd(req);
+    if (sockfd < 0) {
+        LOGW(TAG, "Failed to get socket descriptor from request");
+        return false;
+    }
+
     struct sockaddr_in addr;
     socklen_t addr_len = sizeof(addr);
-    if (getpeername(sockfd, (struct sockaddr*)&addr, &addr_len) != 0)
+    if (getpeername(sockfd, (struct sockaddr*)&addr, &addr_len) != 0) {
+        LOGW(TAG, "Failed to get peer name from socket: errno=%d", errno);
         return false;
+    }
 
     // Convert IP to string
-    if (inet_ntop(AF_INET, &addr.sin_addr, ip_buffer, buffer_size) == NULL)
+    if (inet_ntop(AF_INET, &addr.sin_addr, ip_buffer, buffer_size) == NULL) {
+        LOGW(TAG, "Failed to convert IP to string: errno=%d", errno);
         return false;
+    }
 
+    LOGI(TAG, "Got client IP from socket: %s", ip_buffer);
     return true;
 }
 
@@ -536,29 +552,50 @@ static admin_portal_session_status_t evaluate_session(httpd_req_t *req,
     return status;
 }
 
-// New IP-based session evaluation (no cookies needed)
+// Simple session evaluation (simplified for single-client admin portal)
 static admin_portal_session_status_t evaluate_session_by_ip(httpd_req_t *req)
 {
     char client_ip[16];
-    if (!get_client_ip(req, client_ip, sizeof(client_ip)))
-    {
-        LOGE(TAG, "Failed to get client IP address");
-        return ADMIN_PORTAL_SESSION_NONE;
-    }
-    
+    bool has_ip = get_client_ip(req, client_ip, sizeof(client_ip));
     uint64_t now = get_now_ms();
     
-    LOGI(TAG, "Evaluating IP-based session: client_ip=%s, now=%" PRIu64 "ms", 
-         client_ip, now);
+    LOGI(TAG, "Evaluating simple session: client_ip=%s, now=%" PRIu64 "ms", 
+         has_ip ? client_ip : "unknown", now);
     
-    admin_portal_session_status_t status = admin_portal_state_check_session_by_ip(&g_state, client_ip, now);
+    // For admin portal, we allow only single session, so just check if any session exists
+    admin_portal_session_status_t status;
     
-    LOGI(TAG, "IP-based session evaluation result: status=%s", session_status_name(status));
+    if (has_ip && strlen(client_ip) > 0 && strcmp(client_ip, "0.0.0.0") != 0) {
+        // Use IP-based check if we have valid IP
+        status = admin_portal_state_check_session_by_ip(&g_state, client_ip, now);
+    } else {
+        // Fallback: just check if any session is active (admin portal = single user)
+        if (g_state.session.active) {
+            // Check timeout
+            if (g_state.inactivity_timeout_ms > 0) {
+                uint64_t elapsed = now - g_state.session.last_activity_ms;
+                if (elapsed > g_state.inactivity_timeout_ms) {
+                    admin_portal_state_clear_session(&g_state);
+                    status = ADMIN_PORTAL_SESSION_EXPIRED;
+                } else {
+                    status = ADMIN_PORTAL_SESSION_MATCH;
+                }
+            } else {
+                status = ADMIN_PORTAL_SESSION_MATCH;
+            }
+        } else {
+            status = ADMIN_PORTAL_SESSION_NONE;
+        }
+        LOGI(TAG, "Using session fallback (no valid IP), session active=%s", 
+             g_state.session.active ? "yes" : "no");
+    }
+    
+    LOGI(TAG, "Simple session evaluation result: status=%s", session_status_name(status));
     
     if (status == ADMIN_PORTAL_SESSION_MATCH)
     {
         admin_portal_state_update_session(&g_state, now);
-        LOGI(TAG, "IP-based session updated with current timestamp");
+        LOGI(TAG, "Session updated with current timestamp");
     }
     
     return status;
@@ -810,15 +847,23 @@ static esp_err_t handle_enroll(httpd_req_t *req)
         return send_redirect(req, ADMIN_PORTAL_PAGE_BUSY);
     }
 
-    // Start IP-based session if needed
+    // Start simple session if needed (with IP if available, fallback to cookie-only)
     if (status == ADMIN_PORTAL_SESSION_NONE)
     {
         char client_ip[16];
-        if (get_client_ip(req, client_ip, sizeof(client_ip)))
-        {
-            uint64_t now = get_now_ms();
+        bool has_ip = get_client_ip(req, client_ip, sizeof(client_ip));
+        
+        uint64_t now = get_now_ms();
+        
+        if (has_ip && strlen(client_ip) > 0 && strcmp(client_ip, "0.0.0.0") != 0) {
             admin_portal_state_start_session_by_ip(&g_state, client_ip, now, false);
             LOGI(TAG, "Started IP-based session for client: %s", client_ip);
+        } else {
+            // Fallback: start simple session without IP
+            char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
+            generate_session_token(token);
+            admin_portal_state_start_session(&g_state, token, now, false);
+            LOGI(TAG, "Started simple session (no valid IP)");
         }
     }
 
@@ -926,15 +971,23 @@ static esp_err_t handle_login(httpd_req_t *req)
         return send_redirect(req, ADMIN_PORTAL_PAGE_BUSY);
     }
 
-    // Start IP-based session if needed
+    // Start simple session if needed (with IP if available, fallback to cookie-only)
     if (status == ADMIN_PORTAL_SESSION_NONE)
     {
         char client_ip[16];
-        if (get_client_ip(req, client_ip, sizeof(client_ip)))
-        {
-            uint64_t now = get_now_ms();
+        bool has_ip = get_client_ip(req, client_ip, sizeof(client_ip));
+        
+        uint64_t now = get_now_ms();
+        
+        if (has_ip && strlen(client_ip) > 0 && strcmp(client_ip, "0.0.0.0") != 0) {
             admin_portal_state_start_session_by_ip(&g_state, client_ip, now, false);
             LOGI(TAG, "Started IP-based session for login client: %s", client_ip);
+        } else {
+            // Fallback: start simple session without IP
+            char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
+            generate_session_token(token);
+            admin_portal_state_start_session(&g_state, token, now, false);
+            LOGI(TAG, "Started simple session for login (no valid IP)");
         }
     }
 
