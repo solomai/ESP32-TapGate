@@ -136,9 +136,46 @@
       body: params.toString(),
       credentials: "same-origin"
     })
-      .then((response) => response.json().catch(() => null))
-      .then((data) => handleActionResponse(form, config, data))
-      .catch(() => setMessage(form, "Unable to reach device."));
+      .then((response) => {
+        // First check if it's a redirect response
+        if (response.redirected) {
+          window.location.assign(response.url);
+          return Promise.reject(new Error('redirect'));
+        }
+        
+        // Then check for HTTP errors
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // Try to parse as JSON, but don't fail if it's not JSON
+        return response.text().then(text => {
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            // If not JSON but response was OK, might be a direct page
+            if (text.includes('</html>')) {
+              document.documentElement.innerHTML = text;
+              throw new Error('redirect');
+            }
+            throw new Error('Invalid JSON response');
+          }
+        });
+      })
+      .then((data) => {
+        if (!data) {
+          throw new Error('Empty response');
+        }
+        handleActionResponse(form, config, data);
+      })
+      .catch((error) => {
+        // Don't show error for redirects
+        if (error.message === 'redirect') {
+          return;
+        }
+        console.error('Request failed:', error);
+        setMessage(form, "Unable to reach device.");
+      });
   }
 
   function attachForms() {
