@@ -22,7 +22,7 @@
 
 static const char TAG[] = "DNS Server";
 static TaskHandle_t task_dns_server = NULL;
-int socket_fd;
+int socket_fd = -1;
 
 void dns_server(void *pvParameters)
 {
@@ -32,22 +32,34 @@ void dns_server(void *pvParameters)
     ip4_addr_t ip_resolved;
     inet_pton(AF_INET, DEFAULT_AP_IP, &ip_resolved);
 
+    LOGI(TAG, "Starting DNS server, redirecting all queries to %s", DEFAULT_AP_IP);
+
     /* Create UDP socket */
     socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (socket_fd < 0){
         LOGE(TAG, "Failed to create socket");
+        vTaskDelete(NULL);
+        return;
     }
 
     /* Bind to port 53 (typical DNS Server port) */
     esp_netif_ip_info_t ip;
-    esp_netif_t* netif_sta = wifi_manager_get_esp_netif_sta();
-    ESP_ERROR_CHECK(esp_netif_get_ip_info(netif_sta, &ip));
+    esp_netif_t* netif_ap = wifi_manager_get_esp_netif_ap();
+    if (netif_ap == NULL) {
+        LOGE(TAG, "AP interface not available");
+        close(socket_fd);
+        vTaskDelete(NULL);
+        return;
+    }
+    ESP_ERROR_CHECK(esp_netif_get_ip_info(netif_ap, &ip));
     ra.sin_family = AF_INET;
     ra.sin_addr.s_addr = ip.ip.addr;
     ra.sin_port = htons(53);
     if (bind(socket_fd, (struct sockaddr *)&ra, sizeof(struct sockaddr_in)) == -1) {
         LOGE(TAG, "Failed to bind to 53/udp");
         close(socket_fd);
+        vTaskDelete(NULL);
+        return;
     }
 
     struct sockaddr_in client;
@@ -96,7 +108,7 @@ void dns_server(void *pvParameters)
             for(char* c=domain; *c != '\0'; c++){
             	if(*c < ' ' || *c > 'z') *c = '.'; /* technically we should test if the first two bits are 00 (e.g. if( (*c & 0xC0) == 0x00) *c = '.') but this makes the code a lot more readable */
             }
-            LOGD(TAG, "Replying to DNS request for %s from %s", domain, ip_address);
+            LOGI(TAG, "DNS query for '%s' from %s -> redirecting to %s", domain, ip_address, DEFAULT_AP_IP);
 
             /* create DNS answer at the end of the query*/
             dns_answer_t *dns_answer = (dns_answer_t*)&response[length];
@@ -132,11 +144,18 @@ void dns_server_start()
 
 void dns_server_stop()
 {
-    LOGI(TAG,"Stop thread");
+    LOGI(TAG,"Stopping DNS server");
 	if(task_dns_server)
     {
+        if(socket_fd >= 0) {
+            close(socket_fd);
+            socket_fd = -1;
+        }
 		vTaskDelete(task_dns_server);
-		close(socket_fd);
 		task_dns_server = NULL;
+        LOGI(TAG,"DNS server stopped");
 	}
+    else {
+        LOGW(TAG, "DNS server was not running");
+    }
 }

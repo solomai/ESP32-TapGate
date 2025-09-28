@@ -491,8 +491,8 @@ void wifi_manager(void * pvParameters)
                 break;
 
             case WM_ORDER_STOP_AP:
-                //http_server_stop();
-                //dns_server_stop();
+                http_server_stop();
+                dns_server_stop();
                 stop_ap();
                 /* callback */
                 if(cb_ptr_arr[msg.code])
