@@ -65,6 +65,17 @@
         }
         return false;
       }
+
+      const confirmPasswordInput = form.elements["confirm_password"];
+      if (passwordInput && confirmPasswordInput && passwordInput.value !== confirmPasswordInput.value) {
+        setFieldError(form, "confirm_password", true);
+        setMessage(form, "Passwords do not match.");
+        focusField(form, "password");
+        if (typeof passwordInput.select === "function") {
+          passwordInput.select();
+        }
+        return false;
+      }
     }
 
     if (actionKey === "login") {
