@@ -1312,7 +1312,7 @@ static esp_err_t handle_catch_all(httpd_req_t *req)
     }
     
     LOGI(TAG, "Catch-all redirect: %s %s (Host: %s) -> http://%s/", 
-         req->method == HTTP_GET ? "GET" : "POST", 
+         req->method == HTTP_GET ? "GET" : (req->method == HTTP_POST ? "POST" : "OTHER"),
          req->uri, 
          host_header ? host_header : "unknown",
          DEFAULT_AP_IP);
@@ -1358,6 +1358,8 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
     g_server = server;
     load_initial_state();
 
+    int handler_count = 1;  // Track number of registered handlers
+    
     httpd_uri_t root_get = {
         .uri = "/",
         .method = HTTP_GET,
@@ -1365,6 +1367,7 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &root_get));
+    LOGI(TAG, "Registered handler #%d: / (GET)", handler_count++);
 
     for (size_t i = 0; i < sizeof(g_pages) / sizeof(g_pages[0]); ++i)
     {
@@ -1376,12 +1379,14 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
             .user_ctx = (void *)desc,
         };
         ESP_ERROR_CHECK(httpd_register_uri_handler(server, &page_uri));
+        LOGI(TAG, "Registered handler #%d: %s (GET)", handler_count++, desc->route);
 
         if (desc->alternate_route)
         {
             httpd_uri_t alt_uri = page_uri;
             alt_uri.uri = desc->alternate_route;
             ESP_ERROR_CHECK(httpd_register_uri_handler(server, &alt_uri));
+            LOGI(TAG, "Registered handler #%d: %s (GET alternate)", handler_count++, desc->alternate_route);
         }
     }
 
@@ -1395,6 +1400,7 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
             .user_ctx = (void *)asset,
         };
         ESP_ERROR_CHECK(httpd_register_uri_handler(server, &asset_uri));
+        LOGI(TAG, "Registered handler #%d: %s (GET asset)", handler_count++, asset->uri);
     }
 
 
@@ -1405,6 +1411,7 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &initial_data));
+    LOGI(TAG, "Registered handler #%d: /api/initial (POST)", handler_count++);
 
     httpd_uri_t api_session = {
         .uri = "/api/session",
@@ -1413,6 +1420,7 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_session));
+    LOGI(TAG, "Registered handler #%d: /api/session (GET)", handler_count++);
 
     httpd_uri_t api_enroll = {
         .uri = "/api/enroll",
@@ -1421,6 +1429,7 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_enroll));
+    LOGI(TAG, "Registered handler #%d: /api/enroll (POST)", handler_count++);
 
     httpd_uri_t api_login = {
         .uri = "/api/login",
@@ -1429,6 +1438,7 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_login));
+    LOGI(TAG, "Registered handler #%d: /api/login (POST)", handler_count++);
 
     httpd_uri_t api_change = {
         .uri = "/api/change-password",
@@ -1437,6 +1447,7 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_change));
+    LOGI(TAG, "Registered handler #%d: /api/change-password (POST)", handler_count++);
 
     httpd_uri_t api_device = {
         .uri = "/api/device",
@@ -1445,6 +1456,7 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device));
+    LOGI(TAG, "Registered handler #%d: /api/device (POST)", handler_count++);
 
     // Register single wildcard OPTIONS handler for all API endpoints (mobile browser compatibility)
     httpd_uri_t api_options_wildcard = {
@@ -1454,25 +1466,19 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_options_wildcard));
+    LOGI(TAG, "Registered handler #%d: /api/* (OPTIONS)", handler_count++);
 
-    // Register catch-all handler for captive portal (must be last!)
-    httpd_uri_t catch_all_get = {
+    // Register single catch-all handler for captive portal (must be last!)
+    httpd_uri_t catch_all_handler = {
         .uri = "/*",
-        .method = HTTP_GET,
+        .method = HTTP_GET,  // This will handle GET requests by default
         .handler = handle_catch_all,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &catch_all_get));
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &catch_all_handler));
+    LOGI(TAG, "Registered handler #%d: /* (GET catch-all)", handler_count++);
 
-    httpd_uri_t catch_all_post = {
-        .uri = "/*", 
-        .method = HTTP_POST,
-        .handler = handle_catch_all,
-        .user_ctx = NULL,
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &catch_all_post));
-
-    LOGI(TAG, "Admin portal service registered with captive portal catch-all");
+    LOGI(TAG, "Admin portal service registered with %d total handlers including captive portal", handler_count - 1);
     return ESP_OK;
 }
 
