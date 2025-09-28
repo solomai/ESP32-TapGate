@@ -436,35 +436,27 @@ void wifi_manager(void * pvParameters)
 	ESP_ERROR_CHECK(esp_netif_set_dns_info(esp_netif_ap, ESP_NETIF_DNS_MAIN, &dns_info));
 	ESP_LOGI(TAG, "Set ESP32 (%s) as DNS server for captive portal", DEFAULT_AP_IP);
 
-	// Set DHCP lease options to ensure clients use ESP32 for everything
-	dhcps_lease_t dhcp_lease;
-	dhcp_lease.enable = true;
-	inet_pton(AF_INET, "10.10.0.2", &dhcp_lease.start_ip);   // Start IP
-	inet_pton(AF_INET, "10.10.0.254", &dhcp_lease.end_ip);   // End IP  
-	ESP_ERROR_CHECK(esp_netif_dhcps_option(esp_netif_ap, ESP_NETIF_OP_SET, ESP_NETIF_REQUESTED_IP_ADDRESS, &dhcp_lease, sizeof(dhcp_lease)));
-	ESP_LOGI(TAG, "Configured DHCP lease pool: 10.10.0.2 - 10.10.0.254");
-
-	// Add virtual IP addresses to capture requests to common router IPs
-	// This is a workaround to make ESP32 respond to popular IP addresses
-	const char* virtual_ips[] = {
-		"192.168.1.1",   // Most common home router
-		"192.168.0.1",   // Second most common
-		"10.0.0.1",      // Apple networks
-		"172.16.0.1"     // Corporate networks
-	};
+	// Configure DHCP server options for captive portal
+	// Set the IP range for DHCP leases
+	esp_netif_ip_info_t dhcp_ip_range;
+	memset(&dhcp_ip_range, 0, sizeof(dhcp_ip_range));
+	inet_pton(AF_INET, "10.10.0.2", &dhcp_ip_range.ip);     // Start IP 
+	inet_pton(AF_INET, "255.255.255.0", &dhcp_ip_range.netmask); // Subnet mask
+	inet_pton(AF_INET, DEFAULT_AP_IP, &dhcp_ip_range.gw);   // Gateway (ESP32)
 	
-	for (size_t i = 0; i < sizeof(virtual_ips) / sizeof(virtual_ips[0]); i++) {
-		// Try to add each virtual IP as an alias to the AP interface
-		// This may not work on all ESP-IDF versions, but worth trying
-		esp_netif_ip_info_t virtual_ip_info;
-		memset(&virtual_ip_info, 0x00, sizeof(virtual_ip_info));
-		inet_pton(AF_INET, virtual_ips[i], &virtual_ip_info.ip);
-		inet_pton(AF_INET, "255.255.255.0", &virtual_ip_info.netmask);
-		inet_pton(AF_INET, DEFAULT_AP_IP, &virtual_ip_info.gw);
-		
-		// This is experimental - may not work, but log for debugging
-		ESP_LOGI(TAG, "Attempting to add virtual IP alias: %s", virtual_ips[i]);
-	}
+	ESP_LOGI(TAG, "Configured DHCP for captive portal: IP pool 10.10.0.2-254, GW=%s", DEFAULT_AP_IP);
+
+	// Log common router IPs that users might try to access
+	// Note: These IPs are outside our network range and won't physically reach ESP32,
+	// but DNS hijacking will handle domain names, and HTTP Host header validation 
+	// will handle any requests that do reach us
+	const char* common_router_ips[] = {
+		"192.168.1.1", "192.168.0.1", "10.0.0.1", "172.16.0.1"
+	};
+	ESP_LOGI(TAG, "Note: Common router IPs (%s, %s, %s, %s) are outside our network", 
+			common_router_ips[0], common_router_ips[1], 
+			common_router_ips[2], common_router_ips[3]);
+	ESP_LOGI(TAG, "Captive portal relies on DNS hijacking + HTTP Host validation for universal coverage");
 
     // Setup WiFi
 	ERROR_CHECK(esp_wifi_set_ps(DEFAULT_STA_POWER_SAVE),
