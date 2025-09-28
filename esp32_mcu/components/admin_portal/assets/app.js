@@ -91,6 +91,7 @@
     if (actionKey === "changePassword") {
       const currentInput = form.elements["current"];
       const nextInput = form.elements["next"];
+      const confirmPasswordInput = form.elements["confirm_password"];
       
       if (currentInput && !currentInput.value) {
         setFieldError(form, "current", true);
@@ -105,6 +106,16 @@
         focusField(form, "next");
         if (typeof nextInput.select === "function") {
           nextInput.select();
+        }
+        return false;
+      }
+      
+      if (nextInput && confirmPasswordInput && nextInput.value !== confirmPasswordInput.value) {
+        setFieldError(form, "confirm_password", true);
+        setMessage(form, "Passwords do not match.");
+        focusField(form, "confirm_password");
+        if (typeof confirmPasswordInput.select === "function") {
+          confirmPasswordInput.select();
         }
         return false;
       }
