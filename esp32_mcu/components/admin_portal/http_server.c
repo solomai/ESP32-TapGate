@@ -25,6 +25,11 @@ esp_err_t http_server_start()
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 128;  // Increased to accommodate many captive portal handlers
     config.lru_purge_enable = true;
+    
+    // Bind to all interfaces (0.0.0.0) to capture requests to any IP address
+    config.server_port = 80;
+    config.ctrl_port = 32768;
+    // ESP-IDF by default binds to INADDR_ANY (0.0.0.0) which is what we want
 
     esp_err_t err = httpd_start(&httpserver_handle, &config);
     if (err != ESP_OK)

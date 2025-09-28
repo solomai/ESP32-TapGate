@@ -1254,6 +1254,42 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
 
 static esp_err_t handle_root(httpd_req_t *req)
 {
+    // Check Host header first - redirect if accessing via wrong IP
+    const char *host_header = NULL;
+    size_t host_len = httpd_req_get_hdr_value_len(req, "Host");
+    
+    if (host_len > 0) {
+        char *host_buf = malloc(host_len + 1);
+        if (host_buf && httpd_req_get_hdr_value_str(req, "Host", host_buf, host_len + 1) == ESP_OK) {
+            host_header = host_buf;
+            
+            // Check if Host header matches our AP IP
+            bool is_correct_host = false;
+            if (strncmp(host_header, DEFAULT_AP_IP, strlen(DEFAULT_AP_IP)) == 0) {
+                char next_char = host_header[strlen(DEFAULT_AP_IP)];
+                if (next_char == '\0' || next_char == ':') {
+                    is_correct_host = true;
+                }
+            }
+            
+            if (!is_correct_host) {
+                LOGI(TAG, "Root request with wrong Host: %s -> redirecting to %s", host_header, DEFAULT_AP_IP);
+                free(host_buf);
+                
+                // Redirect to correct IP
+                char redirect_url[64];
+                snprintf(redirect_url, sizeof(redirect_url), "http://%s/", DEFAULT_AP_IP);
+                
+                httpd_resp_set_status(req, "302 Found");
+                httpd_resp_set_hdr(req, "Location", redirect_url);
+                httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+                return httpd_resp_send(req, "", 0);
+            }
+            
+            free(host_buf);
+        }
+    }
+
     const admin_portal_page_descriptor_t *main_page = &admin_portal_page_main;
     
     // Try IP-based session first (mobile-friendly), fallback to cookies (desktop)
@@ -1311,17 +1347,31 @@ static esp_err_t handle_catch_all(httpd_req_t *req)
         }
     }
     
-    LOGI(TAG, "Catch-all redirect: %s %s (Host: %s) -> http://%s/", 
+    // Check if the request is for the correct AP IP
+    bool is_correct_host = false;
+    if (host_header) {
+        // Check if Host header matches our AP IP (with or without port)
+        if (strncmp(host_header, DEFAULT_AP_IP, strlen(DEFAULT_AP_IP)) == 0) {
+            char next_char = host_header[strlen(DEFAULT_AP_IP)];
+            if (next_char == '\0' || next_char == ':') {
+                is_correct_host = true;
+            }
+        }
+    }
+    
+    LOGI(TAG, "Catch-all redirect: %s %s (Host: %s, correct_host: %s) -> http://%s/", 
          req->method == HTTP_GET ? "GET" : (req->method == HTTP_POST ? "POST" : "OTHER"),
          req->uri, 
          host_header ? host_header : "unknown",
+         is_correct_host ? "yes" : "no",
          DEFAULT_AP_IP);
     
     if (host_header) {
         free((void*)host_header);
     }
 
-    // Always redirect to the admin portal main page
+    // Always redirect to the admin portal main page regardless of Host header
+    // This handles cases where users type random IP addresses
     char redirect_url[64];
     snprintf(redirect_url, sizeof(redirect_url), "http://%s/", DEFAULT_AP_IP);
     
