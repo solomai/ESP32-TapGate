@@ -27,3 +27,14 @@ esp_err_t nvm_write_u32(const char *partition,
                         const char *namespace_name,
                         const char *key,
                         uint32_t value);
+
+esp_err_t nvm_read_u8(const char *partition,
+                      const char *namespace_name,
+                      const char *key,
+                      uint8_t *value);
+     
+esp_err_t nvm_write_u8(const char *partition,
+                       const char *namespace_name,
+                       const char *key,
+                       uint8_t value);
+     

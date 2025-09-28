@@ -20,7 +20,9 @@
     "esp_wifi_types.h": "c",
     "bitset": "c",
     "string_view": "c",
-    "regex": "c"
+    "regex": "c",
+    "esp_netif.h": "c",
+    "nvm_partition.h": "c"
   },
   "idf.portWin": "COM6",
   "idf.flashType": "UART",

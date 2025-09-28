@@ -150,3 +150,41 @@ esp_err_t nvm_write_u32(const char *partition,
     nvs_close(handle);
     return err;
 }
+
+esp_err_t nvm_read_u8(const char *partition,
+                      const char *namespace_name,
+                      const char *key,
+                      uint8_t *value)
+{
+    if (!partition || !namespace_name || !key || !value)
+        return ESP_ERR_INVALID_ARG;
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open_from_partition(partition, namespace_name, NVS_READONLY, &handle);
+    if (err != ESP_OK)
+        return err;
+
+    err = nvs_get_u8(handle, key, value);
+    nvs_close(handle);
+    return err;
+}
+
+esp_err_t nvm_write_u8(const char *partition,
+                       const char *namespace_name,
+                       const char *key,
+                       uint8_t value)
+{
+    if (!partition || !namespace_name || !key)
+        return ESP_ERR_INVALID_ARG;
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open_from_partition(partition, namespace_name, NVS_READWRITE, &handle);
+    if (err != ESP_OK)
+        return err;
+
+    err = nvs_set_u8(handle, key, value);
+    if (err == ESP_OK)
+        err = nvs_commit(handle);
+    nvs_close(handle);
+    return err;
+}
