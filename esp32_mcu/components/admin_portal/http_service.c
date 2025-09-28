@@ -1331,6 +1331,27 @@ static esp_err_t handle_catch_all(httpd_req_t *req)
     return httpd_resp_send(req, "", 0);
 }
 
+// Error handler for 404 - redirects to captive portal
+static esp_err_t handle_404_error(httpd_req_t *req, httpd_err_code_t error)
+{
+    if (error == HTTPD_404_NOT_FOUND) {
+        LOGI(TAG, "404 handler: %s %s -> redirecting to captive portal", 
+             req->method == HTTP_GET ? "GET" : "POST", req->uri);
+        
+        // Redirect to admin portal
+        char redirect_url[64];
+        snprintf(redirect_url, sizeof(redirect_url), "http://%s/", DEFAULT_AP_IP);
+        
+        httpd_resp_set_status(req, "302 Found");
+        httpd_resp_set_hdr(req, "Location", redirect_url);
+        httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+        return httpd_resp_send(req, "", 0);
+    }
+    
+    // For other errors, use default handling
+    return ESP_FAIL;
+}
+
 static esp_err_t handle_page_entry(httpd_req_t *req)
 {
     const admin_portal_page_descriptor_t *desc = req->user_ctx;
@@ -1468,48 +1489,87 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_options_wildcard));
     LOGI(TAG, "Registered handler #%d: /api/* (OPTIONS)", handler_count++);
 
-    // Register true catch-all handler for GET requests (must be last!)
-    httpd_uri_t catch_all_handler = {
-        .uri = "/*",  // Use wildcard pattern
-        .method = HTTP_GET,
-        .handler = handle_catch_all,
-        .user_ctx = NULL
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &catch_all_handler));
-    LOGI(TAG, "Registered handler #%d: /* (GET catch-all)", handler_count++);
-
-    // Also register catch-all for POST requests
-    httpd_uri_t catch_all_post_handler = {
-        .uri = "/*",
-        .method = HTTP_POST,
-        .handler = handle_catch_all,
-        .user_ctx = NULL
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &catch_all_post_handler));
-    LOGI(TAG, "Registered handler #%d: /* (POST catch-all)", handler_count++);
-
-    // Register additional wildcard handlers for common paths that might not match /*
-    const char* wildcard_patterns[] = {
-        "/time/*",
-        "/chrome/*", 
+    // Register comprehensive wildcard handlers for captive portal detection
+    // ESP-IDF wildcard limitations require specific patterns
+    const char* captive_portal_patterns[] = {
+        // Microsoft connectivity tests
         "/ncsi.txt",
+        "/connecttest.txt", 
+        "/redirect",
+        "/hotspot-detect.html",
+        
+        // Google/Android connectivity  
         "/generate_204",
-        "/fwlink/*",
-        "/connecttest.txt"
+        "/gen_204",
+        "/204",
+        
+        // Apple connectivity
+        "/hotspot-detect.html",
+        "/library/test/success.html",
+        
+        // Chrome specific
+        "/success.txt",
+        "/check_network_status.txt",
+        
+        // Common paths
+        "/index.html",
+        "/index.htm",
+        "/default.htm",
+        "/home.html",
+        "/blank.html",
+        "/favicon.ico",
+        
+        // Time services (that caused the error)
+        "/time",
+        "/time.txt"
     };
-    
-    for (size_t i = 0; i < sizeof(wildcard_patterns) / sizeof(wildcard_patterns[0]); i++) {
-        httpd_uri_t wildcard_get = {
-            .uri = wildcard_patterns[i],
+
+    // Register GET handlers for all captive portal patterns
+    for (size_t i = 0; i < sizeof(captive_portal_patterns) / sizeof(captive_portal_patterns[0]); i++) {
+        httpd_uri_t captive_get = {
+            .uri = captive_portal_patterns[i],
             .method = HTTP_GET,
             .handler = handle_catch_all,
             .user_ctx = NULL
         };
-        ESP_ERROR_CHECK(httpd_register_uri_handler(server, &wildcard_get));
-        LOGI(TAG, "Registered handler #%d: %s (GET wildcard)", handler_count++, wildcard_patterns[i]);
+        ESP_ERROR_CHECK(httpd_register_uri_handler(server, &captive_get));
+        LOGI(TAG, "Registered handler #%d: %s (GET captive)", handler_count++, captive_portal_patterns[i]);
+        
+        // Also register POST variant for each
+        httpd_uri_t captive_post = {
+            .uri = captive_portal_patterns[i], 
+            .method = HTTP_POST,
+            .handler = handle_catch_all,
+            .user_ctx = NULL
+        };
+        ESP_ERROR_CHECK(httpd_register_uri_handler(server, &captive_post));
+        LOGI(TAG, "Registered handler #%d: %s (POST captive)", handler_count++, captive_portal_patterns[i]);
     }
 
-    LOGI(TAG, "Admin portal service registered with %d total handlers including comprehensive catch-all", handler_count - 1);
+    // Still register /* patterns as fallback (may work for some paths)
+    httpd_uri_t fallback_get = {
+        .uri = "/*",
+        .method = HTTP_GET,
+        .handler = handle_catch_all,
+        .user_ctx = NULL
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &fallback_get));
+    LOGI(TAG, "Registered handler #%d: /* (GET fallback)", handler_count++);
+
+    httpd_uri_t fallback_post = {
+        .uri = "/*",
+        .method = HTTP_POST, 
+        .handler = handle_catch_all,
+        .user_ctx = NULL
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &fallback_post));
+    LOGI(TAG, "Registered handler #%d: /* (POST fallback)", handler_count++);
+
+    // Register error handler for 404 redirects (catches unmatched URLs)
+    httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, handle_404_error);
+    LOGI(TAG, "Registered 404 error handler for captive portal redirects");
+
+    LOGI(TAG, "Admin portal service registered with %d total handlers including comprehensive captive portal coverage", handler_count - 1);
     return ESP_OK;
 }
 
