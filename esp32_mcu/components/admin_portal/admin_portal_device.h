@@ -1,20 +1,17 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdbool.h>
+#include <inttypes.h>
 
-/**
- * @brief Copy the currently configured AP SSID into the provided buffer.
- *
- * The buffer is always null-terminated when size > 0.
- */
-void admin_portal_device_get_ap_ssid(char *ssid, size_t size);
+bool wifi_get_ap_ssid(char *ssid, size_t size);
 
-/**
- * @brief Update the in-memory AP SSID used by the device.
- */
-void admin_portal_device_set_ap_ssid(const char *ssid);
+void wifi_set_ap_ssid(const char *ssid);
 
-/**
- * @brief Update the in-memory AP password used by the device.
- */
-void admin_portal_device_set_ap_password(const char *password);
+bool wifi_get_ap_password(char *password, size_t size);
+
+void wifi_set_ap_password(const char *password);
+
+uint32_t session_get_idle_timeout();
+
+void session_set_idle_timeout(uint32_t timeout_value);

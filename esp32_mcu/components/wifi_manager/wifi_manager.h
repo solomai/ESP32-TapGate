@@ -65,7 +65,6 @@
 // Password used for the Access Point. Leave empty and set AUTH MODE to WIFI_AUTH_OPEN for no password.
 #define DEFAULT_AP_PASSWORD                 DEFAULT_EMPTY
 
-
 // The actual WiFi settings in use. Stored in NVM or Defaut.
 struct wifi_settings_t{
 	char             ap_ssid[MAX_SSID_SIZE];
@@ -154,3 +153,6 @@ esp_netif_t* wifi_manager_get_esp_netif_sta();
 
 // returns the current esp_netif object for the Access Point
 esp_netif_t* wifi_manager_get_esp_netif_ap();
+
+// stored wifi configuration. used by HTTP server
+esp_err_t wifi_manager_save_config();

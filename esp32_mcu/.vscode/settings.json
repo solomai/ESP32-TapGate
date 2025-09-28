@@ -23,7 +23,11 @@
     "regex": "c",
     "esp_netif.h": "c",
     "nvm_partition.h": "c",
-    "format": "c"
+    "format": "c",
+    "page_off.h": "c",
+    "page_wifi.h": "c",
+    "page_main.h": "c",
+    "stdio.h": "c"
   },
   "idf.portWin": "COM6",
   "idf.flashType": "UART",
