@@ -23,8 +23,11 @@ static const char *TAG_MAIN = "APP MAIN";
 
 void cb_ap_start(void *pvParameter)
 {
-    LOGN(TAG_MAIN, "WiFi Access Point started");
-    turn_on_blue_led();
+    esp_err_t err = (esp_err_t)pvParameter;
+    if (err==ESP_OK){
+        LOGN(TAG_MAIN, "WiFi Access Point started");
+        turn_on_blue_led();
+    }
 }
 
 void cb_ap_stop(void *pvParameter)

@@ -24,36 +24,11 @@
 #include "lwip/netdb.h"
 #include "lwip/ip4_addr.h"
 
+#include "bits.h"
+
 static const char *TAG = "WIFI Manager";
 
 static EventGroupHandle_t wifi_manager_event_group;
-
-// indicate that the ESP32 is currently connected.
-const int WIFI_MANAGER_WIFI_CONNECTED_BIT = BIT0;
-
-// indicate that the APSTA currently connected.
-const int WIFI_MANAGER_AP_STA_CONNECTED_BIT = BIT1;
-
-// Set automatically once the SoftAP is started
-const int WIFI_MANAGER_AP_STARTED_BIT = BIT2;
-
-// When set, means a client requested to connect to an access point
-const int WIFI_MANAGER_REQUEST_STA_CONNECT_BIT = BIT3;
-
-// This bit is set automatically as soon as a connection was lost
-const int WIFI_MANAGER_STA_DISCONNECT_BIT = BIT4;
-
-// When set, means the wifi manager attempts to restore a previously saved connection at startup.
-const int WIFI_MANAGER_REQUEST_RESTORE_STA_BIT = BIT5;
-
-// When set, means a client requested to disconnect from currently connected AP
-const int WIFI_MANAGER_REQUEST_WIFI_DISCONNECT_BIT = BIT6;
-
-// When set, means a scan is in progress
-const int WIFI_MANAGER_SCAN_BIT = BIT7;
-
-// When set, means user requested for a disconnect
-const int WIFI_MANAGER_REQUEST_DISCONNECT_BIT = BIT8;
 
 // task handle for the main wifi_manager task
 static TaskHandle_t task_wifi_manager = NULL;
@@ -64,19 +39,15 @@ static esp_netif_t* esp_netif_sta = NULL;
 // netif object for the ACCESS POINT
 static esp_netif_t* esp_netif_ap = NULL;
 
-// Current STA config
-wifi_config_t* wifi_manager_config_sta = NULL;
-
 // The actual WiFi settings in use
 struct wifi_settings_t wifi_settings = {
-	.ap_ssid = DEFAULT_AP_SSID,
-	.ap_pwd = DEFAULT_AP_PASSWORD,
-	.ap_channel = DEFAULT_AP_CHANNEL,
+	.ap_ssid        = DEFAULT_AP_SSID,
+	.ap_pwd         = DEFAULT_AP_PASSWORD,
+	.ap_channel     = DEFAULT_AP_CHANNEL,
 	.ap_ssid_hidden = DEFAULT_AP_SSID_HIDDEN,
-	.ap_bandwidth = DEFAULT_AP_BANDWIDTH,
-	.sta_only = DEFAULT_STA_ONLY,
-	.sta_power_save = DEFAULT_STA_POWER_SAVE,
-	.sta_static_ip = 0,
+	.ap_bandwidth   = DEFAULT_AP_BANDWIDTH,
+    .sta_ssid       = DEFAULT_EMPTY,
+    .sta_pwd        = DEFAULT_EMPTY
 };
 
 // objects used to manipulate the main queue of events
@@ -183,246 +154,200 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base, int32_t eve
     }
 }
 
-esp_err_t wifi_manager_save_sta_config()
+// Store wifi_settings to NVM
+esp_err_t wifi_manager_save_config()
 {
-    if(wifi_manager_config_sta==NULL)
-    {
-        LOGE(TAG, "Error saving WiFi STA config: no settings exist");
-        return ESP_ERR_WIFI_SSID;
-    }
-
-    nvs_handle handle;
+    static const char *LOG_FMT_FAILED_SAVE = "Failed saving %s to NVM \"%s\":\"%s\" error: %s";
+    nvs_handle_t handle;
     esp_err_t err = nvs_open_from_partition(NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, NVS_READWRITE, &handle);
-    if(err != ESP_OK){
-        LOGE(TAG, "Error saving WiFi STA config to NVM \"%s\":\"%s\"", NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
-        return err;
+    if(err==ESP_OK) {
+        // Read buffer to check if the value has changed. Used to prevent memory degradation.
+        struct wifi_settings_t tmp_conf;
+        memset(&tmp_conf, 0x00, sizeof(tmp_conf));
+
+        // Save AP SSID with check that value changed
+        size_t size = sizeof(wifi_settings.ap_ssid);
+        err = nvs_get_str(handle, STORE_NVM_KEY_AP_SSID, tmp_conf.ap_ssid, &size);
+        if(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND)
+            if(strcmp( (char*)tmp_conf.ap_ssid, (char*)wifi_settings.ap_ssid) != 0)
+                err = nvs_set_str(handle, STORE_NVM_KEY_AP_SSID, wifi_settings.ap_ssid);
+        if (err!=ESP_OK)
+            LOGE(TAG, LOG_FMT_FAILED_SAVE,
+                STORE_NVM_KEY_AP_SSID, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+
+        // Save AP Password with check that value changed
+        size = sizeof(wifi_settings.ap_pwd);
+        err = nvs_get_str(handle, STORE_NVM_KEY_AP_PSW, tmp_conf.ap_pwd, &size);
+        if(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND)
+            if(strcmp( (char*)tmp_conf.ap_pwd, (char*)wifi_settings.ap_pwd) != 0)
+                err = nvs_set_str(handle, STORE_NVM_KEY_AP_PSW, wifi_settings.ap_pwd);
+        if (err!=ESP_OK)
+            LOGE(TAG, LOG_FMT_FAILED_SAVE,
+                STORE_NVM_KEY_AP_PSW, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+
+        // Save STA SSID with check that value changed
+        size = sizeof(wifi_settings.sta_ssid);
+        err = nvs_get_str(handle, STORE_NVM_KEY_STA_SSID, tmp_conf.sta_ssid, &size);
+        if(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND)
+            if(strcmp( (char*)tmp_conf.sta_ssid, (char*)wifi_settings.sta_ssid) != 0)
+                err = nvs_set_str(handle, STORE_NVM_KEY_STA_SSID, wifi_settings.sta_ssid);
+        if (err!=ESP_OK)
+            LOGE(TAG, LOG_FMT_FAILED_SAVE,
+                STORE_NVM_KEY_STA_SSID, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+
+        // Save STA Password with check that value changed
+        size = sizeof(wifi_settings.sta_pwd);
+        err = nvs_get_str(handle, STORE_NVM_KEY_STA_PSW, tmp_conf.sta_pwd, &size);
+        if(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND)
+            if(strcmp( (char*)tmp_conf.sta_pwd, (char*)wifi_settings.sta_pwd) != 0)
+                err = nvs_set_str(handle, STORE_NVM_KEY_STA_PSW, wifi_settings.sta_pwd);
+        if (err!=ESP_OK)
+            LOGE(TAG, LOG_FMT_FAILED_SAVE,
+                STORE_NVM_KEY_STA_PSW, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+
+        // Save AP channel
+        err = nvs_get_u8(handle, STORE_NVM_KEY_AP_CHANNEL, &tmp_conf.ap_channel);
+        if(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND)
+            if(tmp_conf.ap_channel != wifi_settings.ap_channel)
+                err = nvs_set_u8(handle, STORE_NVM_KEY_AP_CHANNEL, tmp_conf.ap_channel);
+        if (err!=ESP_OK)
+            LOGE(TAG, LOG_FMT_FAILED_SAVE,
+                STORE_NVM_KEY_AP_CHANNEL, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+
+        // Save hidden flag
+        err = nvs_get_u8(handle, STORE_NVM_KEY_AP_SSID_HIDDEN, &tmp_conf.ap_ssid_hidden);
+        if(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND)
+            if(tmp_conf.ap_ssid_hidden != wifi_settings.ap_ssid_hidden)
+                err = nvs_set_u8(handle, STORE_NVM_KEY_AP_SSID_HIDDEN, tmp_conf.ap_ssid_hidden);
+        if (err!=ESP_OK)
+            LOGE(TAG, LOG_FMT_FAILED_SAVE,
+                STORE_NVM_KEY_AP_SSID_HIDDEN, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+
+        // Save AP bandwidth
+        uint8_t value = DEFAULT_AP_BANDWIDTH;
+        err = nvs_get_u8(handle, STORE_NVM_KEY_AP_BANDWIDTH, &value);
+        if(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND)
+            if(value != wifi_settings.ap_bandwidth)
+            {
+                value = (uint8_t)wifi_settings.ap_bandwidth;
+                err = nvs_set_u8(handle, STORE_NVM_KEY_AP_BANDWIDTH, value);
+            }
+        if (err!=ESP_OK)
+            LOGE(TAG, LOG_FMT_FAILED_SAVE,
+                STORE_NVM_KEY_AP_BANDWIDTH, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
     }
 
-    wifi_config_t tmp_conf;
-	memset(&tmp_conf, 0x00, sizeof(tmp_conf));
-
-    // Save ssid
-    bool ssid_stored = false;
-    size_t ssid_size = sizeof(tmp_conf.sta.ssid);
-    err = nvs_get_blob(handle, STORE_NVM_SSID, tmp_conf.sta.ssid, &ssid_size);
-    if( (err == ESP_OK  || err == ESP_ERR_NVS_NOT_FOUND)
-        && strcmp( (char*)tmp_conf.sta.ssid, (char*)wifi_manager_config_sta->sta.ssid) != 0)
-    {
-        err = nvs_set_blob(handle, STORE_NVM_SSID, wifi_manager_config_sta->sta.ssid, ssid_size);
-        if(err!=ESP_OK)
-        {
-            LOGE(TAG, "Failed saving %s to NVM \"%s\":\"%s\"", STORE_NVM_SSID, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
-            nvs_close(handle);
-            return err;
-        }
-        ssid_stored = true;
-    }
-
-    // Save password
-    bool password_stored = false;
-    size_t psw_size = sizeof(tmp_conf.sta.password);
-    err = nvs_get_blob(handle, STORE_NVM_PSW, tmp_conf.sta.password, &psw_size);
-    if( (err == ESP_OK  || err == ESP_ERR_NVS_NOT_FOUND)
-        && strcmp( (char*)tmp_conf.sta.password, (char*)wifi_manager_config_sta->sta.password) != 0)
-    {
-        err = nvs_set_blob(handle, STORE_NVM_PSW, wifi_manager_config_sta->sta.password, psw_size);
-        if(err!=ESP_OK)
-        {
-            if (ssid_stored)
-                LOGI(TAG, "Saved %s:%s to NVM \"%s\":\"%s\"", STORE_NVM_SSID, (char*)wifi_manager_config_sta->sta.ssid, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
-            LOGE(TAG, "Failed saving %s to NVM \"%s\":\"%s\"", STORE_NVM_PSW, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
-            nvs_close(handle);
-            return err;
-        }
-        password_stored = true;
-    }
-
-    // Save settings
-    bool settings_stored = false;
-    struct wifi_settings_t tmp_settings;
-    memset(&tmp_settings, 0x00, sizeof(tmp_settings));
-    size_t settings_size = sizeof(tmp_settings);
-    err = nvs_get_blob(handle, STORE_NVM_SETTINGS, &tmp_settings, &settings_size);
-    if( (err == ESP_OK  || err == ESP_ERR_NVS_NOT_FOUND) &&
-    (
-        strcmp( (char*)tmp_settings.ap_ssid, (char*)wifi_settings.ap_ssid) != 0 ||
-        strcmp( (char*)tmp_settings.ap_pwd, (char*)wifi_settings.ap_pwd) != 0 ||
-        tmp_settings.ap_ssid_hidden != wifi_settings.ap_ssid_hidden ||
-        tmp_settings.ap_bandwidth != wifi_settings.ap_bandwidth ||
-        tmp_settings.sta_only != wifi_settings.sta_only ||
-        tmp_settings.sta_power_save != wifi_settings.sta_power_save ||
-        tmp_settings.ap_channel != wifi_settings.ap_channel
-    )
-    ){
-        err = nvs_set_blob(handle, STORE_NVM_SETTINGS, &wifi_settings, sizeof(wifi_settings));
-        if(err!=ESP_OK)
-        {
-            if (ssid_stored)
-                LOGI(TAG, "Saved %s:%s to NVM \"%s\":\"%s\"", STORE_NVM_SSID, (char*)wifi_manager_config_sta->sta.ssid, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
-            if (password_stored)
-                LOGI(TAG, "Saved %s:%s to NVM \"%s\":\"%s\"", STORE_NVM_PSW, (char*)wifi_manager_config_sta->sta.password, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
-            LOGE(TAG, "Failed saving %s to NVM \"%s\":\"%s\"", STORE_NVM_SETTINGS, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
-            nvs_close(handle);
-            return err;
-        }
-        settings_stored = true;
-    }
-
-    #ifdef DIAGNOSTIC_VERSION
-    ESP_LOGI(TAG,
-        "\t\tssid:%s%s\n"
-        "\t\tpassword:%s%s\n"
-        "%s",
-        wifi_manager_config_sta->sta.ssid,
-        ssid_stored ? "" : " (update skipped because value did not change)",
-        wifi_manager_config_sta->sta.password,
-        password_stored ? "" : " (update skipped because value did not change)",
-        settings_stored ? 
-            // Normal block with settings
-            "\t\tSoftAP_ssid:%s\n"
-            "\t\tSoftAP_pwd:%s\n"
-            "\t\tSoftAP_channel:%i\n"
-            "\t\tSoftAP_hidden (1 = yes):%i\n"
-            "\t\tSoftAP_bandwidth (1 = 20MHz, 2 = 40MHz):%i\n"
-            "\t\tsta_only (0 = APSTA, 1 = STA when connected):%i\n"
-            "\t\tsta_power_save (1 = yes):%i\n"
-            "\t\tsta_static_ip (0 = dhcp client, 1 = static ip):%i"
-        :
-            // Message when settings not stored
-            "\t\tSettings update skipped because values did not change",
-        // Arguments for settings if they are stored
-        wifi_settings.ap_ssid,
-        wifi_settings.ap_pwd,
-        wifi_settings.ap_channel,
-        wifi_settings.ap_ssid_hidden,
-        wifi_settings.ap_bandwidth,
-        wifi_settings.sta_only,
-        wifi_settings.sta_power_save,
-        wifi_settings.sta_static_ip
-    );
-#endif
-
-    if (settings_stored || password_stored || ssid_stored)
-        nvs_commit(handle);
-
+    if (err == ESP_OK)
+        err = nvs_commit(handle);
     nvs_close(handle);
-    return ESP_OK;
+    return err;
 }
 
-bool wifi_manager_fetch_wifi_sta_config()
+// Load from NVM or Default for wifi_settings
+esp_err_t wifi_manager_load_config()
 {
-    nvs_handle handle;
+    nvs_handle_t handle;
     esp_err_t err = nvs_open_from_partition(NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, NVS_READONLY, &handle);
-    if(err != ESP_OK){
-        LOGW(TAG, "No saved data for Wi-Fi STA in NVM \"%s\":\"%s\"", NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
-        return false;
-    }
+    if(err==ESP_OK) {
 
-	// allocate buffer
-	const size_t blob_buff_size = sizeof(wifi_settings);
-	uint8_t blob_buff[blob_buff_size];
-	memset(blob_buff, 0x00, blob_buff_size);
+        // Load AP SSID
+        size_t size = sizeof(wifi_settings.ap_ssid);
+        err = nvs_get_str(handle, STORE_NVM_KEY_AP_SSID, wifi_settings.ap_ssid, &size);
+        if(err!=ESP_OK){
+            // Use default value
+            strncpy(wifi_settings.ap_ssid, DEFAULT_AP_SSID, sizeof(wifi_settings.ap_ssid));
+            wifi_settings.ap_ssid[sizeof(wifi_settings.ap_ssid) - 1] = '\0';
+        }
 
-    if(wifi_manager_config_sta == NULL){
-        wifi_manager_config_sta = (wifi_config_t*)malloc(sizeof(wifi_config_t));
-    }
-    memset(wifi_manager_config_sta, 0x00, sizeof(wifi_config_t));
-    
-    // load ssid
-    size_t blob_ssid_size = sizeof(wifi_manager_config_sta->sta.ssid);
-    err = nvs_get_blob(handle, STORE_NVM_SSID, blob_buff, &blob_ssid_size);
-    if(err != ESP_OK){
-        LOGE(TAG,"Failed read STA WiFi %s from NVM \"%s\":\"%s\"", STORE_NVM_SSID, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
-		free(wifi_manager_config_sta);
-		wifi_manager_config_sta = NULL;
-        nvs_close(handle);
-        return false;
-    }
-    memcpy(wifi_manager_config_sta->sta.ssid, blob_buff, blob_ssid_size);
+        // Load AP Password
+        size = sizeof(wifi_settings.ap_pwd);
+        err = nvs_get_str(handle, STORE_NVM_KEY_AP_PSW, wifi_settings.ap_pwd, &size);
+        if(err!=ESP_OK){
+            // Use default value
+            strncpy(wifi_settings.ap_pwd, DEFAULT_AP_PASSWORD, sizeof(wifi_settings.ap_pwd));
+            wifi_settings.ap_pwd[sizeof(wifi_settings.ap_pwd) - 1] = '\0';
+        }
 
-    // Load password
-    size_t blob_psw_size = sizeof(wifi_manager_config_sta->sta.password);
-    err = nvs_get_blob(handle, STORE_NVM_PSW, blob_buff, &blob_psw_size);
-    if(err != ESP_OK){
-        LOGE(TAG,"Failed read STA WiFi %s from NVM \"%s\":\"%s\"", STORE_NVM_PSW, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
-		free(wifi_manager_config_sta);
-		wifi_manager_config_sta = NULL;
-        nvs_close(handle);
-        return false;
-    }
-    memcpy(wifi_manager_config_sta->sta.password, blob_buff, blob_psw_size);
+        // Load STA SSID
+        size = sizeof(wifi_settings.sta_ssid);
+        err = nvs_get_str(handle, STORE_NVM_KEY_STA_SSID, wifi_settings.sta_ssid, &size);
+        if(err!=ESP_OK){
+            // Use default value
+            strncpy(wifi_settings.sta_ssid, DEFAULT_EMPTY, sizeof(wifi_settings.sta_ssid));
+            wifi_settings.sta_ssid[sizeof(wifi_settings.sta_ssid) - 1] = '\0';
+        }
 
-    // Load settings
-    size_t blob_setting_size = sizeof(wifi_settings);
-    err = nvs_get_blob(handle, STORE_NVM_SETTINGS, blob_buff, &blob_setting_size);
-    if(err != ESP_OK){
-        LOGE(TAG,"Failed read STA WiFi %s from NVM \"%s\":\"%s\"", STORE_NVM_SETTINGS, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE);
-		free(wifi_manager_config_sta);
-		wifi_manager_config_sta = NULL;
-        nvs_close(handle);
-        return false;
+        // Load STA Password
+        size = sizeof(wifi_settings.sta_pwd);
+        err = nvs_get_str(handle, STORE_NVM_KEY_STA_PSW, wifi_settings.sta_pwd, &size);
+        if(err!=ESP_OK){
+            // Use default value
+            strncpy(wifi_settings.sta_pwd, DEFAULT_EMPTY, sizeof(wifi_settings.sta_pwd));
+            wifi_settings.sta_pwd[sizeof(wifi_settings.sta_pwd) - 1] = '\0';
+        }
+
+        // Load AP channel
+        err = nvs_get_u8(handle, STORE_NVM_KEY_AP_CHANNEL, &wifi_settings.ap_channel);
+        if(err!=ESP_OK){
+            // Use default value
+            wifi_settings.ap_channel = DEFAULT_AP_CHANNEL;
+        }
+
+        // Load AP hidden flag
+        err = nvs_get_u8(handle, STORE_NVM_KEY_AP_SSID_HIDDEN, &wifi_settings.ap_ssid_hidden);
+        if(err!=ESP_OK){
+            // Use default value
+            wifi_settings.ap_ssid_hidden = DEFAULT_AP_SSID_HIDDEN;
+        }
+
+        // Load AP bandwidth
+        uint8_t value = DEFAULT_AP_BANDWIDTH;
+        err = nvs_get_u8(handle, STORE_NVM_KEY_AP_BANDWIDTH, &value);
+        if(err!=ESP_OK){
+            // Use default value
+            wifi_settings.ap_bandwidth = DEFAULT_AP_BANDWIDTH;
+        }
+        else{
+            wifi_settings.ap_bandwidth = (wifi_bandwidth_t)value;
+        }
     }
-    memcpy(&wifi_settings, blob_buff, blob_setting_size);
 
 #ifdef DIAGNOSTIC_VERSION
-    ESP_LOGI(TAG,
-        "\t\tssid:%s password:%s\n"
-        "\t\tSoftAP_ssid:%s\n"
-        "\t\tSoftAP_pwd:%s\n"
-        "\t\tSoftAP_channel:%i\n"
-        "\t\tSoftAP_hidden (1 = yes):%i\n"
-        "\t\tSoftAP_bandwidth (1 = 20MHz, 2 = 40MHz):%i\n"
-        "\t\tsta_only (0 = APSTA, 1 = STA when connected):%i\n"
-        "\t\tsta_power_save (1 = yes):%i\n"
-        "\t\tsta_static_ip (0 = dhcp client, 1 = static ip):%i",
-        wifi_manager_config_sta->sta.ssid,
-        wifi_manager_config_sta->sta.password,
+    ESP_LOGI(TAG, "current WiFi configuration %s\n"
+        "\t\tAP SSID: \"%s\"\n"
+        "\t\tAP pwd: \"%s\"\n"
+        "\t\tAP channel: %i\n"
+        "\t\tAP hidden: %s\n"
+        "\t\tAP bandwidth (1 = 20MHz, 2 = 40MHz): %i\n"
+        "\t\tSTA SSID: \"%s\"\n"
+        "\t\tSTA pwd: \"%s\"",
+        (err==ESP_OK ? "load from NVM" : "created by default"),
         wifi_settings.ap_ssid,
         wifi_settings.ap_pwd,
         wifi_settings.ap_channel,
-        wifi_settings.ap_ssid_hidden,
+        (wifi_settings.ap_ssid_hidden ? "yes" : "no"),
         wifi_settings.ap_bandwidth,
-        wifi_settings.sta_only,
-        wifi_settings.sta_power_save,
-        wifi_settings.sta_static_ip
+        wifi_settings.sta_ssid,
+        wifi_settings.sta_pwd
     );
 #endif
 
     nvs_close(handle);
-    if (wifi_manager_config_sta && wifi_manager_config_sta->sta.ssid[0] != '\0')
+    return err;
+}
+
+bool is_wifi_sta_configured()
+{
+    // check only the SSID in case the STA allows access without a password.
+    if (wifi_settings.sta_ssid[0] != '\0'){
         return true;
+    }
     return false;
 }
 
-void wifi_manager(void * pvParameters)
+esp_err_t configure_and_start_ap()
 {
-  	// initialize the tcp stack
-    ERROR_CHECK(esp_netif_init(),
-                "Error initialize the tcp stack");
-
-	// event loop for the wifi driver
-	ERROR_CHECK(esp_event_loop_create_default(),
-                "Error create event loop for the wifi driver");
-
-	esp_netif_sta = esp_netif_create_default_wifi_sta();
-	esp_netif_ap = esp_netif_create_default_wifi_ap();
-
-    // default wifi config
-	wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
-	ERROR_CHECK(esp_wifi_init(&wifi_init_config),
-                "Error setup defaut wifi config");
-	ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM),
-                "Cannot set wifi storage");
-
-	// event handler for the connection
-    esp_event_handler_instance_t instance_wifi_event;
-    esp_event_handler_instance_t instance_ip_event;
-    ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL,&instance_wifi_event),
-                "Failed registered listener to WIFI_EVENT");
-    ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, ESP_EVENT_ANY_ID, &ip_event_handler, NULL,&instance_ip_event),
-                "Failed registered listener to IP_EVENT");
-
-	// SoftAP - Wifi Access Point configuration setup
+	// Access Point configuration setup
 	wifi_config_t ap_config = {
 		.ap = {
 			.ssid_len = 0,
@@ -443,6 +368,52 @@ void wifi_manager(void * pvParameters)
 		ap_config.ap.authmode = WIFI_AUTH_WPA2_PSK;
 		memcpy(ap_config.ap.password, wifi_settings.ap_pwd, sizeof(wifi_settings.ap_pwd));
 	}
+    // AP mode should be set before change
+    esp_err_t err = esp_wifi_set_mode(WIFI_MODE_APSTA);
+    if (err!=ESP_OK)
+        LOGE(TAG,"AP set set mode APSTA failed: %s", esp_err_to_name(err));
+    // Set AP config
+    if (err == ESP_OK) {
+        err = esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config);
+        if (err!=ESP_OK)
+            LOGE(TAG,"AP set config failed: %s", esp_err_to_name(err));
+    }
+    // Set bandwidth
+    if (err == ESP_OK) {
+        wifi_bandwidth_t current_bandwidth = 0;
+        err = esp_wifi_get_bandwidth(WIFI_IF_AP, &current_bandwidth);
+        if (err==ESP_OK && current_bandwidth != wifi_settings.ap_bandwidth)
+            err = esp_wifi_set_bandwidth(WIFI_IF_AP, wifi_settings.ap_bandwidth);
+        if (err!=ESP_OK)
+            LOGE(TAG,"AP set bandwidth failed: %s", esp_err_to_name(err));
+    }
+    return err;
+}
+
+void stop_ap()
+{
+    esp_wifi_set_mode(WIFI_MODE_STA);
+}
+
+void wifi_manager(void * pvParameters)
+{
+    // Load WiFi configuration from NVM
+    esp_err_t err = wifi_manager_load_config();
+    if (err==ESP_OK) {
+        LOGI(TAG,"WiFi config loaded");
+    }
+    else {
+        LOGW(TAG,"WiFi config not loaded. Used default.");
+    }
+
+	// event handler for the connection
+    esp_event_handler_instance_t instance_wifi_event;
+    esp_event_handler_instance_t instance_ip_event;
+    ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL,&instance_wifi_event),
+                "Failed registered listener to WIFI_EVENT");
+    ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, ESP_EVENT_ANY_ID, &ip_event_handler, NULL,&instance_ip_event),
+                "Failed registered listener to IP_EVENT");
+
 
 	// DHCP AP configuration
 	esp_netif_dhcps_stop(esp_netif_ap); // DHCP client/server must be stopped before setting new IP information.
@@ -457,14 +428,8 @@ void wifi_manager(void * pvParameters)
                 "NETIF start DHCPS failed");
 
     // Setup WiFi
-	ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA),
-                "Set Mode APSTA failed");
-	ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config),
-                "Set Config failed");
-	ERROR_CHECK(esp_wifi_set_bandwidth(WIFI_IF_AP, wifi_settings.ap_bandwidth),
-                "Set Bandwidth failed");
-	ERROR_CHECK(esp_wifi_set_ps(wifi_settings.sta_power_save),
-                "Set PS failed");
+	ERROR_CHECK(esp_wifi_set_ps(DEFAULT_STA_POWER_SAVE),
+                "Set Power Save failed");
 
 	// by default the mode is STA because wifi_manager will not start the access point unless it has to!
 	ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA),
@@ -480,11 +445,6 @@ void wifi_manager(void * pvParameters)
 		.show_hidden = true
 	};
 
-    wifi_manager_event_group = xEventGroupCreate();
-
-    // Create wifi manager message queue
-    wifi_manager_queue = xQueueCreate( 3, sizeof( queue_message) );
-
 	// enqueue first event: load previous config
 	wifi_manager_send_message(WM_ORDER_LOAD_AND_RESTORE_STA, NULL);
     
@@ -498,41 +458,45 @@ void wifi_manager(void * pvParameters)
         switch(msg.code)
         {
             case WM_ORDER_LOAD_AND_RESTORE_STA:
-                if(wifi_manager_fetch_wifi_sta_config()){
-                    ESP_LOGI(TAG, "Saved wifi found on startup. Will attempt to connect.");
+                if(is_wifi_sta_configured()){
+                    ESP_LOGI(TAG, "Saved WiFi found on startup. Will attempt to connect.");
                     wifi_manager_send_message(WM_ORDER_CONNECT_STA, (void*)CONNECTION_REQUEST_RESTORE_CONNECTION);
                 }
                 else{
                     // no wifi saved: start soft AP! This is what should happen during a first run
-                    ESP_LOGI(TAG, "No saved wifi found on startup. Starting access point.");
+                    ESP_LOGI(TAG, "No saved WiFi found on startup. Starting Access Point.");
                     wifi_manager_send_message(WM_ORDER_START_AP, NULL);
                 }
                 // callback
-				if(cb_ptr_arr[msg.code]) (*cb_ptr_arr[msg.code])(NULL);
+				if(cb_ptr_arr[msg.code])
+                    (*cb_ptr_arr[msg.code])(NULL);
                 break;
 
             case WM_ORDER_START_AP:
-                esp_err_t err = esp_wifi_set_mode(WIFI_MODE_APSTA);
+                esp_err_t err = configure_and_start_ap();
                 if (err == ESP_OK)
                 {
                     // Start DNS server to have Captive Portal
                     dns_server_start();
                     // Start HTTP server with admin page
                     http_server_start();
-                    ESP_LOGI(TAG, "WiFi mode set to APSTA successfully (SoftAP started)");
+                    ESP_LOGI(TAG, "AP started. DNS and HTTP server have been launched.");
                 }
                 else
-                    ESP_LOGE(TAG, "Failed to set WiFi mode to APSTA (error=0x%x)", err);
+                    ESP_LOGE(TAG, "Failed to start AP. error: %s", esp_err_to_name(err));
 
                 /* callback */
-                if(cb_ptr_arr[msg.code]) (*cb_ptr_arr[msg.code])(NULL);
+                if(cb_ptr_arr[msg.code])
+                    (*cb_ptr_arr[msg.code])((void*)err);
                 break;
 
             case WM_ORDER_STOP_AP:
-                http_server_stop();
-                dns_server_stop();
+                //http_server_stop();
+                //dns_server_stop();
+                stop_ap();
                 /* callback */
-                if(cb_ptr_arr[msg.code]) (*cb_ptr_arr[msg.code])(NULL);
+                if(cb_ptr_arr[msg.code])
+                    (*cb_ptr_arr[msg.code])(NULL);
                 break;
 
             case WM_ORDER_START_WIFI_SCAN:
@@ -545,14 +509,16 @@ void wifi_manager(void * pvParameters)
                                 "Failed scan WiFi");
 				}
 				/* callback */
-				if(cb_ptr_arr[msg.code]) (*cb_ptr_arr[msg.code])(NULL);
+				if(cb_ptr_arr[msg.code])
+                    (*cb_ptr_arr[msg.code])(NULL);
 				break;
 
             case WM_EVENT_SCAN_DONE:
                 // TODO:
 
 				/* callback */
-				if(cb_ptr_arr[msg.code]) (*cb_ptr_arr[msg.code])( msg.param );            
+				if(cb_ptr_arr[msg.code])
+                    (*cb_ptr_arr[msg.code])( msg.param );            
                 break;
 
             default:
@@ -568,6 +534,30 @@ void wifi_manager_start(void)
     disable_esp_log("wifi");
     LOGI(TAG, "Start manager");
 
+  	// initialize the tcp stack
+      ERROR_CHECK(esp_netif_init(),
+      "Error initialize the tcp stack");
+
+    // event loop for the wifi driver
+    ERROR_CHECK(esp_event_loop_create_default(),
+        "Error create event loop for the wifi driver");
+
+    esp_netif_sta = esp_netif_create_default_wifi_sta();
+    esp_netif_ap = esp_netif_create_default_wifi_ap();
+
+    // default wifi config
+    wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
+    ERROR_CHECK(esp_wifi_init(&wifi_init_config),
+        "Error setup defaut wifi config");
+    ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM),
+        "Cannot set wifi storage");
+
+    // create event group
+    wifi_manager_event_group = xEventGroupCreate();
+    
+    // Create wifi manager message queue
+    wifi_manager_queue = xQueueCreate( 3, sizeof( queue_message) );
+    
     xTaskCreate(&wifi_manager, "wifi_manager", 4096, NULL, WIFI_MANAGER_TASK_PRIORITY, &task_wifi_manager);
 }
 
@@ -580,12 +570,6 @@ void wifi_manager_stop()
     // delete wifi manager message queue
     vQueueDelete(wifi_manager_queue);
 	wifi_manager_queue = NULL;
-
-    // free current STA config
-	if(wifi_manager_config_sta){
-		free(wifi_manager_config_sta);
-		wifi_manager_config_sta = NULL;
-	}  
 
     vEventGroupDelete(wifi_manager_event_group);
 	wifi_manager_event_group = NULL;
