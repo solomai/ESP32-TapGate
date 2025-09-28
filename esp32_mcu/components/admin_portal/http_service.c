@@ -1298,6 +1298,39 @@ static esp_err_t handle_root(httpd_req_t *req)
     return send_redirect(req, target);
 }
 
+// Catch-all handler for captive portal - redirects any unknown requests to admin portal
+static esp_err_t handle_catch_all(httpd_req_t *req)
+{
+    const char *host_header = NULL;
+    size_t host_len = httpd_req_get_hdr_value_len(req, "Host");
+    
+    if (host_len > 0) {
+        char *host_buf = malloc(host_len + 1);
+        if (host_buf && httpd_req_get_hdr_value_str(req, "Host", host_buf, host_len + 1) == ESP_OK) {
+            host_header = host_buf;
+        }
+    }
+    
+    LOGI(TAG, "Catch-all redirect: %s %s (Host: %s) -> http://%s/", 
+         req->method == HTTP_GET ? "GET" : "POST", 
+         req->uri, 
+         host_header ? host_header : "unknown",
+         DEFAULT_AP_IP);
+    
+    if (host_header) {
+        free((void*)host_header);
+    }
+
+    // Always redirect to the admin portal main page
+    char redirect_url[64];
+    snprintf(redirect_url, sizeof(redirect_url), "http://%s/", DEFAULT_AP_IP);
+    
+    httpd_resp_set_status(req, "302 Found");
+    httpd_resp_set_hdr(req, "Location", redirect_url);
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+    return httpd_resp_send(req, "", 0);
+}
+
 static esp_err_t handle_page_entry(httpd_req_t *req)
 {
     const admin_portal_page_descriptor_t *desc = req->user_ctx;
@@ -1422,7 +1455,24 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_options_wildcard));
 
-    LOGI(TAG, "Admin portal service registered");
+    // Register catch-all handler for captive portal (must be last!)
+    httpd_uri_t catch_all_get = {
+        .uri = "/*",
+        .method = HTTP_GET,
+        .handler = handle_catch_all,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &catch_all_get));
+
+    httpd_uri_t catch_all_post = {
+        .uri = "/*", 
+        .method = HTTP_POST,
+        .handler = handle_catch_all,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &catch_all_post));
+
+    LOGI(TAG, "Admin portal service registered with captive portal catch-all");
     return ESP_OK;
 }
 
