@@ -10,4 +10,5 @@ idf_component_register(
         admin_portal
         diagnostic
         esp_common
+        driver
 )

@@ -12,21 +12,25 @@
 #include "dns_server.h"
 #include "http_server.h"
 
+#include "led.h"
+
 #ifdef DIAGNOSTIC_VERSION
     #include "diagnostic.h"
 #endif
 
 // log tag
-static const char *TAG_MAIN = "APP_MAIN";
+static const char *TAG_MAIN = "APP MAIN";
 
 void cb_ap_start(void *pvParameter)
 {
     LOGN(TAG_MAIN, "WiFi Access Point started");
+    turn_on_blue_led();
 }
 
 void cb_ap_stop(void *pvParameter)
 {
     LOGN(TAG_MAIN, "WiFi Access Point stopped");
+    turn_off_blue_led();
 }
 
 // MAIN FUNCTION
@@ -38,6 +42,7 @@ void app_main(void)
 #endif
 
     LOGN(TAG_MAIN, "Application bootup");
+    blue_led_init();
 
     // Init NVS partitions
     esp_err_t err = nvm_init();
