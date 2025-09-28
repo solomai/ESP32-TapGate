@@ -3,6 +3,10 @@
   font-family: "Inter", "Segoe UI", sans-serif;
 }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -131,8 +135,18 @@ button:active,
   flex-wrap: wrap;
 }
 
-.actions .button-link {
+.actions .button-link,
+.actions button {
   flex: 1;
+}
+
+@media (max-width: 560px) {
+  .actions { 
+    flex-direction: column; 
+  }
+  .actions > * { 
+    width: 100%;
+  }
 }
 
 .message {
@@ -168,6 +182,6 @@ body.page-off main.card {
   }
 
   .logo {
-    width: 96px;
+    width: 80px;
   }
 }
