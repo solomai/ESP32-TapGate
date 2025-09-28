@@ -1298,7 +1298,13 @@ static esp_err_t handle_root(httpd_req_t *req)
     return send_redirect(req, target);
 }
 
-// Catch-all handler for captive portal - redirects any unknown requests to admin portal
+// Custom URI matcher for true catch-all functionality  
+static bool catch_all_uri_matcher(const char *template, const char *uri, size_t len)
+{
+    // This catch-all matcher will match ANY URI that hasn't been handled by other handlers
+    // Since this is registered last, it only gets called if no other handler matched
+    return true;  // Match everything
+}
 static esp_err_t handle_catch_all(httpd_req_t *req)
 {
     const char *host_header = NULL;
@@ -1468,17 +1474,35 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_options_wildcard));
     LOGI(TAG, "Registered handler #%d: /api/* (OPTIONS)", handler_count++);
 
-    // Register single catch-all handler for captive portal (must be last!)
+    // Register true catch-all handler using custom URI matcher (must be last!)
     httpd_uri_t catch_all_handler = {
-        .uri = "/*",
-        .method = HTTP_GET,  // This will handle GET requests by default
+        .uri = "*",  // Template - not used due to custom matcher
+        .method = HTTP_GET,
         .handler = handle_catch_all,
         .user_ctx = NULL,
+        .is_websocket = false,
+        .handle_ws_control_frames = false,
+        .supported_subprotocol = NULL,
+        .uri_match_fn = catch_all_uri_matcher  // Custom matcher for true catch-all
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &catch_all_handler));
-    LOGI(TAG, "Registered handler #%d: /* (GET catch-all)", handler_count++);
+    LOGI(TAG, "Registered handler #%d: * (GET catch-all with custom matcher)", handler_count++);
 
-    LOGI(TAG, "Admin portal service registered with %d total handlers including captive portal", handler_count - 1);
+    // Also register catch-all for POST requests
+    httpd_uri_t catch_all_post_handler = {
+        .uri = "*",
+        .method = HTTP_POST,
+        .handler = handle_catch_all,
+        .user_ctx = NULL,
+        .is_websocket = false,
+        .handle_ws_control_frames = false,
+        .supported_subprotocol = NULL,
+        .uri_match_fn = catch_all_uri_matcher
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &catch_all_post_handler));
+    LOGI(TAG, "Registered handler #%d: * (POST catch-all with custom matcher)", handler_count++);
+
+    LOGI(TAG, "Admin portal service registered with %d total handlers including true catch-all", handler_count - 1);
     return ESP_OK;
 }
 
