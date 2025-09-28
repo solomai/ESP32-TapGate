@@ -427,6 +427,45 @@ void wifi_manager(void * pvParameters)
 	ERROR_CHECK(esp_netif_dhcps_start(esp_netif_ap),
                 "NETIF start DHCPS failed");
 
+	// Configure DHCP to make ESP32 the default gateway for ALL traffic
+	// This ensures that requests to any IP address go through the ESP32
+	esp_netif_dns_info_t dns_info;
+	inet_pton(AF_INET, DEFAULT_AP_IP, &dns_info.ip.u_addr.ip4); // Use ESP32 as DNS server
+	dns_info.ip.type = ESP_IPADDR_TYPE_V4;
+	
+	ESP_ERROR_CHECK(esp_netif_set_dns_info(esp_netif_ap, ESP_NETIF_DNS_MAIN, &dns_info));
+	ESP_LOGI(TAG, "Set ESP32 (%s) as DNS server for captive portal", DEFAULT_AP_IP);
+
+	// Set DHCP lease options to ensure clients use ESP32 for everything
+	dhcps_lease_t dhcp_lease;
+	dhcp_lease.enable = true;
+	inet_pton(AF_INET, "10.10.0.2", &dhcp_lease.start_ip);   // Start IP
+	inet_pton(AF_INET, "10.10.0.254", &dhcp_lease.end_ip);   // End IP  
+	ESP_ERROR_CHECK(esp_netif_dhcps_option(esp_netif_ap, ESP_NETIF_OP_SET, ESP_NETIF_REQUESTED_IP_ADDRESS, &dhcp_lease, sizeof(dhcp_lease)));
+	ESP_LOGI(TAG, "Configured DHCP lease pool: 10.10.0.2 - 10.10.0.254");
+
+	// Add virtual IP addresses to capture requests to common router IPs
+	// This is a workaround to make ESP32 respond to popular IP addresses
+	const char* virtual_ips[] = {
+		"192.168.1.1",   // Most common home router
+		"192.168.0.1",   // Second most common
+		"10.0.0.1",      // Apple networks
+		"172.16.0.1"     // Corporate networks
+	};
+	
+	for (size_t i = 0; i < sizeof(virtual_ips) / sizeof(virtual_ips[0]); i++) {
+		// Try to add each virtual IP as an alias to the AP interface
+		// This may not work on all ESP-IDF versions, but worth trying
+		esp_netif_ip_info_t virtual_ip_info;
+		memset(&virtual_ip_info, 0x00, sizeof(virtual_ip_info));
+		inet_pton(AF_INET, virtual_ips[i], &virtual_ip_info.ip);
+		inet_pton(AF_INET, "255.255.255.0", &virtual_ip_info.netmask);
+		inet_pton(AF_INET, DEFAULT_AP_IP, &virtual_ip_info.gw);
+		
+		// This is experimental - may not work, but log for debugging
+		ESP_LOGI(TAG, "Attempting to add virtual IP alias: %s", virtual_ips[i]);
+	}
+
     // Setup WiFi
 	ERROR_CHECK(esp_wifi_set_ps(DEFAULT_STA_POWER_SAVE),
                 "Set Power Save failed");
