@@ -438,6 +438,12 @@ static esp_err_t send_asset(httpd_req_t *req, const admin_portal_asset_t *asset)
 
 static esp_err_t send_initial_data_script(httpd_req_t *req)
 {
+    // Refresh SSID from wifi_manager to ensure it's current
+    char current_ssid[sizeof(g_state.ap_ssid)];
+    if (wifi_get_ap_ssid(current_ssid, sizeof(current_ssid))) {
+        admin_portal_state_set_ssid(&g_state, current_ssid);
+    }
+    
     const char *ssid = admin_portal_state_get_ssid(&g_state);
     bool has_password = admin_portal_state_has_password(&g_state);
     bool authorized = admin_portal_state_session_authorized(&g_state);
