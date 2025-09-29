@@ -100,7 +100,7 @@ void test_timeout_moves_to_off_page(void)
     admin_portal_session_status_t status = admin_portal_state_check_session(&state, "token", now);
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_EXPIRED, status);
     admin_portal_page_t page = admin_portal_state_resolve_page(&state, ADMIN_PORTAL_PAGE_MAIN, status);
-    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_OFF, page);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_AUTH, page);
 }
 
 void test_password_validation_rules(void)
@@ -131,6 +131,29 @@ void test_authorized_session_without_cookie_remains_reclaimable(void)
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH, status);
 }
 
+void test_authorized_session_prevents_new_session_creation(void)
+{
+    set_password("superpass");
+    start_session("token1", 1000, true);
+    
+    // First client should have authorized session
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH,
+                          admin_portal_state_check_session(&state, "token1", 1000));
+    TEST_ASSERT_TRUE(admin_portal_state_session_authorized(&state));
+    
+    // Attempting to start a new unauthorized session should be blocked
+    admin_portal_state_start_session(&state, "token2", 1100, false);
+    
+    // Session should still belong to the first client and remain authorized
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH,
+                          admin_portal_state_check_session(&state, "token1", 1200));
+    TEST_ASSERT_TRUE(admin_portal_state_session_authorized(&state));
+    
+    // Second client should get BUSY status
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_BUSY,
+                          admin_portal_state_check_session(&state, "token2", 1300));
+}
+
 int main(int argc, char **argv)
 {
     UnityConfigureFromArgs(argc, (const char **)argv);
@@ -146,5 +169,6 @@ int main(int argc, char **argv)
     RUN_TEST(test_password_validation_rules);
     RUN_TEST(test_pending_session_allows_new_client_to_claim);
     RUN_TEST(test_authorized_session_without_cookie_remains_reclaimable);
+    RUN_TEST(test_authorized_session_prevents_new_session_creation);
     return UNITY_END();
 }

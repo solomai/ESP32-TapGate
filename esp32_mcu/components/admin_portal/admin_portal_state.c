@@ -185,6 +185,11 @@ void admin_portal_state_start_session(admin_portal_state_t *state,
     if (!state || !token)
         return;
 
+    // Don't overwrite an existing authorized session with an unauthorized one
+    if (state->session.active && state->session.authorized && !authorized) {
+        return;
+    }
+
     state->session.active = true;
     state->session.authorized = authorized;
     state->session.claimed = false;
@@ -192,6 +197,9 @@ void admin_portal_state_start_session(admin_portal_state_t *state,
     size_t length = strnlen_safe(token, ADMIN_PORTAL_TOKEN_MAX_LEN);
     memcpy(state->session.token, token, length);
     state->session.token[length] = '\0';
+    
+    // Clear IP when using token-based session
+    memset(state->session.client_ip, 0, sizeof(state->session.client_ip));
 }
 
 void admin_portal_state_start_session_by_ip(admin_portal_state_t *state,
@@ -201,6 +209,11 @@ void admin_portal_state_start_session_by_ip(admin_portal_state_t *state,
 {
     if (!state || !client_ip)
         return;
+
+    // Don't overwrite an existing authorized session with an unauthorized one
+    if (state->session.active && state->session.authorized && !authorized) {
+        return;
+    }
 
     state->session.active = true;
     state->session.authorized = authorized;

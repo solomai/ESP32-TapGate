@@ -543,6 +543,14 @@ static admin_portal_session_status_t evaluate_unified_session(httpd_req_t *req, 
 static esp_err_t create_unified_session(httpd_req_t *req, char *token_buffer, size_t token_size)
 {
     uint64_t now = get_now_ms();
+    
+    // Check if there's already an active authorized session
+    if (admin_portal_state_session_authorized(&g_state)) {
+        // Don't create a new session if one is already authorized
+        // This prevents session takeover
+        return ESP_ERR_INVALID_STATE;
+    }
+    
     char new_token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
     generate_session_token(new_token);
     
@@ -689,7 +697,11 @@ static esp_err_t handle_session_info(httpd_req_t *req)
     }
 
     if (status == ADMIN_PORTAL_SESSION_NONE) {
-        create_unified_session(req, token, sizeof(token));
+        esp_err_t session_result = create_unified_session(req, token, sizeof(token));
+        if (session_result != ESP_OK) {
+            // Session creation failed due to existing authorized session
+            return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+        }
     }
 
     bool authorized = admin_portal_state_session_authorized(&g_state);
@@ -715,7 +727,11 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     }
 
     if (status == ADMIN_PORTAL_SESSION_NONE) {
-        create_unified_session(req, token, sizeof(token));
+        esp_err_t session_result = create_unified_session(req, token, sizeof(token));
+        if (session_result != ESP_OK) {
+            // Session creation failed due to existing authorized session
+            return send_redirect(req, ADMIN_PORTAL_PAGE_BUSY);
+        }
     }
 
     // Redirect to auth if password already exists
@@ -764,7 +780,11 @@ static esp_err_t handle_login(httpd_req_t *req)
     }
 
     if (status == ADMIN_PORTAL_SESSION_NONE) {
-        create_unified_session(req, token, sizeof(token));
+        esp_err_t session_result = create_unified_session(req, token, sizeof(token));
+        if (session_result != ESP_OK) {
+            // Session creation failed due to existing authorized session
+            return send_redirect(req, ADMIN_PORTAL_PAGE_BUSY);
+        }
     }
 
     if (!admin_portal_state_has_password(&g_state)) {
@@ -921,8 +941,16 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
     if (target != desc->page)
         return send_redirect(req, target);
 
-    if (status == ADMIN_PORTAL_SESSION_NONE && desc->page != ADMIN_PORTAL_PAGE_BUSY)
-        create_unified_session(req, token, sizeof(token));
+    // Only create session if none exists and page is not BUSY
+    // If there's an authorized session from another client, don't create a new one
+    if (status == ADMIN_PORTAL_SESSION_NONE && desc->page != ADMIN_PORTAL_PAGE_BUSY) {
+        esp_err_t session_result = create_unified_session(req, token, sizeof(token));
+        if (session_result != ESP_OK && desc->page != ADMIN_PORTAL_PAGE_BUSY) {
+            // Session creation failed (likely due to existing authorized session)
+            // Redirect to busy page
+            return send_redirect(req, ADMIN_PORTAL_PAGE_BUSY);
+        }
+    }
 
     return send_page_content(req, desc);
 }
