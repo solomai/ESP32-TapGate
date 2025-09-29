@@ -156,3 +156,6 @@ esp_netif_t* wifi_manager_get_esp_netif_ap();
 
 // stored wifi configuration. used by HTTP server
 esp_err_t wifi_manager_save_config();
+
+// trigger scan WiFi points. used by HTTP server
+void wifi_manager_scan_async();

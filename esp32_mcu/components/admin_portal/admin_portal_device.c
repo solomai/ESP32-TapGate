@@ -114,3 +114,8 @@ void session_set_idle_timeout(uint32_t timeout_value)
              ADMIN_PORTAL_KEY_IDLE_MIN, NVM_ADMIN_PORTAL_PARTITION, ADMIN_PORTAL_NAMESPACE);
     }
 }
+
+void trigger_scan_wifi()
+{
+    wifi_manager_scan_async();
+}

@@ -69,25 +69,25 @@ esp_err_t wifi_manager_set_callback(message_code_t message_code, void (*func_ptr
 	if(message_code < WM_MESSAGE_CODE_COUNT){
 		cb_ptr_arr[message_code] = func_ptr;
         return ESP_OK;
-	}
+    }
     return ESP_ERR_WIFI_NOT_INIT;
 }
 
 void wifi_manager_scan_async()
 {
-	wifi_manager_send_message(WM_ORDER_START_WIFI_SCAN, NULL);
+    wifi_manager_send_message(WM_ORDER_START_WIFI_SCAN, NULL);
 }
 
 void wifi_manager_disconnect_async()
 {
-	wifi_manager_send_message(WM_ORDER_DISCONNECT_STA, NULL);
+    wifi_manager_send_message(WM_ORDER_DISCONNECT_STA, NULL);
 }
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
-	if (event_base == WIFI_EVENT)
+    if (event_base == WIFI_EVENT)
     {
-		switch(event_id)
+        switch(event_id)
         {
             case WIFI_EVENT_WIFI_READY:
                 LOGI(TAG, "EVENT: WIFI_EVENT_WIFI_READY");
