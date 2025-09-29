@@ -544,10 +544,11 @@ static esp_err_t create_unified_session(httpd_req_t *req, char *token_buffer, si
 {
     uint64_t now = get_now_ms();
     
-    // Check if there's already an active authorized session
-    if (admin_portal_state_session_authorized(&g_state)) {
-        // Don't create a new session if one is already authorized
-        // This prevents session takeover
+    // Only prevent session creation if there's an authorized session AND password is set
+    // During enrollment (no password), multiple sessions should be allowed
+    if (admin_portal_state_session_authorized(&g_state) && admin_portal_state_has_password(&g_state)) {
+        // Don't create a new session if one is already authorized and password is set
+        // This prevents session takeover after enrollment is complete
         return ESP_ERR_INVALID_STATE;
     }
     

@@ -186,7 +186,9 @@ void admin_portal_state_start_session(admin_portal_state_t *state,
         return;
 
     // Don't overwrite an existing authorized session with an unauthorized one
-    if (state->session.active && state->session.authorized && !authorized) {
+    // UNLESS there's no password set (enrollment phase)
+    if (state->session.active && state->session.authorized && !authorized && 
+        admin_portal_state_has_password(state)) {
         return;
     }
 
@@ -211,7 +213,9 @@ void admin_portal_state_start_session_by_ip(admin_portal_state_t *state,
         return;
 
     // Don't overwrite an existing authorized session with an unauthorized one
-    if (state->session.active && state->session.authorized && !authorized) {
+    // UNLESS there's no password set (enrollment phase)
+    if (state->session.active && state->session.authorized && !authorized && 
+        admin_portal_state_has_password(state)) {
         return;
     }
 

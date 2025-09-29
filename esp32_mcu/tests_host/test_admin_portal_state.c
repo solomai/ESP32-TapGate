@@ -141,7 +141,7 @@ void test_authorized_session_prevents_new_session_creation(void)
                           admin_portal_state_check_session(&state, "token1", 1000));
     TEST_ASSERT_TRUE(admin_portal_state_session_authorized(&state));
     
-    // Attempting to start a new unauthorized session should be blocked
+    // Attempting to start a new unauthorized session should be blocked when password is set
     admin_portal_state_start_session(&state, "token2", 1100, false);
     
     // Session should still belong to the first client and remain authorized
@@ -152,6 +152,29 @@ void test_authorized_session_prevents_new_session_creation(void)
     // Second client should get BUSY status
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_BUSY,
                           admin_portal_state_check_session(&state, "token2", 1300));
+}
+
+void test_enrollment_allows_session_takeover_when_no_password(void)
+{
+    // During enrollment (no password), session takeover should be allowed
+    start_session("token1", 1000, false);  // Start with unauthorized session
+    
+    // First client should have session
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH,
+                          admin_portal_state_check_session(&state, "token1", 1000));
+    TEST_ASSERT_FALSE(admin_portal_state_session_authorized(&state));
+    
+    // Without password set, new session should be allowed to take over
+    admin_portal_state_start_session(&state, "token2", 1100, false);
+    
+    // Session should now belong to the second client
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH,
+                          admin_portal_state_check_session(&state, "token2", 1200));
+    TEST_ASSERT_FALSE(admin_portal_state_session_authorized(&state));
+    
+    // First client should no longer have valid session (token doesn't match)
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_NONE,
+                          admin_portal_state_check_session(&state, "token1", 1300));
 }
 
 int main(int argc, char **argv)
@@ -170,5 +193,6 @@ int main(int argc, char **argv)
     RUN_TEST(test_pending_session_allows_new_client_to_claim);
     RUN_TEST(test_authorized_session_without_cookie_remains_reclaimable);
     RUN_TEST(test_authorized_session_prevents_new_session_creation);
+    RUN_TEST(test_enrollment_allows_session_takeover_when_no_password);
     return UNITY_END();
 }
