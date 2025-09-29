@@ -547,6 +547,28 @@ static esp_err_t create_unified_session(httpd_req_t *req, char *token_buffer, si
     // Only prevent session creation if there's an authorized session AND password is set
     // During enrollment (no password), multiple sessions should be allowed
     if (admin_portal_state_session_authorized(&g_state) && admin_portal_state_has_password(&g_state)) {
+        // Check if this is the same client that has the authorized session (by IP)
+        char client_ip[16];
+        if (get_client_ip(req, client_ip, sizeof(client_ip))) {
+            // Allow the same IP to reconnect to their existing session
+            if (strlen(g_state.session.client_ip) > 0 && 
+                strcmp(g_state.session.client_ip, client_ip) == 0) {
+                LOGI(TAG, "Allowing same client IP %s to reconnect to existing session", client_ip);
+                // Generate new token for this session
+                char new_token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
+                generate_session_token(new_token);
+                
+                // Update session with new token but keep authorization
+                admin_portal_state_start_session(&g_state, new_token, now, true);
+                
+                if (token_buffer && token_size > 0) {
+                    strncpy(token_buffer, new_token, token_size - 1);
+                    token_buffer[token_size - 1] = '\0';
+                }
+                return ESP_OK;
+            }
+        }
+        
         // Don't create a new session if one is already authorized and password is set
         // This prevents session takeover after enrollment is complete
         return ESP_ERR_INVALID_STATE;

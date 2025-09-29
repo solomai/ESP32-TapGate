@@ -215,6 +215,30 @@ void test_clear_session_by_ip_wrong_ip(void)
     TEST_ASSERT_TRUE(admin_portal_state_session_authorized(&state));
 }
 
+void test_same_client_can_reconnect_after_enrollment(void)
+{
+    // Simulate enrollment process
+    admin_portal_state_start_session_by_ip(&state, "10.10.0.2", 1000, false);
+    
+    // Complete enrollment (set password and authorize)
+    set_password("superpass");
+    admin_portal_state_authorize_session(&state);
+    
+    // Verify session is authorized
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH,
+                          admin_portal_state_check_session_by_ip(&state, "10.10.0.2", 1100));
+    TEST_ASSERT_TRUE(admin_portal_state_session_authorized(&state));
+    
+    // Simulate the same client losing session data (cookie lost, page refresh, etc.)
+    // but making a new request from the same IP
+    admin_portal_state_start_session_by_ip(&state, "10.10.0.2", 1200, true);
+    
+    // Should still be authorized and accessible
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH,
+                          admin_portal_state_check_session_by_ip(&state, "10.10.0.2", 1300));
+    TEST_ASSERT_TRUE(admin_portal_state_session_authorized(&state));
+}
+
 int main(int argc, char **argv)
 {
     UnityConfigureFromArgs(argc, (const char **)argv);
@@ -234,5 +258,6 @@ int main(int argc, char **argv)
     RUN_TEST(test_enrollment_allows_session_takeover_when_no_password);
     RUN_TEST(test_clear_session_by_ip);
     RUN_TEST(test_clear_session_by_ip_wrong_ip);
+    RUN_TEST(test_same_client_can_reconnect_after_enrollment);
     return UNITY_END();
 }
