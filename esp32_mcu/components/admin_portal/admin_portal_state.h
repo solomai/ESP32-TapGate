@@ -109,6 +109,7 @@ void admin_portal_state_start_session_by_ip(admin_portal_state_t *state,
 void admin_portal_state_update_session(admin_portal_state_t *state, uint64_t now_ms);
 
 void admin_portal_state_clear_session(admin_portal_state_t *state);
+void admin_portal_state_clear_session_by_ip(admin_portal_state_t *state, const char *client_ip);
 
 void admin_portal_state_authorize_session(admin_portal_state_t *state);
 bool admin_portal_state_session_authorized(const admin_portal_state_t *state);

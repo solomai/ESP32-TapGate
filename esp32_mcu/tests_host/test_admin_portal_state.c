@@ -177,6 +177,44 @@ void test_enrollment_allows_session_takeover_when_no_password(void)
                           admin_portal_state_check_session(&state, "token1", 1300));
 }
 
+void test_clear_session_by_ip(void)
+{
+    set_password("superpass");
+    admin_portal_state_start_session_by_ip(&state, "10.10.0.2", 1000, true);
+    
+    // Session should be active
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH,
+                          admin_portal_state_check_session_by_ip(&state, "10.10.0.2", 1100));
+    TEST_ASSERT_TRUE(admin_portal_state_session_authorized(&state));
+    
+    // Clear session for the specific IP
+    admin_portal_state_clear_session_by_ip(&state, "10.10.0.2");
+    
+    // Session should be cleared
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_NONE,
+                          admin_portal_state_check_session_by_ip(&state, "10.10.0.2", 1200));
+    TEST_ASSERT_FALSE(admin_portal_state_session_authorized(&state));
+}
+
+void test_clear_session_by_ip_wrong_ip(void)
+{
+    set_password("superpass");
+    admin_portal_state_start_session_by_ip(&state, "10.10.0.2", 1000, true);
+    
+    // Session should be active
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH,
+                          admin_portal_state_check_session_by_ip(&state, "10.10.0.2", 1100));
+    TEST_ASSERT_TRUE(admin_portal_state_session_authorized(&state));
+    
+    // Clear session for a different IP - should not affect the session
+    admin_portal_state_clear_session_by_ip(&state, "10.10.0.3");
+    
+    // Session should still be active
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH,
+                          admin_portal_state_check_session_by_ip(&state, "10.10.0.2", 1200));
+    TEST_ASSERT_TRUE(admin_portal_state_session_authorized(&state));
+}
+
 int main(int argc, char **argv)
 {
     UnityConfigureFromArgs(argc, (const char **)argv);
@@ -194,5 +232,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_authorized_session_without_cookie_remains_reclaimable);
     RUN_TEST(test_authorized_session_prevents_new_session_creation);
     RUN_TEST(test_enrollment_allows_session_takeover_when_no_password);
+    RUN_TEST(test_clear_session_by_ip);
+    RUN_TEST(test_clear_session_by_ip_wrong_ip);
     return UNITY_END();
 }

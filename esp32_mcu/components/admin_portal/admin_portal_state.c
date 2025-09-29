@@ -271,6 +271,19 @@ void admin_portal_state_clear_session(admin_portal_state_t *state)
     memset(&state->session, 0, sizeof(state->session));
 }
 
+void admin_portal_state_clear_session_by_ip(admin_portal_state_t *state, const char *client_ip)
+{
+    if (!state || !client_ip || !state->session.active)
+        return;
+
+    // Only clear session if it belongs to the specified IP
+    if (strlen(state->session.client_ip) > 0 && 
+        strcmp(state->session.client_ip, client_ip) == 0) {
+        LOGI(TAG, "Clearing session for disconnected client IP: %s", client_ip);
+        memset(&state->session, 0, sizeof(state->session));
+    }
+}
+
 void admin_portal_state_authorize_session(admin_portal_state_t *state)
 {
     if (!state)

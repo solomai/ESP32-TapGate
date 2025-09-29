@@ -9,11 +9,13 @@
 // admin portal
 #include "dns_server.h"
 #include "http_server.h"
+#include "http_service.h"
 
 // ESP-IDF networking stack
 #include "esp_netif.h"
 #include "esp_event.h"
 #include "esp_wifi.h"
+#include "esp_mac.h"
 
 // NVM
 #include "nvs_flash.h"
@@ -122,8 +124,16 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
                 LOGI(TAG, "EVENT: WIFI_EVENT_AP_STACONNECTED");
                 break;
             case WIFI_EVENT_AP_STADISCONNECTED:
-                LOGI(TAG, "EVENT: WIFI_EVENT_AP_STADISCONNECTED");
+            {
+                wifi_event_ap_stadisconnected_t* event = (wifi_event_ap_stadisconnected_t*) event_data;
+                LOGI(TAG, "EVENT: WIFI_EVENT_AP_STADISCONNECTED - MAC: " MACSTR, MAC2STR(event->mac));
+                
+                // We need to find the IP address associated with this MAC address
+                // For now, we'll clear all sessions since we can't easily map MAC to IP
+                // In a future improvement, we could maintain a MAC->IP mapping table
+                admin_portal_notify_client_disconnected(NULL);
                 break;
+            }
             case WIFI_EVENT_AP_PROBEREQRECVED:
                 LOGI(TAG, "EVENT: WIFI_EVENT_AP_PROBEREQRECVED");
                 break;

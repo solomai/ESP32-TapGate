@@ -1119,3 +1119,14 @@ void admin_portal_http_service_stop(void)
     admin_portal_state_clear_session(&g_state);
 }
 
+void admin_portal_notify_client_disconnected(const char *client_ip)
+{
+    if (client_ip) {
+        LOGI(TAG, "Client disconnected notification: %s", client_ip);
+        admin_portal_state_clear_session_by_ip(&g_state, client_ip);
+    } else {
+        LOGI(TAG, "Client disconnected - clearing all sessions due to MAC->IP mapping unavailable");
+        admin_portal_state_clear_session(&g_state);
+    }
+}
+
