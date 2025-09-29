@@ -243,7 +243,13 @@ admin_portal_session_status_t admin_portal_state_check_session_by_ip(admin_porta
 
     // Check if session is from the same IP
     if (strcmp(state->session.client_ip, client_ip) != 0) {
-        return ADMIN_PORTAL_SESSION_BUSY; // Different client has session
+        // Only return BUSY if session is authorized AND password is set
+        // During enrollment (no password), allow multiple clients
+        if (state->session.authorized && admin_portal_state_has_password(state)) {
+            return ADMIN_PORTAL_SESSION_BUSY; // Different client has authorized session
+        } else {
+            return ADMIN_PORTAL_SESSION_NONE; // Allow multiple sessions during enrollment
+        }
     }
 
     // Check timeout using helper function

@@ -517,10 +517,16 @@ static admin_portal_session_status_t evaluate_unified_session(httpd_req_t *req, 
     uint64_t now = get_now_ms();
     admin_portal_session_status_t status = ADMIN_PORTAL_SESSION_NONE;
     
+    char client_ip[16] = {0};
+    get_client_ip(req, client_ip, sizeof(client_ip));
+    
     // Try IP-based session first (mobile-friendly)
-    char client_ip[16];
-    if (get_client_ip(req, client_ip, sizeof(client_ip))) {
+    if (strlen(client_ip) > 0) {
         status = admin_portal_state_check_session_by_ip(&g_state, client_ip, now);
+        LOGI(TAG, "evaluate_unified_session: IP %s check result: %s", client_ip, 
+             status == ADMIN_PORTAL_SESSION_MATCH ? "MATCH" : 
+             status == ADMIN_PORTAL_SESSION_BUSY ? "BUSY" : "NONE");
+             
         if (status == ADMIN_PORTAL_SESSION_MATCH) {
             admin_portal_state_update_session(&g_state, now);
             return status;
@@ -531,6 +537,11 @@ static admin_portal_session_status_t evaluate_unified_session(httpd_req_t *req, 
     if (status == ADMIN_PORTAL_SESSION_NONE) {
         bool has_token = get_session_token(req, token_buffer, token_size);
         status = admin_portal_state_check_session(&g_state, has_token ? token_buffer : NULL, now);
+        LOGI(TAG, "evaluate_unified_session: Cookie check (has_token=%s) result: %s", 
+             has_token ? "yes" : "no",
+             status == ADMIN_PORTAL_SESSION_MATCH ? "MATCH" : 
+             status == ADMIN_PORTAL_SESSION_BUSY ? "BUSY" : "NONE");
+             
         if (status == ADMIN_PORTAL_SESSION_MATCH) {
             admin_portal_state_update_session(&g_state, now);
         }
@@ -544,9 +555,19 @@ static esp_err_t create_unified_session(httpd_req_t *req, char *token_buffer, si
 {
     uint64_t now = get_now_ms();
     
+    char client_ip[16] = {0};
+    get_client_ip(req, client_ip, sizeof(client_ip));
+    
+    bool has_authorized_session = admin_portal_state_session_authorized(&g_state);
+    bool has_password = admin_portal_state_has_password(&g_state);
+    
+    LOGI(TAG, "create_unified_session: client_ip=%s, has_authorized_session=%s, has_password=%s", 
+         client_ip, has_authorized_session ? "yes" : "no", has_password ? "yes" : "no");
+    
     // Only prevent session creation if there's an authorized session AND password is set
     // During enrollment (no password), multiple sessions should be allowed
-    if (admin_portal_state_session_authorized(&g_state) && admin_portal_state_has_password(&g_state)) {
+    if (has_authorized_session && has_password) {
+    if (has_authorized_session && has_password) {
         // Check if this is the same client that has the authorized session (by IP)
         char client_ip[16];
         if (get_client_ip(req, client_ip, sizeof(client_ip))) {
@@ -569,17 +590,19 @@ static esp_err_t create_unified_session(httpd_req_t *req, char *token_buffer, si
             }
         }
         
+        LOGI(TAG, "Blocking session creation: authorized session exists from different IP %s", g_state.session.client_ip);
         // Don't create a new session if one is already authorized and password is set
         // This prevents session takeover after enrollment is complete
         return ESP_ERR_INVALID_STATE;
     }
     
+    LOGI(TAG, "Creating new session for client IP %s", client_ip);
+    
     char new_token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
     generate_session_token(new_token);
     
     // Create IP-based session if IP is available
-    char client_ip[16];
-    if (get_client_ip(req, client_ip, sizeof(client_ip))) {
+    if (strlen(client_ip) > 0) {
         admin_portal_state_start_session_by_ip(&g_state, client_ip, now, false);
     }
     
