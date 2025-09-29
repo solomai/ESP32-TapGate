@@ -8,14 +8,35 @@
 
 static const char *TAG = "AdminPortal";
 
+// Helper function to safely measure string length
 static size_t strnlen_safe(const char *str, size_t max_len)
 {
+    if (!str) return 0;
+    
     size_t len = 0;
-    if (!str)
-        return 0;
-    while (len < max_len && str[len] != '\0')
+    while (len < max_len && str[len] != '\0') {
         ++len;
+    }
     return len;
+}
+
+// Helper function to validate IP address format (basic validation)
+static bool is_valid_ip(const char *ip)
+{
+    if (!ip || strlen(ip) < 7 || strlen(ip) > 15) return false;
+    // Basic check: should not be 0.0.0.0 or localhost
+    return strcmp(ip, "0.0.0.0") != 0 && strcmp(ip, "127.0.0.1") != 0;
+}
+
+// Helper function to check if session has timed out
+static bool is_session_expired(const admin_portal_state_t *state, uint64_t now_ms)
+{
+    if (!state || !state->session.active || state->inactivity_timeout_ms == 0) {
+        return false;
+    }
+    
+    uint64_t elapsed = now_ms - state->session.last_activity_ms;
+    return elapsed >= state->inactivity_timeout_ms;
 }
 
 static const char *const page_routes[] = {
@@ -200,25 +221,19 @@ admin_portal_session_status_t admin_portal_state_check_session_by_ip(admin_porta
                                                                      const char *client_ip,
                                                                      uint64_t now_ms)
 {
-    if (!state || !client_ip)
+    if (!state || !client_ip || !state->session.active) {
         return ADMIN_PORTAL_SESSION_NONE;
-
-    if (!state->session.active)
-        return ADMIN_PORTAL_SESSION_NONE;
+    }
 
     // Check if session is from the same IP
-    if (strcmp(state->session.client_ip, client_ip) != 0)
+    if (strcmp(state->session.client_ip, client_ip) != 0) {
         return ADMIN_PORTAL_SESSION_BUSY; // Different client has session
+    }
 
-    // Check timeout
-    if (state->inactivity_timeout_ms > 0)
-    {
-        uint64_t elapsed = now_ms - state->session.last_activity_ms;
-        if (elapsed > state->inactivity_timeout_ms)
-        {
-            admin_portal_state_clear_session(state);
-            return ADMIN_PORTAL_SESSION_EXPIRED;
-        }
+    // Check timeout using helper function
+    if (is_session_expired(state, now_ms)) {
+        admin_portal_state_clear_session(state);
+        return ADMIN_PORTAL_SESSION_EXPIRED;
     }
 
     return ADMIN_PORTAL_SESSION_MATCH;
