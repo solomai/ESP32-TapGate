@@ -171,6 +171,29 @@ nav.menu .button-link {
   width: 100%;
 }
 
+.logoff-section {
+  margin-top: 32px; /* Height of one button plus some extra spacing */
+  border-top: 1px solid #1f2a37;
+  padding-top: 24px;
+}
+
+.logoff-btn {
+  width: 100%;
+  background: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #ef4444 !important;
+}
+
+.logoff-btn:hover,
+.logoff-btn:focus {
+  background: #374151 !important;
+  border-color: #4b5563 !important;
+}
+
+.logoff-btn:active {
+  background: #111827 !important;
+}
+
 body.page-busy main.card,
 body.page-off main.card {
   max-width: 480px;
