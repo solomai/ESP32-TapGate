@@ -49,7 +49,6 @@ static const char *const page_routes[] = {
     [ADMIN_PORTAL_PAGE_EVENTS] = "/events/",
     [ADMIN_PORTAL_PAGE_MAIN] = "/main/",
     [ADMIN_PORTAL_PAGE_BUSY] = "/busy/",
-    [ADMIN_PORTAL_PAGE_OFF] = "/off/",
 };
 
 void admin_portal_state_init(admin_portal_state_t *state,
@@ -294,7 +293,7 @@ admin_portal_page_t admin_portal_state_resolve_page(const admin_portal_state_t *
         return ADMIN_PORTAL_PAGE_BUSY;
 
     if (session_status == ADMIN_PORTAL_SESSION_EXPIRED)
-        return ADMIN_PORTAL_PAGE_OFF;
+        return ADMIN_PORTAL_PAGE_AUTH;
 
     // Enroll admin first. redirect to enroll page.
     if (!password_set)
@@ -315,6 +314,13 @@ admin_portal_page_t admin_portal_state_resolve_page(const admin_portal_state_t *
 
     // No reason open Auth page in the case autorized. redirect to main page.
     if (requested_page == ADMIN_PORTAL_PAGE_AUTH)
+    {
+        if (session_status == ADMIN_PORTAL_SESSION_MATCH && authorized)
+            requested_page = ADMIN_PORTAL_PAGE_MAIN;
+    }
+
+    // Authenticated users should not access busy page - redirect to main
+    if (requested_page == ADMIN_PORTAL_PAGE_BUSY)
     {
         if (session_status == ADMIN_PORTAL_SESSION_MATCH && authorized)
             requested_page = ADMIN_PORTAL_PAGE_MAIN;

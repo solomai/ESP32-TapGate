@@ -294,6 +294,51 @@
         }
       });
     });
+    
+    // Attach logoff button handler
+    const logoffBtn = document.getElementById("logoff-btn");
+    if (logoffBtn) {
+      console.log("Attaching logoff button handler");
+      logoffBtn.addEventListener("click", handleLogoff);
+    }
+  }
+
+  function handleLogoff(event) {
+    event.preventDefault();
+    console.log("Logoff button clicked");
+    
+    const button = event.target;
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = "Logging off...";
+    
+    fetch('/api/logoff', {
+      method: 'POST',
+      credentials: 'include'
+    })
+    .then(response => {
+      console.log(`Logoff response: ${response.status}`);
+      if (response.redirected) {
+        console.log("Browser followed redirect automatically");
+        window.location.href = response.url;
+        return;
+      }
+      
+      if (response.ok || [301, 302, 303, 307, 308].includes(response.status)) {
+        console.log("Logoff successful, redirecting to auth page");
+        window.location.href = "/auth/";
+        return;
+      }
+      
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    })
+    .catch(error => {
+      console.error('Logoff error:', error);
+      // Restore button state on error
+      button.disabled = false;
+      button.textContent = originalText;
+      alert("Error logging off. Please try again.");
+    });
   }
 
   function ensureRequiredElements() {

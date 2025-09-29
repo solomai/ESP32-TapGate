@@ -24,7 +24,6 @@
 #include "pages/page_enroll.h"
 #include "pages/page_events.h"
 #include "pages/page_main.h"
-#include "pages/page_off.h"
 #include "pages/page_wifi.h"
 
 static const char *TAG = "AdminPortal";
@@ -52,7 +51,6 @@ static const admin_portal_page_descriptor_t *const g_pages[] = {
     &admin_portal_page_events,
     &admin_portal_page_main,
     &admin_portal_page_busy,
-    &admin_portal_page_off,
 };
 
 extern const uint8_t _binary_logo_png_start[];
@@ -125,8 +123,6 @@ static const char *page_name(admin_portal_page_t page)
             return "main";
         case ADMIN_PORTAL_PAGE_BUSY:
             return "busy";
-        case ADMIN_PORTAL_PAGE_OFF:
-            return "off";
         default:
             return "unknown";
     }
@@ -689,7 +685,7 @@ static esp_err_t handle_session_info(httpd_req_t *req)
     if (status == ADMIN_PORTAL_SESSION_EXPIRED) {
         admin_portal_state_clear_session(&g_state);
         set_session_cookie(req, NULL, 0);
-        return send_json(req, "200 OK", "{\"status\":\"expired\",\"redirect\":\"/off/\"}");
+        return send_json(req, "200 OK", "{\"status\":\"expired\",\"redirect\":\"/auth/\"}");
     }
 
     if (status == ADMIN_PORTAL_SESSION_NONE) {
@@ -799,6 +795,22 @@ static esp_err_t handle_login(httpd_req_t *req)
     return send_redirect(req, ADMIN_PORTAL_PAGE_MAIN);
 }
 
+static esp_err_t handle_logoff(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
+
+    // Clear session regardless of current status
+    admin_portal_state_clear_session(&g_state);
+    
+    // Clear session cookie
+    set_session_cookie(req, NULL, 0);
+    
+    LOGI(TAG, "User logged off - session cleared");
+    
+    return send_redirect(req, ADMIN_PORTAL_PAGE_AUTH);
+}
+
 static esp_err_t handle_change_password(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
@@ -902,22 +914,14 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
 
     if (!admin_portal_state_has_password(&g_state) &&
         target != ADMIN_PORTAL_PAGE_ENROLL &&
-        target != ADMIN_PORTAL_PAGE_BUSY &&
-        target != ADMIN_PORTAL_PAGE_OFF) {
+        target != ADMIN_PORTAL_PAGE_BUSY) {
         target = ADMIN_PORTAL_PAGE_ENROLL;
-    }
-
-    if (target == ADMIN_PORTAL_PAGE_OFF && status == ADMIN_PORTAL_SESSION_EXPIRED)
-    {
-        admin_portal_state_clear_session(&g_state);
-        set_session_cookie(req, NULL, 0);
-        LOGI(TAG, "Session expired while requesting %s; clearing cookie", desc->route);
     }
 
     if (target != desc->page)
         return send_redirect(req, target);
 
-    if (status == ADMIN_PORTAL_SESSION_NONE && desc->page != ADMIN_PORTAL_PAGE_BUSY && desc->page != ADMIN_PORTAL_PAGE_OFF)
+    if (status == ADMIN_PORTAL_SESSION_NONE && desc->page != ADMIN_PORTAL_PAGE_BUSY)
         create_unified_session(req, token, sizeof(token));
 
     return send_page_content(req, desc);
@@ -934,14 +938,8 @@ static esp_err_t handle_root(httpd_req_t *req)
 
     if (!admin_portal_state_has_password(&g_state) &&
         target != ADMIN_PORTAL_PAGE_ENROLL &&
-        target != ADMIN_PORTAL_PAGE_BUSY &&
-        target != ADMIN_PORTAL_PAGE_OFF) {
+        target != ADMIN_PORTAL_PAGE_BUSY) {
         target = ADMIN_PORTAL_PAGE_ENROLL;
-    }
-
-    if (target == ADMIN_PORTAL_PAGE_OFF && status == ADMIN_PORTAL_SESSION_EXPIRED) {
-        admin_portal_state_clear_session(&g_state);
-        set_session_cookie(req, NULL, 0);
     }
 
     return send_redirect(req, target);
@@ -1045,6 +1043,14 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_login));
+
+    httpd_uri_t api_logoff = {
+        .uri = "/api/logoff",
+        .method = HTTP_POST,
+        .handler = handle_logoff,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_logoff));
 
     httpd_uri_t api_change = {
         .uri = "/api/change-password",

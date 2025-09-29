@@ -17,7 +17,6 @@ typedef enum {
     ADMIN_PORTAL_PAGE_EVENTS,
     ADMIN_PORTAL_PAGE_MAIN,
     ADMIN_PORTAL_PAGE_BUSY,
-    ADMIN_PORTAL_PAGE_OFF,
     ADMIN_PORTAL_PAGE_COUNT
 } admin_portal_page_t;
 static inline const char* admin_portal_page_to_str(admin_portal_page_t page)
@@ -33,7 +32,6 @@ static inline const char* admin_portal_page_to_str(admin_portal_page_t page)
         case ADMIN_PORTAL_PAGE_EVENTS:          return "EVENTS";
         case ADMIN_PORTAL_PAGE_MAIN:            return "MAIN";
         case ADMIN_PORTAL_PAGE_BUSY:            return "BUSY";
-        case ADMIN_PORTAL_PAGE_OFF:             return "OFF";
         case ADMIN_PORTAL_PAGE_COUNT:           return "COUNT";
         default:                                return "UNKNOWN";
     }
