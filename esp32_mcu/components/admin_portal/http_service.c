@@ -474,10 +474,7 @@ static esp_err_t send_page_content(httpd_req_t *req, const admin_portal_page_des
     set_cache_headers(req);
     httpd_resp_set_type(req, desc->content_type);
     httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
-    
-    // Add CORS headers for mobile compatibility
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "http://10.10.0.1");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
+    set_cors_headers(req);
     
     size_t length = (size_t)(desc->asset_end - desc->asset_start);
     return httpd_resp_send(req, (const char *)desc->asset_start, length);
@@ -567,71 +564,6 @@ static esp_err_t create_unified_session(httpd_req_t *req, char *token_buffer, si
         token_buffer[token_size - 1] = '\0';
     }
     
-    return ESP_OK;
-}
-
-// Create session using hybrid approach (IP-based + cookie fallback)
-static esp_err_t ensure_session_claim(httpd_req_t *req,
-                                      admin_portal_session_status_t *status,
-                                      char *token_buffer,
-                                      size_t token_size)
-{
-    if (!status || !token_buffer)
-        return ESP_ERR_INVALID_ARG;
-
-    if (*status != ADMIN_PORTAL_SESSION_NONE)
-    {
-        LOGI(TAG, "Session already exists, not creating new session");
-        return ESP_OK;
-    }
-
-    LOGI(TAG, "Creating new hybrid session claim (IP + cookie)");
-    
-    // Try to get client IP for IP-based session
-    char client_ip[16];
-    bool has_ip = get_client_ip(req, client_ip, sizeof(client_ip));
-    
-    uint64_t now = get_now_ms();
-    
-    if (has_ip)
-    {
-        // Create IP-based session (mobile-friendly)
-        admin_portal_state_start_session_by_ip(&g_state, client_ip, now, false);
-        LOGI(TAG, "Created IP-based session for client: %s", client_ip);
-    }
-    
-    // Also create cookie-based session for desktop browsers
-    char new_token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
-    generate_session_token(new_token);
-    LOGI(TAG, "Generated session token: %.8s...", new_token);
-    
-    admin_portal_state_start_session(&g_state, new_token, now, false);
-    uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
-    
-    // For API endpoints, cookie will be set after authorization to avoid duplicate headers
-    // For GET requests (pages), set cookie immediately for desktop compatibility
-    bool is_api_request = req && req->uri[0] != '\0' && strstr(req->uri, "/api/") != NULL;
-    
-    if (!is_api_request)
-    {
-        LOGI(TAG, "Setting session cookie for page request: %s", req ? req->uri : "<null>");
-        set_session_cookie(req, new_token, max_age);
-    }
-    else
-    {
-        LOGI(TAG, "API request detected, cookie will be set after authorization: %s", req ? req->uri : "<null>");
-    }
-    
-    LOGI(TAG,
-         "Hybrid session started for URI %s (IP=%s, max_age=%" PRIu32 " s)",
-         req ? req->uri : "<null>",
-         has_ip ? client_ip : "unavailable",
-         max_age);
-    
-    strncpy(token_buffer, new_token, token_size - 1);
-    token_buffer[token_size - 1] = '\0';
-    *status = ADMIN_PORTAL_SESSION_MATCH;
-    LOGI(TAG, "Hybrid session claim completed successfully");
     return ESP_OK;
 }
 
@@ -828,91 +760,41 @@ static esp_err_t handle_enroll(httpd_req_t *req)
 
 static esp_err_t handle_login(httpd_req_t *req)
 {
-    // Use IP-based session evaluation with cookie fallback
-    admin_portal_session_status_t status = evaluate_session_by_ip(req);
-    
-    // If IP-based fails, try cookie-based for desktop browsers
-    if (status == ADMIN_PORTAL_SESSION_NONE)
-    {
-        char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-        status = evaluate_session(req, token, sizeof(token));
-    }
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
 
-    LOGI(TAG,
-         "API /api/login: status=%s has_password=%s authorized=%s",
-         session_status_name(status),
-         admin_portal_state_has_password(&g_state) ? "true" : "false",
-         admin_portal_state_session_authorized(&g_state) ? "true" : "false");
-
-    if (status == ADMIN_PORTAL_SESSION_BUSY)
-    {
-        LOGI(TAG, "Login denied: portal busy");
+    if (status == ADMIN_PORTAL_SESSION_BUSY) {
         return send_redirect(req, ADMIN_PORTAL_PAGE_BUSY);
     }
 
-    // Start simple session if needed (with IP if available, fallback to cookie-only)
-    if (status == ADMIN_PORTAL_SESSION_NONE)
-    {
-        char client_ip[16];
-        bool has_ip = get_client_ip(req, client_ip, sizeof(client_ip));
-        
-        uint64_t now = get_now_ms();
-        
-        if (has_ip && strlen(client_ip) > 0 && strcmp(client_ip, "0.0.0.0") != 0) {
-            admin_portal_state_start_session_by_ip(&g_state, client_ip, now, false);
-            LOGI(TAG, "Started IP-based session for login client: %s", client_ip);
-        } else {
-            // Fallback: start simple session without IP
-            char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
-            generate_session_token(token);
-            admin_portal_state_start_session(&g_state, token, now, false);
-            LOGI(TAG, "Started simple session for login (no valid IP)");
-        }
+    if (status == ADMIN_PORTAL_SESSION_NONE) {
+        create_unified_session(req, token, sizeof(token));
     }
 
-    if (!admin_portal_state_has_password(&g_state))
-    {
-        LOGI(TAG, "Login redirected to enroll because password missing");
+    if (!admin_portal_state_has_password(&g_state)) {
         return send_redirect(req, ADMIN_PORTAL_PAGE_ENROLL);
     }
 
     char *body = read_body(req);
-    if (!body)
-    {
-        LOGI(TAG, "Login failed: request body missing");
+    if (!body) {
         return send_redirect(req, ADMIN_PORTAL_PAGE_AUTH);
     }
 
     char password[sizeof(g_state.ap_password)];
     bool has_password = form_get_field(body, "password", password, sizeof(password));
     
-    LOGI(TAG, "Login form data: has_password=%s", has_password ? "yes" : "no");
-#ifdef DIAGNOSTIC_VERSION
-    LOGI(TAG, "Password length: %zu", has_password ? strlen(password) : 0);
-#endif
-    
     free(body);
 
-    if (!has_password || !admin_portal_state_password_matches(&g_state, password))
-    {
-        LOGI(TAG, "Login failed: %s", 
-             !has_password ? "password missing" : "wrong password");
+    if (!has_password || !admin_portal_state_password_matches(&g_state, password)) {
         return send_redirect(req, ADMIN_PORTAL_PAGE_AUTH);
     }
 
-    LOGI(TAG, "Authorizing session after login");
     admin_portal_state_authorize_session(&g_state);
     
-    bool is_authorized = admin_portal_state_session_authorized(&g_state);
-    LOGI(TAG, "Session authorization status: %s", is_authorized ? "authorized" : "not_authorized");
-    
-    // Set session cookie for desktop browsers (mobile will use IP-based session)
-    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
-    generate_session_token(token);
-    uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
+    // Set session cookie for desktop browsers
+    uint32_t max_age = g_state.inactivity_timeout_ms ? 
+                       (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
     set_session_cookie(req, token, max_age);
-    
-    LOGI(TAG, "Login successful, redirecting to main page");
     
     return send_redirect(req, ADMIN_PORTAL_PAGE_MAIN);
 }
@@ -920,20 +802,13 @@ static esp_err_t handle_login(httpd_req_t *req)
 static esp_err_t handle_change_password(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
-    LOGI(TAG,
-         "API /api/change-password: status=%s authorized=%s",
-         session_status_name(status),
-         admin_portal_state_session_authorized(&g_state) ? "true" : "false");
+    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
 
-    if (status == ADMIN_PORTAL_SESSION_BUSY)
-    {
-        LOGI(TAG, "Change password denied: portal busy");
+    if (status == ADMIN_PORTAL_SESSION_BUSY) {
         return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
     }
-    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state))
-    {
-        LOGI(TAG, "Change password denied: unauthorized session");
+    
+    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state)) {
         return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
     }
 
@@ -980,20 +855,13 @@ static esp_err_t handle_change_password(httpd_req_t *req)
 static esp_err_t handle_update_device(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
-    LOGI(TAG,
-         "API /api/device: status=%s authorized=%s",
-         session_status_name(status),
-         admin_portal_state_session_authorized(&g_state) ? "true" : "false");
+    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
 
-    if (status == ADMIN_PORTAL_SESSION_BUSY)
-    {
-        LOGI(TAG, "Device update denied: portal busy");
+    if (status == ADMIN_PORTAL_SESSION_BUSY) {
         return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
     }
-    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state))
-    {
-        LOGI(TAG, "Device update denied: unauthorized session");
+    
+    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state)) {
         return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
     }
 
@@ -1027,38 +895,17 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
     if (!desc)
         return ESP_ERR_INVALID_ARG;
 
-    // Try IP-based session first (mobile-friendly), fallback to cookies (desktop)
-    admin_portal_session_status_t status = evaluate_session_by_ip(req);
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    
-    if (status == ADMIN_PORTAL_SESSION_NONE)
-    {
-        status = evaluate_session(req, token, sizeof(token));
-        LOGI(TAG, "IP-based session failed, trying cookie-based: %s", session_status_name(status));
-    }
-    else
-    {
-        LOGI(TAG, "Using IP-based session: %s", session_status_name(status));
-    }
+    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
     
     admin_portal_page_t target = admin_portal_state_resolve_page(&g_state, desc->page, status);
-    LOGI(TAG, "Handle page request resolve page: %s", admin_portal_page_to_str(target));
 
     if (!admin_portal_state_has_password(&g_state) &&
         target != ADMIN_PORTAL_PAGE_ENROLL &&
         target != ADMIN_PORTAL_PAGE_BUSY &&
-        target != ADMIN_PORTAL_PAGE_OFF)
-    {
-        LOGI(TAG, "Password missing, forcing redirect to enroll page");
+        target != ADMIN_PORTAL_PAGE_OFF) {
         target = ADMIN_PORTAL_PAGE_ENROLL;
     }
-
-    LOGI(TAG,
-         "GET %s: session=%s authorized=%s resolved=%s",
-         desc->route,
-         session_status_name(status),
-         admin_portal_state_session_authorized(&g_state) ? "true" : "false",
-         page_name(target));
 
     if (target == ADMIN_PORTAL_PAGE_OFF && status == ADMIN_PORTAL_SESSION_EXPIRED)
     {
@@ -1071,9 +918,8 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
         return send_redirect(req, target);
 
     if (status == ADMIN_PORTAL_SESSION_NONE && desc->page != ADMIN_PORTAL_PAGE_BUSY && desc->page != ADMIN_PORTAL_PAGE_OFF)
-        ensure_session_claim(req, &status, token, sizeof(token));
+        create_unified_session(req, token, sizeof(token));
 
-    LOGI(TAG, "Serving page %s", page_name(desc->page));
     return send_page_content(req, desc);
 }
 
@@ -1081,43 +927,21 @@ static esp_err_t handle_root(httpd_req_t *req)
 {
     const admin_portal_page_descriptor_t *main_page = &admin_portal_page_main;
     
-    // Try IP-based session first (mobile-friendly), fallback to cookies (desktop)
-    admin_portal_session_status_t status = evaluate_session_by_ip(req);
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    
-    if (status == ADMIN_PORTAL_SESSION_NONE)
-    {
-        status = evaluate_session(req, token, sizeof(token));
-        LOGI(TAG, "IP-based session failed for root, trying cookie-based: %s", session_status_name(status));
-    }
-    else
-    {
-        LOGI(TAG, "Using IP-based session for root: %s", session_status_name(status));
-    }
+    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
     
     admin_portal_page_t target = admin_portal_state_resolve_page(&g_state, main_page->page, status);
-    LOGI(TAG, "Handle root resolve page: %s", admin_portal_page_to_str(target));
 
     if (!admin_portal_state_has_password(&g_state) &&
         target != ADMIN_PORTAL_PAGE_ENROLL &&
         target != ADMIN_PORTAL_PAGE_BUSY &&
-        target != ADMIN_PORTAL_PAGE_OFF)
-    {
-        LOGI(TAG, "Password missing on root request, redirecting to enroll");
+        target != ADMIN_PORTAL_PAGE_OFF) {
         target = ADMIN_PORTAL_PAGE_ENROLL;
     }
 
-    LOGI(TAG,
-         "GET /: session=%s authorized=%s resolved=%s",
-         session_status_name(status),
-         admin_portal_state_session_authorized(&g_state) ? "true" : "false",
-         page_name(target));
-
-    if (target == ADMIN_PORTAL_PAGE_OFF && status == ADMIN_PORTAL_SESSION_EXPIRED)
-    {
+    if (target == ADMIN_PORTAL_PAGE_OFF && status == ADMIN_PORTAL_SESSION_EXPIRED) {
         admin_portal_state_clear_session(&g_state);
         set_session_cookie(req, NULL, 0);
-        LOGI(TAG, "Session expired on root request; clearing cookie");
     }
 
     return send_redirect(req, target);
