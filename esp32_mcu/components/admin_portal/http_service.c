@@ -85,6 +85,24 @@ static const char *session_status_name(admin_portal_session_status_t status)
     }
 }
 
+// Helper function to set common CORS headers for mobile compatibility
+static void set_cors_headers(httpd_req_t *req)
+{
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "http://10.10.0.1");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Cookie, Authorization");
+}
+
+// Helper function to set CORS headers with additional exposed headers
+static void set_cors_headers_with_expose(httpd_req_t *req, const char *expose_headers)
+{
+    set_cors_headers(req);
+    if (expose_headers) {
+        httpd_resp_set_hdr(req, "Access-Control-Expose-Headers", expose_headers);
+    }
+}
+
 static const char *page_name(admin_portal_page_t page)
 {
     switch (page)
@@ -119,61 +137,40 @@ static uint64_t get_now_ms(void)
     return esp_timer_get_time() / 1000ULL;
 }
 
-// Get client IP address from HTTP request
+// Simplified client IP detection with reduced logging
 static bool get_client_ip(httpd_req_t *req, char *ip_buffer, size_t buffer_size)
 {
     if (!req || !ip_buffer || buffer_size < 16)
         return false;
 
-    // Try ESP-IDF specific way first - X-Forwarded-For header
+    // Try X-Forwarded-For header first
     size_t len = httpd_req_get_hdr_value_len(req, "X-Forwarded-For");
     if (len > 0 && len < buffer_size) {
         if (httpd_req_get_hdr_value_str(req, "X-Forwarded-For", ip_buffer, buffer_size) == ESP_OK) {
-            LOGI(TAG, "Got client IP from X-Forwarded-For: %s", ip_buffer);
             return true;
         }
     }
 
-    // Try X-Real-IP header (common in proxies)
+    // Try X-Real-IP header
     len = httpd_req_get_hdr_value_len(req, "X-Real-IP");
     if (len > 0 && len < buffer_size) {
         if (httpd_req_get_hdr_value_str(req, "X-Real-IP", ip_buffer, buffer_size) == ESP_OK) {
-            LOGI(TAG, "Got client IP from X-Real-IP: %s", ip_buffer);
             return true;
         }
     }
 
-    // Fallback to socket method
-    int sockfd = httpd_req_to_sockfd(req);
-    if (sockfd < 0) {
-        LOGW(TAG, "Failed to get socket descriptor from request");
-        return false;
-    }
-
-    // Try both getpeername (peer address) and getsockname (local address)
-    struct sockaddr_in addr;
-    socklen_t addr_len = sizeof(addr);
-    
-    // First try getpeername (remote peer address)
-    if (getpeername(sockfd, (struct sockaddr*)&addr, &addr_len) == 0) {
-        if (inet_ntop(AF_INET, &addr.sin_addr, ip_buffer, buffer_size) != NULL) {
-            // Validate the IP is not 0.0.0.0 or localhost
-            if (strcmp(ip_buffer, "0.0.0.0") != 0 && strcmp(ip_buffer, "127.0.0.1") != 0) {
-                LOGI(TAG, "Got client IP from getpeername: %s", ip_buffer);
-                return true;
-            }
-        }
-    }
-    
-    // ESP32 AP mode often can't detect client IP properly via socket calls
-    // For single-user admin portal, use a consistent mobile client identifier
-    LOGW(TAG, "Socket-based IP detection failed, using mobile client identifier");
-    
-    // For mobile browsers connecting to ESP32 AP, use a consistent identifier
-    // This ensures session consistency across requests
-    strncpy(ip_buffer, "10.10.0.100", buffer_size - 1);  // Fixed mobile client ID
+    // For ESP32 AP mode, socket-based detection often fails
+    // Use a consistent mobile client identifier to avoid warnings
+    strncpy(ip_buffer, "10.10.0.100", buffer_size - 1);
     ip_buffer[buffer_size - 1] = '\0';
-    LOGI(TAG, "Using fixed mobile client identifier: %s", ip_buffer);
+    
+    // Log only once to reduce log noise
+    static bool logged_fallback = false;
+    if (!logged_fallback) {
+        LOGW(TAG, "Using fixed mobile client identifier for session consistency");
+        logged_fallback = true;
+    }
+    
     return true;
 }
 
@@ -486,142 +483,91 @@ static esp_err_t send_page_content(httpd_req_t *req, const admin_portal_page_des
     return httpd_resp_send(req, (const char *)desc->asset_start, length);
 }
 
+// Helper function for redirects with CORS headers
 static esp_err_t send_redirect(httpd_req_t *req, admin_portal_page_t page)
 {
     const char *location = admin_portal_state_page_route(page);
-    if (!location)
-        location = "/";
-    LOGI(TAG,
-         "Redirecting request for %s to %s (page=%s)",
-         req ? req->uri : "<null>",
-         location,
-         page_name(page));
+    if (!location) location = "/";
+    
     httpd_resp_set_status(req, "302 Found");
     httpd_resp_set_hdr(req, "Location", location);
-    
-    // Add CORS headers for mobile compatibility (allow JavaScript to read Location header)
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
-    httpd_resp_set_hdr(req, "Access-Control-Expose-Headers", "Location, Set-Cookie");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Cookie, Authorization");
-    
+    set_cors_headers_with_expose(req, "Location, Set-Cookie");
     set_cache_headers(req);
     
-    LOGI(TAG, "Redirect response headers set, sending empty body");
     return httpd_resp_send(req, "", 0);
 }
 
 // CORS preflight handler for mobile browser compatibility
 static esp_err_t handle_options(httpd_req_t *req)
 {
-    LOGI(TAG, "Handling OPTIONS request for CORS preflight: %s", req->uri);
-    
     httpd_resp_set_status(req, "200 OK");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "http://10.10.0.1");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Cookie, Authorization");
+    set_cors_headers(req);
     httpd_resp_set_hdr(req, "Access-Control-Max-Age", "86400"); // 24 hours
     
     return httpd_resp_send(req, "", 0);
 }
 
+// Helper function for JSON responses with proper CORS headers
 static esp_err_t send_json(httpd_req_t *req, const char *status_text, const char *body)
 {
-    LOGI(TAG, "Sending JSON response: status=%s, body_length=%zu", 
-         status_text, body ? strlen(body) : 0);
-#ifdef DIAGNOSTIC_VERSION
-    LOGI(TAG, "JSON Response body: %s", body ? body : "<null>");
-#endif
-    
     httpd_resp_set_status(req, status_text);
     httpd_resp_set_type(req, "application/json");
-    
-    // Add CORS headers to allow credentials (mobile-compatible)
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "http://10.10.0.1");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
-    httpd_resp_set_hdr(req, "Access-Control-Expose-Headers", "Set-Cookie");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Cookie");
-    
+    set_cors_headers_with_expose(req, "Set-Cookie");
     set_cache_headers(req);
     
-    esp_err_t result = httpd_resp_send(req, body, HTTPD_RESP_USE_STRLEN);
-    LOGI(TAG, "JSON response sent: result=%s", esp_err_to_name(result));
-    return result;
+    return httpd_resp_send(req, body, HTTPD_RESP_USE_STRLEN);
 }
 
-static admin_portal_session_status_t evaluate_session(httpd_req_t *req,
-                                                      char *token_buffer,
-                                                      size_t token_size)
+// Unified session evaluation with both IP and token-based checking
+static admin_portal_session_status_t evaluate_unified_session(httpd_req_t *req, char *token_buffer, size_t token_size)
 {
-    bool has_token = get_session_token(req, token_buffer, token_size);
     uint64_t now = get_now_ms();
+    admin_portal_session_status_t status = ADMIN_PORTAL_SESSION_NONE;
     
-    LOGI(TAG, "Evaluating session: has_token=%s, now=%" PRIu64 "ms", 
-         has_token ? "yes" : "no", now);
-    
-    admin_portal_session_status_t status = admin_portal_state_check_session(&g_state, has_token ? token_buffer : NULL, now);
-    
-    LOGI(TAG, "Session evaluation result: status=%s", session_status_name(status));
-    
-    if (status == ADMIN_PORTAL_SESSION_MATCH)
-    {
-        admin_portal_state_update_session(&g_state, now);
-        LOGI(TAG, "Session updated with current timestamp");
-    }
-    
-    return status;
-}
-
-// Simple session evaluation (simplified for single-client admin portal)
-static admin_portal_session_status_t evaluate_session_by_ip(httpd_req_t *req)
-{
+    // Try IP-based session first (mobile-friendly)
     char client_ip[16];
-    bool has_ip = get_client_ip(req, client_ip, sizeof(client_ip));
-    uint64_t now = get_now_ms();
-    
-    LOGI(TAG, "Evaluating simple session: client_ip=%s, now=%" PRIu64 "ms", 
-         has_ip ? client_ip : "unknown", now);
-    
-    // For admin portal, we allow only single session, so just check if any session exists
-    admin_portal_session_status_t status;
-    
-    if (has_ip && strlen(client_ip) > 0 && strcmp(client_ip, "0.0.0.0") != 0) {
-        // Use IP-based check if we have valid IP
+    if (get_client_ip(req, client_ip, sizeof(client_ip))) {
         status = admin_portal_state_check_session_by_ip(&g_state, client_ip, now);
-    } else {
-        // Fallback: just check if any session is active (admin portal = single user)
-        if (g_state.session.active) {
-            // Check timeout
-            if (g_state.inactivity_timeout_ms > 0) {
-                uint64_t elapsed = now - g_state.session.last_activity_ms;
-                if (elapsed > g_state.inactivity_timeout_ms) {
-                    admin_portal_state_clear_session(&g_state);
-                    status = ADMIN_PORTAL_SESSION_EXPIRED;
-                } else {
-                    status = ADMIN_PORTAL_SESSION_MATCH;
-                }
-            } else {
-                status = ADMIN_PORTAL_SESSION_MATCH;
-            }
-        } else {
-            status = ADMIN_PORTAL_SESSION_NONE;
+        if (status == ADMIN_PORTAL_SESSION_MATCH) {
+            admin_portal_state_update_session(&g_state, now);
+            return status;
         }
-        LOGI(TAG, "Using session fallback (no valid IP), session active=%s", 
-             g_state.session.active ? "yes" : "no");
     }
     
-    LOGI(TAG, "Simple session evaluation result: status=%s", session_status_name(status));
-    
-    if (status == ADMIN_PORTAL_SESSION_MATCH)
-    {
-        admin_portal_state_update_session(&g_state, now);
-        LOGI(TAG, "Session updated with current timestamp");
+    // Fallback to cookie-based session (desktop browsers)
+    if (status == ADMIN_PORTAL_SESSION_NONE) {
+        bool has_token = get_session_token(req, token_buffer, token_size);
+        status = admin_portal_state_check_session(&g_state, has_token ? token_buffer : NULL, now);
+        if (status == ADMIN_PORTAL_SESSION_MATCH) {
+            admin_portal_state_update_session(&g_state, now);
+        }
     }
     
     return status;
+}
+
+// Create a new session with both IP and cookie support
+static esp_err_t create_unified_session(httpd_req_t *req, char *token_buffer, size_t token_size)
+{
+    uint64_t now = get_now_ms();
+    char new_token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
+    generate_session_token(new_token);
+    
+    // Create IP-based session if IP is available
+    char client_ip[16];
+    if (get_client_ip(req, client_ip, sizeof(client_ip))) {
+        admin_portal_state_start_session_by_ip(&g_state, client_ip, now, false);
+    }
+    
+    // Always create cookie-based session for desktop compatibility
+    admin_portal_state_start_session(&g_state, new_token, now, false);
+    
+    if (token_buffer && token_size > 0) {
+        strncpy(token_buffer, new_token, token_size - 1);
+        token_buffer[token_size - 1] = '\0';
+    }
+    
+    return ESP_OK;
 }
 
 // Create session using hybrid approach (IP-based + cookie fallback)
@@ -802,32 +748,20 @@ static char *read_body(httpd_req_t *req)
 static esp_err_t handle_session_info(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
 
-    LOGI(TAG,
-         "handle_session_info: API /api/session: status=%s authorized=%s claimed=%s",
-         session_status_name(status),
-         admin_portal_state_session_authorized(&g_state) ? "true" : "false",
-         g_state.session.claimed ? "true" : "false");
-
-    if (status == ADMIN_PORTAL_SESSION_BUSY)
-    {
-        LOGI(TAG, "handle_session_info: API /api/session response: busy");
+    if (status == ADMIN_PORTAL_SESSION_BUSY) {
         return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
     }
 
-    if (status == ADMIN_PORTAL_SESSION_EXPIRED)
-    {
+    if (status == ADMIN_PORTAL_SESSION_EXPIRED) {
         admin_portal_state_clear_session(&g_state);
         set_session_cookie(req, NULL, 0);
-        LOGI(TAG, "handle_session_info: Session expired, redirecting to off page");
         return send_json(req, "200 OK", "{\"status\":\"expired\",\"redirect\":\"/off/\"}");
     }
 
-    if (status == ADMIN_PORTAL_SESSION_NONE)
-    {
-        ensure_session_claim(req, &status, token, sizeof(token));
-        LOGI(TAG, "handle_session_info: API /api/session issued new token after claim");
+    if (status == ADMIN_PORTAL_SESSION_NONE) {
+        create_unified_session(req, token, sizeof(token));
     }
 
     bool authorized = admin_portal_state_session_authorized(&g_state);
@@ -839,69 +773,30 @@ static esp_err_t handle_session_info(httpd_req_t *req)
              authorized ? "true" : "false",
              has_password ? "true" : "false",
              admin_portal_state_get_ssid(&g_state));
-    LOGI(TAG, "handle_session_info: API /api/session response: authorized=%s, has_password=%s, AP SSID=%s",
-                authorized ? "true" : "false",
-                has_password ? "true" : "false",
-                admin_portal_state_get_ssid(&g_state));
+    
     return send_json(req, "200 OK", response);
 }
 
 static esp_err_t handle_enroll(httpd_req_t *req)
 {
-    // Use IP-based session evaluation with cookie fallback
-    admin_portal_session_status_t status = evaluate_session_by_ip(req);
-    
-    // If IP-based fails, try cookie-based for desktop browsers
-    if (status == ADMIN_PORTAL_SESSION_NONE)
-    {
-        char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-        status = evaluate_session(req, token, sizeof(token));
-    }
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
 
-    LOGI(TAG,
-         "API /api/enroll: status=%s has_password=%s",
-         session_status_name(status),
-         admin_portal_state_has_password(&g_state) ? "true" : "false");
-
-    // Handle busy portal
-    if (status == ADMIN_PORTAL_SESSION_BUSY)
-    {
-        LOGI(TAG, "Enrollment denied: portal busy");
+    if (status == ADMIN_PORTAL_SESSION_BUSY) {
         return send_redirect(req, ADMIN_PORTAL_PAGE_BUSY);
     }
 
-    // Start simple session if needed (with IP if available, fallback to cookie-only)
-    if (status == ADMIN_PORTAL_SESSION_NONE)
-    {
-        char client_ip[16];
-        bool has_ip = get_client_ip(req, client_ip, sizeof(client_ip));
-        
-        uint64_t now = get_now_ms();
-        
-        if (has_ip && strlen(client_ip) > 0 && strcmp(client_ip, "0.0.0.0") != 0) {
-            admin_portal_state_start_session_by_ip(&g_state, client_ip, now, false);
-            LOGI(TAG, "Started IP-based session for client: %s", client_ip);
-        } else {
-            // Fallback: start simple session without IP
-            char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
-            generate_session_token(token);
-            admin_portal_state_start_session(&g_state, token, now, false);
-            LOGI(TAG, "Started simple session (no valid IP)");
-        }
+    if (status == ADMIN_PORTAL_SESSION_NONE) {
+        create_unified_session(req, token, sizeof(token));
     }
 
     // Redirect to auth if password already exists
-    if (admin_portal_state_has_password(&g_state))
-    {
-        LOGI(TAG, "Enrollment redirected to auth because password already set");
+    if (admin_portal_state_has_password(&g_state)) {
         return send_redirect(req, ADMIN_PORTAL_PAGE_AUTH);
     }
 
     char *body = read_body(req);
-    if (!body)
-    {
-        LOGI(TAG, "Enrollment failed: request body missing");
-        // Return to enroll page with error - could be handled by query param
+    if (!body) {
         return send_redirect(req, ADMIN_PORTAL_PAGE_ENROLL);
     }
 
@@ -910,52 +805,24 @@ static esp_err_t handle_enroll(httpd_req_t *req)
     bool has_portal_name = form_get_field(body, "portal", portal_name, sizeof(portal_name));
     bool has_password = form_get_field(body, "password", password, sizeof(password));
     
-    LOGI(TAG, "Enrollment form data: has_portal_name=%s, has_password=%s", 
-         has_portal_name ? "yes" : "no", has_password ? "yes" : "no");
-#ifdef DIAGNOSTIC_VERSION
-    LOGI(TAG, "Portal name: \"%s\", password length: %zu", 
-         has_portal_name ? portal_name : "<missing>", 
-         has_password ? strlen(password) : 0);
-#endif
-    
     free(body);
 
-    if (!has_portal_name || portal_name[0] == '\0')
-    {
-        LOGI(TAG, "Enrollment failed: portal name missing");
-        return send_redirect(req, ADMIN_PORTAL_PAGE_ENROLL);
-    }
-
-    if (!has_password || !admin_portal_state_password_valid(&g_state, password))
-    {
-        LOGI(TAG,
-             "Enrollment failed: %s",
-             has_password ? "password does not meet requirements" : "password missing");
+    if (!has_portal_name || portal_name[0] == '\0' ||
+        !has_password || !admin_portal_state_password_valid(&g_state, password)) {
         return send_redirect(req, ADMIN_PORTAL_PAGE_ENROLL);
     }
 
     wifi_set_ap_ssid(portal_name);
     wifi_set_ap_password(password);
-
     admin_portal_state_set_ssid(&g_state, portal_name);
     admin_portal_state_set_password(&g_state, password);
-    
-    LOGI(TAG, "Authorizing session after enrollment");
     admin_portal_state_authorize_session(&g_state);
     
-    bool is_authorized = admin_portal_state_session_authorized(&g_state);
-    LOGI(TAG, "Session authorization status: %s", is_authorized ? "authorized" : "not_authorized");
-    
-    wifi_set_ap_password(password);
-
-    // Set session cookie for desktop browsers (mobile will use IP-based session)
-    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
-    generate_session_token(token);
-    uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
+    // Set session cookie for desktop browsers
+    uint32_t max_age = g_state.inactivity_timeout_ms ? 
+                       (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;
     set_session_cookie(req, token, max_age);
 
-    LOGI(TAG, "Enrollment successful, redirecting to main page (AP SSID=\"%s\")", portal_name);
-    
     return send_redirect(req, ADMIN_PORTAL_PAGE_MAIN);
 }
 
