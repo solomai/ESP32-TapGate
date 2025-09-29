@@ -287,7 +287,7 @@ admin_portal_page_t admin_portal_state_resolve_page(const admin_portal_state_t *
         state?"yes":"NULL");
 
     if (!state)
-        return ADMIN_PORTAL_PAGE_OFF;
+        return ADMIN_PORTAL_PAGE_AUTH;
 
     if (session_status == ADMIN_PORTAL_SESSION_BUSY)
         return ADMIN_PORTAL_PAGE_BUSY;
