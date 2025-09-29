@@ -854,7 +854,6 @@ static esp_err_t handle_change_password(httpd_req_t *req)
     wifi_set_ap_password(next);
     admin_portal_state_set_password(&g_state, next);
     admin_portal_state_authorize_session(&g_state);
-    wifi_set_ap_password(next);
 
     // Set session cookie BEFORE sending response to ensure authorized session is maintained
     uint32_t max_age = g_state.inactivity_timeout_ms ? (uint32_t)(g_state.inactivity_timeout_ms / 1000UL) : 60U;

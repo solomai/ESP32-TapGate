@@ -157,6 +157,27 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base, int32_t eve
 // Store wifi_settings to NVM
 esp_err_t wifi_manager_save_config()
 {
+    LOGI(TAG,"Store WiFi configuration to NVM");
+
+#ifdef DIAGNOSTIC_VERSION
+    ESP_LOGI(TAG, "Current WiFi configuration:\n"
+        "\t\tAP SSID: \"%s\"\n"
+        "\t\tAP pwd: \"%s\"\n"
+        "\t\tAP channel: %i\n"
+        "\t\tAP hidden: %s\n"
+        "\t\tAP bandwidth (1 = 20MHz, 2 = 40MHz): %i\n"
+        "\t\tSTA SSID: \"%s\"\n"
+        "\t\tSTA pwd: \"%s\"",
+        wifi_settings.ap_ssid,
+        wifi_settings.ap_pwd,
+        wifi_settings.ap_channel,
+        (wifi_settings.ap_ssid_hidden ? "yes" : "no"),
+        wifi_settings.ap_bandwidth,
+        wifi_settings.sta_ssid,
+        wifi_settings.sta_pwd
+    );
+#endif
+
     static const char *LOG_FMT_FAILED_SAVE = "Failed saving %s to NVM \"%s\":\"%s\" error: %s";
     nvs_handle_t handle;
     esp_err_t err = nvs_open_from_partition(NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, NVS_READWRITE, &handle);
@@ -166,75 +187,87 @@ esp_err_t wifi_manager_save_config()
         memset(&tmp_conf, 0x00, sizeof(tmp_conf));
 
         // Save AP SSID with check that value changed
-        size_t size = sizeof(wifi_settings.ap_ssid);
+        size_t size = sizeof(tmp_conf.ap_ssid);
         err = nvs_get_str(handle, STORE_NVM_KEY_AP_SSID, tmp_conf.ap_ssid, &size);
-        if(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND)
-            if(strcmp( (char*)tmp_conf.ap_ssid, (char*)wifi_settings.ap_ssid) != 0)
-                err = nvs_set_str(handle, STORE_NVM_KEY_AP_SSID, wifi_settings.ap_ssid);
-        if (err!=ESP_OK)
-            LOGE(TAG, LOG_FMT_FAILED_SAVE,
-                STORE_NVM_KEY_AP_SSID, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+        if((err == ESP_OK && strcmp(tmp_conf.ap_ssid, wifi_settings.ap_ssid) != 0) || 
+            err == ESP_ERR_NVS_NOT_FOUND)
+        {
+            err = nvs_set_str(handle, STORE_NVM_KEY_AP_SSID, wifi_settings.ap_ssid);
+            if(err != ESP_OK)
+                LOGE(TAG, LOG_FMT_FAILED_SAVE,
+                    STORE_NVM_KEY_AP_SSID, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+        }
 
         // Save AP Password with check that value changed
         size = sizeof(wifi_settings.ap_pwd);
         err = nvs_get_str(handle, STORE_NVM_KEY_AP_PSW, tmp_conf.ap_pwd, &size);
-        if(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND)
-            if(strcmp( (char*)tmp_conf.ap_pwd, (char*)wifi_settings.ap_pwd) != 0)
-                err = nvs_set_str(handle, STORE_NVM_KEY_AP_PSW, wifi_settings.ap_pwd);
-        if (err!=ESP_OK)
-            LOGE(TAG, LOG_FMT_FAILED_SAVE,
-                STORE_NVM_KEY_AP_PSW, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+        if((err == ESP_OK && strcmp(tmp_conf.ap_pwd, wifi_settings.ap_pwd) != 0) || 
+            err == ESP_ERR_NVS_NOT_FOUND)
+        {
+            err = nvs_set_str(handle, STORE_NVM_KEY_AP_PSW, wifi_settings.ap_pwd);
+            if (err!=ESP_OK)
+                LOGE(TAG, LOG_FMT_FAILED_SAVE,
+                    STORE_NVM_KEY_AP_PSW, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+        }
 
         // Save STA SSID with check that value changed
         size = sizeof(wifi_settings.sta_ssid);
         err = nvs_get_str(handle, STORE_NVM_KEY_STA_SSID, tmp_conf.sta_ssid, &size);
-        if(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND)
-            if(strcmp( (char*)tmp_conf.sta_ssid, (char*)wifi_settings.sta_ssid) != 0)
-                err = nvs_set_str(handle, STORE_NVM_KEY_STA_SSID, wifi_settings.sta_ssid);
-        if (err!=ESP_OK)
-            LOGE(TAG, LOG_FMT_FAILED_SAVE,
-                STORE_NVM_KEY_STA_SSID, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+        if((err == ESP_OK && strcmp(tmp_conf.sta_ssid, wifi_settings.sta_ssid) != 0) || 
+            err == ESP_ERR_NVS_NOT_FOUND)
+        {
+            err = nvs_set_str(handle, STORE_NVM_KEY_STA_SSID, wifi_settings.sta_ssid);
+            if (err!=ESP_OK)
+                LOGE(TAG, LOG_FMT_FAILED_SAVE,
+                    STORE_NVM_KEY_STA_SSID, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+        }
 
         // Save STA Password with check that value changed
         size = sizeof(wifi_settings.sta_pwd);
         err = nvs_get_str(handle, STORE_NVM_KEY_STA_PSW, tmp_conf.sta_pwd, &size);
-        if(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND)
-            if(strcmp( (char*)tmp_conf.sta_pwd, (char*)wifi_settings.sta_pwd) != 0)
-                err = nvs_set_str(handle, STORE_NVM_KEY_STA_PSW, wifi_settings.sta_pwd);
-        if (err!=ESP_OK)
-            LOGE(TAG, LOG_FMT_FAILED_SAVE,
-                STORE_NVM_KEY_STA_PSW, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+        if((err == ESP_OK && strcmp(tmp_conf.sta_pwd, wifi_settings.sta_pwd) != 0) || 
+            err == ESP_ERR_NVS_NOT_FOUND)
+        {
+            err = nvs_set_str(handle, STORE_NVM_KEY_STA_PSW, wifi_settings.sta_pwd);
+            if (err!=ESP_OK)
+                LOGE(TAG, LOG_FMT_FAILED_SAVE,
+                    STORE_NVM_KEY_STA_PSW, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+        }
 
         // Save AP channel
         err = nvs_get_u8(handle, STORE_NVM_KEY_AP_CHANNEL, &tmp_conf.ap_channel);
-        if(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND)
-            if(tmp_conf.ap_channel != wifi_settings.ap_channel)
-                err = nvs_set_u8(handle, STORE_NVM_KEY_AP_CHANNEL, tmp_conf.ap_channel);
-        if (err!=ESP_OK)
-            LOGE(TAG, LOG_FMT_FAILED_SAVE,
-                STORE_NVM_KEY_AP_CHANNEL, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+        if((err == ESP_OK && tmp_conf.ap_channel != wifi_settings.ap_channel) ||
+            err == ESP_ERR_NVS_NOT_FOUND)
+        {
+            err = nvs_set_u8(handle, STORE_NVM_KEY_AP_CHANNEL, tmp_conf.ap_channel);
+            if (err!=ESP_OK)
+                LOGE(TAG, LOG_FMT_FAILED_SAVE,
+                    STORE_NVM_KEY_AP_CHANNEL, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+        }
 
         // Save hidden flag
         err = nvs_get_u8(handle, STORE_NVM_KEY_AP_SSID_HIDDEN, &tmp_conf.ap_ssid_hidden);
-        if(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND)
-            if(tmp_conf.ap_ssid_hidden != wifi_settings.ap_ssid_hidden)
-                err = nvs_set_u8(handle, STORE_NVM_KEY_AP_SSID_HIDDEN, tmp_conf.ap_ssid_hidden);
-        if (err!=ESP_OK)
-            LOGE(TAG, LOG_FMT_FAILED_SAVE,
-                STORE_NVM_KEY_AP_SSID_HIDDEN, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+        if((err == ESP_OK && tmp_conf.ap_ssid_hidden != wifi_settings.ap_ssid_hidden)|| 
+            err == ESP_ERR_NVS_NOT_FOUND)
+        {
+            err = nvs_set_u8(handle, STORE_NVM_KEY_AP_SSID_HIDDEN, tmp_conf.ap_ssid_hidden);
+            if (err!=ESP_OK)
+                LOGE(TAG, LOG_FMT_FAILED_SAVE,
+                    STORE_NVM_KEY_AP_SSID_HIDDEN, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+        }
 
         // Save AP bandwidth
         uint8_t value = DEFAULT_AP_BANDWIDTH;
         err = nvs_get_u8(handle, STORE_NVM_KEY_AP_BANDWIDTH, &value);
-        if(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND)
-            if(value != wifi_settings.ap_bandwidth)
-            {
-                value = (uint8_t)wifi_settings.ap_bandwidth;
-                err = nvs_set_u8(handle, STORE_NVM_KEY_AP_BANDWIDTH, value);
-            }
-        if (err!=ESP_OK)
-            LOGE(TAG, LOG_FMT_FAILED_SAVE,
-                STORE_NVM_KEY_AP_BANDWIDTH, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+        if((err == ESP_OK && value != wifi_settings.ap_bandwidth) ||
+            err == ESP_ERR_NVS_NOT_FOUND)
+        {
+            value = (uint8_t)wifi_settings.ap_bandwidth;
+            err = nvs_set_u8(handle, STORE_NVM_KEY_AP_BANDWIDTH, value);
+            if (err!=ESP_OK)
+                LOGE(TAG, LOG_FMT_FAILED_SAVE,
+                    STORE_NVM_KEY_AP_BANDWIDTH, NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, esp_err_to_name(err));
+        }
     }
 
     if (err == ESP_OK)
@@ -246,6 +279,7 @@ esp_err_t wifi_manager_save_config()
 // Load from NVM or Default for wifi_settings
 esp_err_t wifi_manager_load_config()
 {
+    LOGI(TAG,"Load WiFi configuration from NVM");
     nvs_handle_t handle;
     esp_err_t err = nvs_open_from_partition(NVM_WIFI_PARTITION, NVM_WIFI_NAMESPACE, NVS_READONLY, &handle);
     if(err==ESP_OK) {
@@ -313,7 +347,7 @@ esp_err_t wifi_manager_load_config()
     }
 
 #ifdef DIAGNOSTIC_VERSION
-    ESP_LOGI(TAG, "current WiFi configuration %s\n"
+    ESP_LOGI(TAG, "Current WiFi configuration %s\n"
         "\t\tAP SSID: \"%s\"\n"
         "\t\tAP pwd: \"%s\"\n"
         "\t\tAP channel: %i\n"
