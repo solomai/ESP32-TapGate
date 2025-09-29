@@ -567,9 +567,7 @@ static esp_err_t create_unified_session(httpd_req_t *req, char *token_buffer, si
     // Only prevent session creation if there's an authorized session AND password is set
     // During enrollment (no password), multiple sessions should be allowed
     if (has_authorized_session && has_password) {
-    if (has_authorized_session && has_password) {
         // Check if this is the same client that has the authorized session (by IP)
-        char client_ip[16];
         if (get_client_ip(req, client_ip, sizeof(client_ip))) {
             // Allow the same IP to reconnect to their existing session
             if (strlen(g_state.session.client_ip) > 0 && 
