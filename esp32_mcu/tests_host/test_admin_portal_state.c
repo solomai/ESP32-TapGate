@@ -83,6 +83,54 @@ void test_busy_state_blocks_other_clients(void)
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_BUSY, page);
 }
 
+void test_ip_based_session_blocks_other_ips_when_authorized(void)
+{
+    set_password("superpass");
+    admin_portal_state_start_session_by_ip(&state, "192.168.1.10", 1000, true);
+    
+    // Same IP should work
+    admin_portal_session_status_t status = admin_portal_state_check_session_by_ip(&state, "192.168.1.10", 1100);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH, status);
+    
+    // Different IP should be blocked when session is authorized
+    status = admin_portal_state_check_session_by_ip(&state, "192.168.1.20", 1200);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_BUSY, status);
+}
+
+void test_ip_based_session_allows_takeover_when_not_authorized(void)
+{
+    // No password set, unauthorized session
+    admin_portal_state_start_session_by_ip(&state, "192.168.1.10", 1000, false);
+    
+    // Different IP should be able to take over when session is not authorized and no password
+    admin_portal_session_status_t status = admin_portal_state_check_session_by_ip(&state, "192.168.1.20", 1200);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_NONE, status);
+}
+
+void test_token_session_blocks_other_tokens_when_authorized(void)
+{
+    set_password("superpass");
+    start_session("token1", 1000, true);
+    
+    // Same token should work
+    admin_portal_session_status_t status = admin_portal_state_check_session(&state, "token1", 1100);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH, status);
+    
+    // Different token should be blocked when session is authorized
+    status = admin_portal_state_check_session(&state, "token2", 1200);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_BUSY, status);
+}
+
+void test_token_session_allows_takeover_when_not_authorized(void)
+{
+    // No password set, unauthorized session
+    start_session("token1", 1000, false);
+    
+    // Different token should be able to take over when session is not authorized and no password
+    admin_portal_session_status_t status = admin_portal_state_check_session(&state, "token2", 1200);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_NONE, status);
+}
+
 void test_enroll_session_takeover_when_no_password(void)
 {
     start_session("token", 1000, false);
@@ -100,7 +148,7 @@ void test_timeout_moves_to_off_page(void)
     admin_portal_session_status_t status = admin_portal_state_check_session(&state, "token", now);
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_EXPIRED, status);
     admin_portal_page_t page = admin_portal_state_resolve_page(&state, ADMIN_PORTAL_PAGE_MAIN, status);
-    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_OFF, page);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_AUTH, page);
 }
 
 void test_password_validation_rules(void)
@@ -141,6 +189,10 @@ int main(int argc, char **argv)
     RUN_TEST(test_main_access_when_authorized);
     RUN_TEST(test_enroll_redirects_to_auth_when_password_exists);
     RUN_TEST(test_busy_state_blocks_other_clients);
+    RUN_TEST(test_ip_based_session_blocks_other_ips_when_authorized);
+    RUN_TEST(test_ip_based_session_allows_takeover_when_not_authorized);
+    RUN_TEST(test_token_session_blocks_other_tokens_when_authorized);
+    RUN_TEST(test_token_session_allows_takeover_when_not_authorized);
     RUN_TEST(test_enroll_session_takeover_when_no_password);
     RUN_TEST(test_timeout_moves_to_off_page);
     RUN_TEST(test_password_validation_rules);

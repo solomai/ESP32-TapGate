@@ -112,6 +112,7 @@ void admin_portal_state_clear_session(admin_portal_state_t *state);
 
 void admin_portal_state_authorize_session(admin_portal_state_t *state);
 bool admin_portal_state_session_authorized(const admin_portal_state_t *state);
+bool admin_portal_state_has_active_session(const admin_portal_state_t *state);
 
 admin_portal_page_t admin_portal_state_resolve_page(const admin_portal_state_t *state,
                                                     admin_portal_page_t requested_page,

@@ -169,9 +169,11 @@ admin_portal_session_status_t admin_portal_state_check_session(admin_portal_stat
 
     if (!token || strncmp(token, state->session.token, ADMIN_PORTAL_TOKEN_MAX_LEN) != 0)
     {
-        if (!admin_portal_state_has_password(state))
-            return ADMIN_PORTAL_SESSION_NONE;
-        return ADMIN_PORTAL_SESSION_BUSY;
+        // If there's an active session from a different client, return BUSY
+        // regardless of password state, unless it's an unauthorized session
+        if (state->session.authorized || admin_portal_state_has_password(state))
+            return ADMIN_PORTAL_SESSION_BUSY;
+        return ADMIN_PORTAL_SESSION_NONE;
     }
 
     return ADMIN_PORTAL_SESSION_MATCH;
@@ -226,7 +228,13 @@ admin_portal_session_status_t admin_portal_state_check_session_by_ip(admin_porta
 
     // Check if session is from the same IP
     if (strcmp(state->session.client_ip, client_ip) != 0) {
-        return ADMIN_PORTAL_SESSION_BUSY; // Different client has session
+        // If there's an active session from different IP and it's authorized or password is set, 
+        // return BUSY
+        if (state->session.authorized || admin_portal_state_has_password(state)) {
+            return ADMIN_PORTAL_SESSION_BUSY;
+        }
+        // If session is not authorized and no password set, allow takeover
+        return ADMIN_PORTAL_SESSION_NONE;
     }
 
     // Check timeout using helper function
@@ -270,6 +278,13 @@ bool admin_portal_state_session_authorized(const admin_portal_state_t *state)
     if (!state)
         return false;
     return state->session.active && state->session.authorized;
+}
+
+bool admin_portal_state_has_active_session(const admin_portal_state_t *state)
+{
+    if (!state)
+        return false;
+    return state->session.active;
 }
 
 admin_portal_page_t admin_portal_state_resolve_page(const admin_portal_state_t *state,

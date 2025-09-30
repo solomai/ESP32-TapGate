@@ -524,6 +524,9 @@ static admin_portal_session_status_t evaluate_unified_session(httpd_req_t *req, 
         if (status == ADMIN_PORTAL_SESSION_MATCH) {
             admin_portal_state_update_session(&g_state, now);
             return status;
+        } else if (status == ADMIN_PORTAL_SESSION_BUSY) {
+            // Don't fallback to cookie check if IP-based check returns BUSY
+            return status;
         }
     }
     
@@ -542,6 +545,12 @@ static admin_portal_session_status_t evaluate_unified_session(httpd_req_t *req, 
 // Create a new session with both IP and cookie support
 static esp_err_t create_unified_session(httpd_req_t *req, char *token_buffer, size_t token_size)
 {
+    // Don't create new session if there's already an active authorized session
+    if (admin_portal_state_has_active_session(&g_state) && 
+        admin_portal_state_session_authorized(&g_state)) {
+        return ESP_OK; // Don't create session, but don't fail either
+    }
+    
     uint64_t now = get_now_ms();
     char new_token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
     generate_session_token(new_token);
@@ -558,6 +567,10 @@ static esp_err_t create_unified_session(httpd_req_t *req, char *token_buffer, si
     if (token_buffer && token_size > 0) {
         strncpy(token_buffer, new_token, token_size - 1);
         token_buffer[token_size - 1] = '\0';
+    }
+    
+    return ESP_OK;
+}
     }
     
     return ESP_OK;
@@ -689,7 +702,11 @@ static esp_err_t handle_session_info(httpd_req_t *req)
     }
 
     if (status == ADMIN_PORTAL_SESSION_NONE) {
-        create_unified_session(req, token, sizeof(token));
+        // Only create session if there's no active authorized session
+        if (!(admin_portal_state_has_active_session(&g_state) && 
+              admin_portal_state_session_authorized(&g_state))) {
+            create_unified_session(req, token, sizeof(token));
+        }
     }
 
     bool authorized = admin_portal_state_session_authorized(&g_state);
@@ -920,8 +937,14 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
     if (target != desc->page)
         return send_redirect(req, target);
 
-    if (status == ADMIN_PORTAL_SESSION_NONE && desc->page != ADMIN_PORTAL_PAGE_BUSY)
+    // Only create session if status is NONE and we're not showing busy page
+    // and there's no active authorized session
+    if (status == ADMIN_PORTAL_SESSION_NONE && 
+        desc->page != ADMIN_PORTAL_PAGE_BUSY &&
+        !(admin_portal_state_has_active_session(&g_state) && 
+          admin_portal_state_session_authorized(&g_state))) {
         create_unified_session(req, token, sizeof(token));
+    }
 
     return send_page_content(req, desc);
 }
