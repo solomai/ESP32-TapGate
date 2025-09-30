@@ -240,7 +240,7 @@ static void generate_device_fingerprint(httpd_req_t *req, char fingerprint[32])
     }
     
     // Convert to hex string (limited to 31 chars + null terminator)
-    snprintf(fingerprint, 32, "%08x", hash);
+    snprintf(fingerprint, 32, "%08" PRIx32, hash);
     
     // Clean up allocated memory
     if (user_agent) free(user_agent);
@@ -956,7 +956,7 @@ static esp_err_t handle_change_password(httpd_req_t *req)
 static esp_err_t handle_update_device(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
 
     if (status == ADMIN_PORTAL_SESSION_BUSY) {
         return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
