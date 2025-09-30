@@ -1010,7 +1010,12 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
     if (target != desc->page)
         return send_redirect(req, target);
 
-    if (status == ADMIN_PORTAL_SESSION_NONE && desc->page != ADMIN_PORTAL_PAGE_BUSY)
+    // Only auto-create sessions for pages that need them
+    // AUTH page should not auto-create sessions - sessions should only be created upon successful authentication
+    // BUSY page should never create sessions
+    if (status == ADMIN_PORTAL_SESSION_NONE && 
+        desc->page != ADMIN_PORTAL_PAGE_BUSY && 
+        desc->page != ADMIN_PORTAL_PAGE_AUTH)
         create_session(req, token, sizeof(token));
 
     return send_page_content(req, desc);
