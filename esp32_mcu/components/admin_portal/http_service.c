@@ -133,7 +133,7 @@ static uint64_t get_now_ms(void)
     return esp_timer_get_time() / 1000ULL;
 }
 
-// Simplified client IP detection with reduced logging
+// Client IP detection with proper socket-based fallback
 static bool get_client_ip(httpd_req_t *req, char *ip_buffer, size_t buffer_size)
 {
     if (!req || !ip_buffer || buffer_size < 16)
@@ -143,6 +143,7 @@ static bool get_client_ip(httpd_req_t *req, char *ip_buffer, size_t buffer_size)
     size_t len = httpd_req_get_hdr_value_len(req, "X-Forwarded-For");
     if (len > 0 && len < buffer_size) {
         if (httpd_req_get_hdr_value_str(req, "X-Forwarded-For", ip_buffer, buffer_size) == ESP_OK) {
+            LOGI(TAG, "Client IP from X-Forwarded-For: %s", ip_buffer);
             return true;
         }
     }
@@ -151,23 +152,27 @@ static bool get_client_ip(httpd_req_t *req, char *ip_buffer, size_t buffer_size)
     len = httpd_req_get_hdr_value_len(req, "X-Real-IP");
     if (len > 0 && len < buffer_size) {
         if (httpd_req_get_hdr_value_str(req, "X-Real-IP", ip_buffer, buffer_size) == ESP_OK) {
+            LOGI(TAG, "Client IP from X-Real-IP: %s", ip_buffer);
             return true;
         }
     }
 
-    // For ESP32 AP mode, socket-based detection often fails
-    // Use a consistent mobile client identifier to avoid warnings
-    strncpy(ip_buffer, "10.10.0.100", buffer_size - 1);
-    ip_buffer[buffer_size - 1] = '\0';
-    
-    // Log only once to reduce log noise
-    static bool logged_fallback = false;
-    if (!logged_fallback) {
-        LOGW(TAG, "Using fixed mobile client identifier for session consistency");
-        logged_fallback = true;
+    // Get socket descriptor and extract peer address
+    int sockfd = httpd_req_to_sockfd(req);
+    if (sockfd >= 0) {
+        struct sockaddr_in addr;
+        socklen_t addr_len = sizeof(addr);
+        
+        if (getpeername(sockfd, (struct sockaddr *)&addr, &addr_len) == 0) {
+            inet_ntop(AF_INET, &addr.sin_addr, ip_buffer, buffer_size);
+            LOGI(TAG, "Client IP from socket: %s", ip_buffer);
+            return true;
+        }
     }
-    
-    return true;
+
+    // Should never reach here, but provide fallback
+    LOGW(TAG, "Failed to detect client IP, all detection methods failed");
+    return false;
 }
 
 static uint64_t minutes_to_ms(uint32_t minutes)

@@ -22,6 +22,11 @@ static void start_session(const char *token, uint64_t now_ms, bool authorized)
     admin_portal_state_start_session(&state, token, now_ms, authorized);
 }
 
+static void start_session_by_ip(const char *client_ip, uint64_t now_ms, bool authorized)
+{
+    admin_portal_state_start_session_by_ip(&state, client_ip, now_ms, authorized);
+}
+
 void test_enroll_redirect_when_no_password(void)
 {
     admin_portal_page_t page = admin_portal_state_resolve_page(&state, ADMIN_PORTAL_PAGE_MAIN, ADMIN_PORTAL_SESSION_NONE);
@@ -131,6 +136,55 @@ void test_authorized_session_without_cookie_remains_reclaimable(void)
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH, status);
 }
 
+void test_second_client_blocked_when_first_client_logged_in(void)
+{
+    set_password("superpass");
+    
+    // First client starts session with IP
+    start_session_by_ip("192.168.1.100", 1000, false);
+    
+    // First client completes login (creates token-based session too)
+    start_session("token1", 1000, false);
+    admin_portal_state_authorize_session(&state);
+    
+    // First client should have access
+    admin_portal_session_status_t status = admin_portal_state_check_session(&state, "token1", 1100);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH, status);
+    
+    // Second client with different IP should be blocked
+    status = admin_portal_state_check_session_by_ip(&state, "192.168.1.101", 1200);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_BUSY, status);
+    
+    // Second client should see busy page
+    admin_portal_page_t page = admin_portal_state_resolve_page(&state, ADMIN_PORTAL_PAGE_MAIN, status);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_BUSY, page);
+}
+
+void test_second_client_blocked_via_token_check(void)
+{
+    set_password("superpass");
+    
+    // First client logs in with token-based session
+    start_session("token1", 1000, false);
+    admin_portal_state_authorize_session(&state);
+    
+    // First client should have access
+    admin_portal_session_status_t status = admin_portal_state_check_session(&state, "token1", 1100);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH, status);
+    
+    // Second client without correct token should be blocked
+    status = admin_portal_state_check_session(&state, NULL, 1200);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_BUSY, status);
+    
+    // Second client with wrong token should also be blocked
+    status = admin_portal_state_check_session(&state, "wrong_token", 1300);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_BUSY, status);
+    
+    // Second client should see busy page
+    admin_portal_page_t page = admin_portal_state_resolve_page(&state, ADMIN_PORTAL_PAGE_MAIN, status);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_BUSY, page);
+}
+
 int main(int argc, char **argv)
 {
     UnityConfigureFromArgs(argc, (const char **)argv);
@@ -146,5 +200,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_password_validation_rules);
     RUN_TEST(test_pending_session_allows_new_client_to_claim);
     RUN_TEST(test_authorized_session_without_cookie_remains_reclaimable);
+    RUN_TEST(test_second_client_blocked_when_first_client_logged_in);
+    RUN_TEST(test_second_client_blocked_via_token_check);
     return UNITY_END();
 }
