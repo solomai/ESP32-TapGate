@@ -20,14 +20,6 @@ static size_t strnlen_safe(const char *str, size_t max_len)
     return len;
 }
 
-// Helper function to validate IP address format (basic validation)
-static bool is_valid_ip(const char *ip)
-{
-    if (!ip || strlen(ip) < 7 || strlen(ip) > 15) return false;
-    // Basic check: should not be 0.0.0.0 or localhost
-    return strcmp(ip, "0.0.0.0") != 0 && strcmp(ip, "127.0.0.1") != 0;
-}
-
 // Helper function to check if session has timed out
 static bool is_session_expired(const admin_portal_state_t *state, uint64_t now_ms)
 {
@@ -137,106 +129,76 @@ bool admin_portal_state_password_valid(const admin_portal_state_t *state, const 
 }
 
 admin_portal_session_status_t admin_portal_state_check_session(admin_portal_state_t *state,
-                                                               const char *token,
+                                                               const char *client_ip,
+                                                               const char *session_token,
+                                                               const char *device_fingerprint,
                                                                uint64_t now_ms)
 {
-    if (!state || !state->session.active)
-        return ADMIN_PORTAL_SESSION_NONE;
-
-    if (!state->session.claimed)
-    {
-        if (!token || token[0] == '\0')
-            return ADMIN_PORTAL_SESSION_NONE;
-
-        if (strncmp(token, state->session.token, ADMIN_PORTAL_TOKEN_MAX_LEN) == 0)
-        {
-            state->session.claimed = true;
-        }
-        else
-        {
-            return ADMIN_PORTAL_SESSION_NONE;
-        }
-    }
-
-    uint64_t last_activity = state->session.last_activity_ms;
-    uint64_t timeout = state->inactivity_timeout_ms;
-    if (timeout > 0 && now_ms >= last_activity)
-    {
-        uint64_t delta = now_ms - last_activity;
-        if (delta >= timeout)
-            return ADMIN_PORTAL_SESSION_EXPIRED;
-    }
-
-    if (!token || strncmp(token, state->session.token, ADMIN_PORTAL_TOKEN_MAX_LEN) != 0)
-    {
-        if (!admin_portal_state_has_password(state))
-            return ADMIN_PORTAL_SESSION_NONE;
-        return ADMIN_PORTAL_SESSION_BUSY;
-    }
-
-    return ADMIN_PORTAL_SESSION_MATCH;
-}
-
-void admin_portal_state_start_session(admin_portal_state_t *state,
-                                      const char *token,
-                                      uint64_t now_ms,
-                                      bool authorized)
-{
-    if (!state || !token)
-        return;
-
-    state->session.active = true;
-    state->session.authorized = authorized;
-    state->session.claimed = false;
-    state->session.last_activity_ms = now_ms;
-    size_t length = strnlen_safe(token, ADMIN_PORTAL_TOKEN_MAX_LEN);
-    memcpy(state->session.token, token, length);
-    state->session.token[length] = '\0';
-}
-
-void admin_portal_state_start_session_by_ip(admin_portal_state_t *state,
-                                            const char *client_ip,
-                                            uint64_t now_ms,
-                                            bool authorized)
-{
-    if (!state || !client_ip)
-        return;
-
-    state->session.active = true;
-    state->session.authorized = authorized;
-    state->session.claimed = false;
-    state->session.last_activity_ms = now_ms;
-    
-    // Store client IP instead of token
-    size_t ip_length = strnlen_safe(client_ip, sizeof(state->session.client_ip) - 1);
-    memcpy(state->session.client_ip, client_ip, ip_length);
-    state->session.client_ip[ip_length] = '\0';
-    
-    // Clear token when using IP-based session
-    memset(state->session.token, 0, sizeof(state->session.token));
-}
-
-admin_portal_session_status_t admin_portal_state_check_session_by_ip(admin_portal_state_t *state,
-                                                                     const char *client_ip,
-                                                                     uint64_t now_ms)
-{
-    if (!state || !client_ip || !state->session.active) {
+    if (!state || !state->session.active) {
         return ADMIN_PORTAL_SESSION_NONE;
     }
 
-    // Check if session is from the same IP
-    if (strcmp(state->session.client_ip, client_ip) != 0) {
-        return ADMIN_PORTAL_SESSION_BUSY; // Different client has session
-    }
-
-    // Check timeout using helper function
+    // Check if session has timed out
     if (is_session_expired(state, now_ms)) {
         admin_portal_state_clear_session(state);
         return ADMIN_PORTAL_SESSION_EXPIRED;
     }
 
-    return ADMIN_PORTAL_SESSION_MATCH;
+    // Primary identification: check if this is the same client
+    bool ip_matches = client_ip && (strcmp(state->session.client_ip, client_ip) == 0);
+    bool token_matches = session_token && (strcmp(state->session.session_token, session_token) == 0);
+    bool fingerprint_matches = device_fingerprint && (strcmp(state->session.device_fingerprint, device_fingerprint) == 0);
+
+    // Allow session match if either:
+    // 1. IP and token match (same device, same session)
+    // 2. IP and fingerprint match (same device, recovered session)
+    if ((ip_matches && token_matches) || (ip_matches && fingerprint_matches)) {
+        return ADMIN_PORTAL_SESSION_MATCH;
+    }
+
+    // If there's an active session but client doesn't match, it's busy
+    return ADMIN_PORTAL_SESSION_BUSY;
 }
+
+void admin_portal_state_start_session(admin_portal_state_t *state,
+                                      const char *client_ip,
+                                      const char *session_token,
+                                      const char *device_fingerprint,
+                                      uint64_t now_ms,
+                                      bool authorized)
+{
+    if (!state || !client_ip || !session_token) {
+        return;
+    }
+
+    // Clear any existing session first
+    admin_portal_state_clear_session(state);
+
+    state->session.active = true;
+    state->session.authorized = authorized;
+    state->session.last_activity_ms = now_ms;
+    
+    // Store client IP
+    size_t ip_length = strnlen_safe(client_ip, sizeof(state->session.client_ip) - 1);
+    memcpy(state->session.client_ip, client_ip, ip_length);
+    state->session.client_ip[ip_length] = '\0';
+    
+    // Store session token
+    size_t token_length = strnlen_safe(session_token, sizeof(state->session.session_token) - 1);
+    memcpy(state->session.session_token, session_token, token_length);
+    state->session.session_token[token_length] = '\0';
+    
+    // Store device fingerprint (optional)
+    if (device_fingerprint) {
+        size_t fp_length = strnlen_safe(device_fingerprint, sizeof(state->session.device_fingerprint) - 1);
+        memcpy(state->session.device_fingerprint, device_fingerprint, fp_length);
+        state->session.device_fingerprint[fp_length] = '\0';
+    } else {
+        state->session.device_fingerprint[0] = '\0';
+    }
+}
+
+
 
 void admin_portal_state_update_session(admin_portal_state_t *state, uint64_t now_ms)
 {

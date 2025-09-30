@@ -188,6 +188,66 @@ static void generate_session_token(char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1])
     token[ADMIN_PORTAL_TOKEN_MAX_LEN] = '\0';
 }
 
+static void generate_device_fingerprint(httpd_req_t *req, char fingerprint[32])
+{
+    // Create a simple device fingerprint based on User-Agent and other headers
+    char *user_agent = NULL;
+    char *accept = NULL;
+    char *accept_language = NULL;
+    
+    // Get User-Agent header
+    size_t buf_len = httpd_req_get_hdr_value_len(req, "User-Agent");
+    if (buf_len > 0) {
+        user_agent = malloc(buf_len + 1);
+        if (user_agent && httpd_req_get_hdr_value_str(req, "User-Agent", user_agent, buf_len + 1) != ESP_OK) {
+            free(user_agent);
+            user_agent = NULL;
+        }
+    }
+    
+    // Get Accept header
+    buf_len = httpd_req_get_hdr_value_len(req, "Accept");
+    if (buf_len > 0) {
+        accept = malloc(buf_len + 1);
+        if (accept && httpd_req_get_hdr_value_str(req, "Accept", accept, buf_len + 1) != ESP_OK) {
+            free(accept);
+            accept = NULL;
+        }
+    }
+    
+    // Get Accept-Language header
+    buf_len = httpd_req_get_hdr_value_len(req, "Accept-Language");
+    if (buf_len > 0) {
+        accept_language = malloc(buf_len + 1);
+        if (accept_language && httpd_req_get_hdr_value_str(req, "Accept-Language", accept_language, buf_len + 1) != ESP_OK) {
+            free(accept_language);
+            accept_language = NULL;
+        }
+    }
+    
+    // Create a simple hash of the combined headers
+    uint32_t hash = 2166136261U; // FNV-1a offset basis
+    const char *sources[] = {user_agent, accept, accept_language};
+    for (int i = 0; i < 3; i++) {
+        const char *str = sources[i];
+        if (str) {
+            while (*str) {
+                hash ^= (uint8_t)*str;
+                hash *= 16777619U; // FNV-1a prime
+                str++;
+            }
+        }
+    }
+    
+    // Convert to hex string (limited to 31 chars + null terminator)
+    snprintf(fingerprint, 32, "%08" PRIx32, hash);
+    
+    // Clean up allocated memory
+    if (user_agent) free(user_agent);
+    if (accept) free(accept);
+    if (accept_language) free(accept_language);
+}
+
 static void set_cache_headers(httpd_req_t *req)
 {
     httpd_resp_set_hdr(req, "Cache-Control", "no-store");
@@ -511,54 +571,84 @@ static esp_err_t send_json(httpd_req_t *req, const char *status_text, const char
     return httpd_resp_send(req, body, HTTPD_RESP_USE_STRLEN);
 }
 
-// Unified session evaluation with both IP and token-based checking
-static admin_portal_session_status_t evaluate_unified_session(httpd_req_t *req, char *token_buffer, size_t token_size)
+// Unified session evaluation with client identification
+static admin_portal_session_status_t evaluate_session(httpd_req_t *req, char *token_buffer, size_t token_size)
 {
     uint64_t now = get_now_ms();
-    admin_portal_session_status_t status = ADMIN_PORTAL_SESSION_NONE;
     
-    // Try IP-based session first (mobile-friendly)
+    // Get client IP
     char client_ip[16];
-    if (get_client_ip(req, client_ip, sizeof(client_ip))) {
-        status = admin_portal_state_check_session_by_ip(&g_state, client_ip, now);
-        if (status == ADMIN_PORTAL_SESSION_MATCH) {
-            admin_portal_state_update_session(&g_state, now);
-            return status;
+    if (!get_client_ip(req, client_ip, sizeof(client_ip))) {
+        LOGI(TAG, "Could not determine client IP");
+        return ADMIN_PORTAL_SESSION_NONE;
+    }
+    
+    // Generate device fingerprint
+    char device_fingerprint[32];
+    generate_device_fingerprint(req, device_fingerprint);
+    
+    // Get session token from cookie
+    char session_token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    bool has_token = get_session_token(req, session_token, sizeof(session_token));
+    
+    // Check session with all client identifiers
+    admin_portal_session_status_t status = admin_portal_state_check_session(
+        &g_state, 
+        client_ip, 
+        has_token ? session_token : NULL, 
+        device_fingerprint, 
+        now
+    );
+    
+    if (status == ADMIN_PORTAL_SESSION_MATCH) {
+        admin_portal_state_update_session(&g_state, now);
+        // Copy token to buffer for cookie management
+        if (token_buffer && token_size > 0 && has_token) {
+            strncpy(token_buffer, session_token, token_size - 1);
+            token_buffer[token_size - 1] = '\0';
         }
     }
     
-    // Fallback to cookie-based session (desktop browsers)
-    if (status == ADMIN_PORTAL_SESSION_NONE) {
-        bool has_token = get_session_token(req, token_buffer, token_size);
-        status = admin_portal_state_check_session(&g_state, has_token ? token_buffer : NULL, now);
-        if (status == ADMIN_PORTAL_SESSION_MATCH) {
-            admin_portal_state_update_session(&g_state, now);
-        }
-    }
+    LOGI(TAG, "Session evaluation: IP=%s, token=%s, fingerprint=%s, status=%s", 
+         client_ip, 
+         has_token ? "present" : "none", 
+         device_fingerprint,
+         admin_portal_session_status_to_str(status));
     
     return status;
 }
 
-// Create a new session with both IP and cookie support
-static esp_err_t create_unified_session(httpd_req_t *req, char *token_buffer, size_t token_size)
+// Create a new session with proper client binding
+static esp_err_t create_session(httpd_req_t *req, char *token_buffer, size_t token_size)
 {
     uint64_t now = get_now_ms();
+    
+    // Get client IP
+    char client_ip[16];
+    if (!get_client_ip(req, client_ip, sizeof(client_ip))) {
+        LOGI(TAG, "Cannot create session: could not determine client IP");
+        return ESP_FAIL;
+    }
+    
+    // Generate new session token
     char new_token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1];
     generate_session_token(new_token);
     
-    // Create IP-based session if IP is available
-    char client_ip[16];
-    if (get_client_ip(req, client_ip, sizeof(client_ip))) {
-        admin_portal_state_start_session_by_ip(&g_state, client_ip, now, false);
-    }
+    // Generate device fingerprint
+    char device_fingerprint[32];
+    generate_device_fingerprint(req, device_fingerprint);
     
-    // Always create cookie-based session for desktop compatibility
-    admin_portal_state_start_session(&g_state, new_token, now, false);
+    // Create session
+    admin_portal_state_start_session(&g_state, client_ip, new_token, device_fingerprint, now, false);
     
+    // Copy token to buffer
     if (token_buffer && token_size > 0) {
         strncpy(token_buffer, new_token, token_size - 1);
         token_buffer[token_size - 1] = '\0';
     }
+    
+    LOGI(TAG, "New session created: IP=%s, token=%.8s..., fingerprint=%s", 
+         client_ip, new_token, device_fingerprint);
     
     return ESP_OK;
 }
@@ -676,7 +766,7 @@ static char *read_body(httpd_req_t *req)
 static esp_err_t handle_session_info(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
 
     if (status == ADMIN_PORTAL_SESSION_BUSY) {
         return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
@@ -689,7 +779,7 @@ static esp_err_t handle_session_info(httpd_req_t *req)
     }
 
     if (status == ADMIN_PORTAL_SESSION_NONE) {
-        create_unified_session(req, token, sizeof(token));
+        create_session(req, token, sizeof(token));
     }
 
     bool authorized = admin_portal_state_session_authorized(&g_state);
@@ -708,14 +798,14 @@ static esp_err_t handle_session_info(httpd_req_t *req)
 static esp_err_t handle_enroll(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
 
     if (status == ADMIN_PORTAL_SESSION_BUSY) {
         return send_redirect(req, ADMIN_PORTAL_PAGE_BUSY);
     }
 
     if (status == ADMIN_PORTAL_SESSION_NONE) {
-        create_unified_session(req, token, sizeof(token));
+        create_session(req, token, sizeof(token));
     }
 
     // Redirect to auth if password already exists
@@ -757,14 +847,14 @@ static esp_err_t handle_enroll(httpd_req_t *req)
 static esp_err_t handle_login(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
 
     if (status == ADMIN_PORTAL_SESSION_BUSY) {
         return send_redirect(req, ADMIN_PORTAL_PAGE_BUSY);
     }
 
     if (status == ADMIN_PORTAL_SESSION_NONE) {
-        create_unified_session(req, token, sizeof(token));
+        create_session(req, token, sizeof(token));
     }
 
     if (!admin_portal_state_has_password(&g_state)) {
@@ -798,7 +888,7 @@ static esp_err_t handle_login(httpd_req_t *req)
 static esp_err_t handle_logoff(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
 
     // Clear session regardless of current status
     admin_portal_state_clear_session(&g_state);
@@ -814,7 +904,7 @@ static esp_err_t handle_logoff(httpd_req_t *req)
 static esp_err_t handle_change_password(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
 
     if (status == ADMIN_PORTAL_SESSION_BUSY) {
         return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
@@ -866,7 +956,7 @@ static esp_err_t handle_change_password(httpd_req_t *req)
 static esp_err_t handle_update_device(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
 
     if (status == ADMIN_PORTAL_SESSION_BUSY) {
         return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
@@ -907,7 +997,7 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
         return ESP_ERR_INVALID_ARG;
 
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
     
     admin_portal_page_t target = admin_portal_state_resolve_page(&g_state, desc->page, status);
 
@@ -921,7 +1011,7 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
         return send_redirect(req, target);
 
     if (status == ADMIN_PORTAL_SESSION_NONE && desc->page != ADMIN_PORTAL_PAGE_BUSY)
-        create_unified_session(req, token, sizeof(token));
+        create_session(req, token, sizeof(token));
 
     return send_page_content(req, desc);
 }
@@ -931,7 +1021,7 @@ static esp_err_t handle_root(httpd_req_t *req)
     const admin_portal_page_descriptor_t *main_page = &admin_portal_page_main;
     
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
-    admin_portal_session_status_t status = evaluate_unified_session(req, token, sizeof(token));
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
     
     admin_portal_page_t target = admin_portal_state_resolve_page(&g_state, main_page->page, status);
 

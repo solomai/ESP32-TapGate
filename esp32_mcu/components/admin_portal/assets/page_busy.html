@@ -3,18 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TapGate · Busy</title>
+  <title>TapGate · Session Active</title>
   <link rel="stylesheet" href="/assets/styles.css">
   <script src="/api/initial-data.js"></script>
   <script defer src="/assets/app.js"></script>
 </head>
 <body class="page page-busy">
   <main class="card">
-    <h1>Portal in Use</h1>
+    <h1>Admin Session Active</h1>
     <p class="notice">
-      Another administrator is currently connected<br>
-      to the TapGate portal.<br><br>
-      Please try again later.
+      An administrator session is already active<br>
+      on another device.<br><br>
+      Please wait for the current session to end<br>
+      or ask the current administrator to log out<br>
+      before attempting to access the portal.
+    </p>
+    <p class="notice">
+      <small>Sessions automatically expire after a period of inactivity.</small>
     </p>
   </main>
 </body>

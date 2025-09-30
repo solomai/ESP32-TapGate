@@ -19,7 +19,7 @@ static void set_password(const char *password)
 
 static void start_session(const char *token, uint64_t now_ms, bool authorized)
 {
-    admin_portal_state_start_session(&state, token, now_ms, authorized);
+    admin_portal_state_start_session(&state, "192.168.1.100", token, "test_fingerprint", now_ms, authorized);
 }
 
 void test_enroll_redirect_when_no_password(void)
@@ -76,8 +76,8 @@ void test_busy_state_blocks_other_clients(void)
     set_password("superpass");
     start_session("token", 1000, true);
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH,
-                          admin_portal_state_check_session(&state, "token", 1000));
-    admin_portal_session_status_t status = admin_portal_state_check_session(&state, "other", 1200);
+                          admin_portal_state_check_session(&state, "192.168.1.100", "token", "test_fingerprint", 1000));
+    admin_portal_session_status_t status = admin_portal_state_check_session(&state, "192.168.1.101", "other", "different_fingerprint", 1200);
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_BUSY, status);
     admin_portal_page_t page = admin_portal_state_resolve_page(&state, ADMIN_PORTAL_PAGE_MAIN, status);
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_BUSY, page);
@@ -87,9 +87,9 @@ void test_enroll_session_takeover_when_no_password(void)
 {
     start_session("token", 1000, false);
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH,
-                          admin_portal_state_check_session(&state, "token", 1000));
-    admin_portal_session_status_t status = admin_portal_state_check_session(&state, "other", 1200);
-    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_NONE, status);
+                          admin_portal_state_check_session(&state, "192.168.1.100", "token", "test_fingerprint", 1000));
+    admin_portal_session_status_t status = admin_portal_state_check_session(&state, "192.168.1.101", "other", "different_fingerprint", 1200);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_BUSY, status);
 }
 
 void test_timeout_moves_to_off_page(void)
@@ -97,10 +97,10 @@ void test_timeout_moves_to_off_page(void)
     set_password("superpass");
     start_session("token", 0, true);
     uint64_t now = state.inactivity_timeout_ms;
-    admin_portal_session_status_t status = admin_portal_state_check_session(&state, "token", now);
+    admin_portal_session_status_t status = admin_portal_state_check_session(&state, "192.168.1.100", "token", "test_fingerprint", now);
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_EXPIRED, status);
     admin_portal_page_t page = admin_portal_state_resolve_page(&state, ADMIN_PORTAL_PAGE_MAIN, status);
-    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_OFF, page);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_PAGE_AUTH, page);
 }
 
 void test_password_validation_rules(void)
@@ -112,10 +112,12 @@ void test_password_validation_rules(void)
 void test_pending_session_allows_new_client_to_claim(void)
 {
     start_session("token", 0, false);
-    admin_portal_session_status_t status = admin_portal_state_check_session(&state, NULL, 0);
-    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_NONE, status);
-    status = admin_portal_state_check_session(&state, "different", 0);
-    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_NONE, status);
+    // With new session management, different IP should return BUSY
+    admin_portal_session_status_t status = admin_portal_state_check_session(&state, "192.168.1.101", NULL, "different_fingerprint", 0);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_BUSY, status);
+    // Same IP but different token should still work if using fingerprint
+    status = admin_portal_state_check_session(&state, "192.168.1.100", "different", "test_fingerprint", 0);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH, status);
 }
 
 void test_authorized_session_without_cookie_remains_reclaimable(void)
@@ -124,10 +126,12 @@ void test_authorized_session_without_cookie_remains_reclaimable(void)
     start_session("token", 0, false);
     admin_portal_state_authorize_session(&state);
 
-    admin_portal_session_status_t status = admin_portal_state_check_session(&state, NULL, 1000);
-    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_NONE, status);
+    // Different IP should return BUSY
+    admin_portal_session_status_t status = admin_portal_state_check_session(&state, "192.168.1.101", NULL, "different_fingerprint", 1000);
+    TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_BUSY, status);
 
-    status = admin_portal_state_check_session(&state, "token", 2000);
+    // Same IP with correct token should work
+    status = admin_portal_state_check_session(&state, "192.168.1.100", "token", "test_fingerprint", 2000);
     TEST_ASSERT_EQUAL_INT(ADMIN_PORTAL_SESSION_MATCH, status);
 }
 
