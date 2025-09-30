@@ -571,10 +571,6 @@ static esp_err_t create_unified_session(httpd_req_t *req, char *token_buffer, si
     
     return ESP_OK;
 }
-    }
-    
-    return ESP_OK;
-}
 
 static size_t url_decode(char *dest, size_t dest_size, const char *src, size_t src_len)
 {
