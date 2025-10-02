@@ -17,3 +17,6 @@ uint32_t session_get_idle_timeout();
 void session_set_idle_timeout(uint32_t timeout_value);
 
 void trigger_scan_wifi();
+
+// Create JSON string from WiFi scan results
+char* create_json_from_ap_records();
