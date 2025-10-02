@@ -597,6 +597,31 @@ void create_json_from_ap_records(wifi_ap_record_t *ap_records, uint16_t ap_count
     size_t buffer_size = MAX_AP_NUM * MAXONEJSONRECORD + 4;
     LOGI(TAG, "Starting JSON generation: %d APs found, buffer size: %zu bytes", ap_count, buffer_size);
 
+    // Sort AP records by RSSI (better signal first)
+    // Create a copy array with indices for sorting
+    typedef struct {
+        uint16_t index;
+        int8_t rssi;
+    } ap_sort_entry_t;
+    
+    ap_sort_entry_t sort_array[MAX_AP_NUM];
+    for (uint16_t i = 0; i < ap_count && i < MAX_AP_NUM; i++) {
+        sort_array[i].index = i;
+        sort_array[i].rssi = ap_records[i].rssi;
+    }
+    
+    // Simple bubble sort by RSSI (better signal = higher RSSI value = less negative)
+    for (uint16_t i = 0; i < ap_count - 1; i++) {
+        for (uint16_t j = 0; j < ap_count - 1 - i; j++) {
+            if (sort_array[j].rssi < sort_array[j + 1].rssi) {
+                // Swap entries
+                ap_sort_entry_t temp = sort_array[j];
+                sort_array[j] = sort_array[j + 1];
+                sort_array[j + 1] = temp;
+            }
+        }
+    }
+
     // Start with opening bracket
     strcpy(accessp_json, "[\n");
     
@@ -606,9 +631,12 @@ void create_json_from_ap_records(wifi_ap_record_t *ap_records, uint16_t ap_count
     int skipped_empty = 0;
     int skipped_duplicate = 0;
     
+    // Process APs in sorted order
     for (uint16_t i = 0; i < ap_count; i++) {
+        uint16_t ap_idx = sort_array[i].index;
+        
         // Filter out empty SSIDs
-        if (ap_records[i].ssid[0] == '\0') {
+        if (ap_records[ap_idx].ssid[0] == '\0') {
             skipped_empty++;
             continue;
         }
@@ -616,7 +644,9 @@ void create_json_from_ap_records(wifi_ap_record_t *ap_records, uint16_t ap_count
         // Check for duplicate SSIDs by comparing with previously processed entries
         bool is_duplicate = false;
         for (uint16_t j = 0; j < i; j++) {
-            if (strcmp((char*)ap_records[i].ssid, (char*)ap_records[j].ssid) == 0) {
+            uint16_t prev_ap_idx = sort_array[j].index;
+            if (ap_records[prev_ap_idx].ssid[0] != '\0' && 
+                strcmp((char*)ap_records[ap_idx].ssid, (char*)ap_records[prev_ap_idx].ssid) == 0) {
                 is_duplicate = true;
                 break;
             }
@@ -632,10 +662,10 @@ void create_json_from_ap_records(wifi_ap_record_t *ap_records, uint16_t ap_count
         int entry_len = snprintf(json_entry, sizeof(json_entry), 
                 "%s{\"ssid\":\"%s\",\"chan\":%d,\"rssi\":%d,\"auth\":%d}",
                 first_entry ? "" : ",\n",
-                (char*)ap_records[i].ssid,
-                ap_records[i].primary,
-                ap_records[i].rssi,
-                ap_records[i].authmode);
+                (char*)ap_records[ap_idx].ssid,
+                ap_records[ap_idx].primary,
+                ap_records[ap_idx].rssi,
+                ap_records[ap_idx].authmode);
         
         // Check if adding this entry would exceed buffer size (leave space for closing "]")
         if (current_length + entry_len + 3 >= buffer_size) {
@@ -650,8 +680,8 @@ void create_json_from_ap_records(wifi_ap_record_t *ap_records, uint16_t ap_count
         processed_count++;
         
         LOGI(TAG, "Added AP %d: '%s' ch:%d rssi:%d auth:%d", 
-             processed_count, (char*)ap_records[i].ssid, 
-             ap_records[i].primary, ap_records[i].rssi, ap_records[i].authmode);
+             processed_count, (char*)ap_records[ap_idx].ssid, 
+             ap_records[ap_idx].primary, ap_records[ap_idx].rssi, ap_records[ap_idx].authmode);
     }
     
     // Close the JSON array
