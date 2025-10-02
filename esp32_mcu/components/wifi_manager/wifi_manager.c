@@ -39,6 +39,9 @@ static esp_netif_t* esp_netif_sta = NULL;
 // netif object for the ACCESS POINT
 static esp_netif_t* esp_netif_ap = NULL;
 
+// STA WiFi records
+static wifi_ap_record_t *accessp_records = NULL;
+
 // The actual WiFi settings in use
 struct wifi_settings_t wifi_settings = {
 	.ap_ssid        = DEFAULT_AP_SSID,
@@ -94,6 +97,10 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
                 break;
             case WIFI_EVENT_SCAN_DONE:
                 LOGI(TAG, "EVENT: WIFI_EVENT_SCAN_DONE");
+                xEventGroupClearBits(wifi_manager_event_group, WIFI_MANAGER_SCAN_BIT);
+                wifi_event_sta_scan_done_t* event_sta_scan_done = (wifi_event_sta_scan_done_t*)malloc(sizeof(wifi_event_sta_scan_done_t));
+                *event_sta_scan_done = *((wifi_event_sta_scan_done_t*)event_data);
+                wifi_manager_send_message(WM_EVENT_SCAN_DONE, event_sta_scan_done);
                 break;
             case WIFI_EVENT_STA_START:
                 LOGI(TAG, "EVENT: WIFI_EVENT_STA_START");
@@ -493,12 +500,12 @@ void wifi_manager(void * pvParameters)
         {
             case WM_ORDER_LOAD_AND_RESTORE_STA:
                 if(is_wifi_sta_configured()){
-                    ESP_LOGI(TAG, "Saved WiFi found on startup. Will attempt to connect.");
+                    LOGI(TAG, "Saved WiFi found on startup. Will attempt to connect.");
                     wifi_manager_send_message(WM_ORDER_CONNECT_STA, (void*)CONNECTION_REQUEST_RESTORE_CONNECTION);
                 }
                 else{
                     // no wifi saved: start soft AP! This is what should happen during a first run
-                    ESP_LOGI(TAG, "No saved WiFi found on startup. Starting Access Point.");
+                    LOGI(TAG, "No saved WiFi found on startup. Starting Access Point.");
                     wifi_manager_send_message(WM_ORDER_START_AP, NULL);
                 }
                 // callback
@@ -514,10 +521,10 @@ void wifi_manager(void * pvParameters)
                     dns_server_start();
                     // Start HTTP server with admin page
                     http_server_start();
-                    ESP_LOGI(TAG, "AP started. DNS and HTTP server have been launched.");
+                    LOGI(TAG, "AP started. DNS and HTTP server have been launched.");
                 }
                 else
-                    ESP_LOGE(TAG, "Failed to start AP. error: %s", esp_err_to_name(err));
+                    LOGE(TAG, "Failed to start AP. error: %s", esp_err_to_name(err));
 
                 /* callback */
                 if(cb_ptr_arr[msg.code])
@@ -548,11 +555,23 @@ void wifi_manager(void * pvParameters)
 				break;
 
             case WM_EVENT_SCAN_DONE:
-                // TODO:
+                wifi_event_sta_scan_done_t *evt_scan_done = (wifi_event_sta_scan_done_t*)msg.param;
+                LOGI(TAG, "STA scan done: status: %s, count: %d, scan_id: %d",
+                    (evt_scan_done->status==0?"success":"failure"),
+                    evt_scan_done->number, evt_scan_done->scan_id );
+                // only check for AP if the scan is succesful
+				if(evt_scan_done->status == 0) {
+                    uint16_t ap_num = MAX_AP_NUM;
+                    ERROR_CHECK(esp_wifi_scan_get_ap_records(&ap_num, accessp_records),
+                                "Scan WiFi failed");
+                    // create_json_from_ap_records(accessp_records);
+                }
 
 				/* callback */
 				if(cb_ptr_arr[msg.code])
-                    (*cb_ptr_arr[msg.code])( msg.param );            
+                    (*cb_ptr_arr[msg.code])( msg.param );
+
+                free(evt_scan_done);
                 break;
 
             default:
@@ -591,6 +610,9 @@ void wifi_manager_start(void)
     
     // Create wifi manager message queue
     wifi_manager_queue = xQueueCreate( 3, sizeof( queue_message) );
+
+    // WiFi STA records
+    accessp_records = (wifi_ap_record_t*)malloc(sizeof(wifi_ap_record_t) * MAX_AP_NUM);
     
     xTaskCreate(&wifi_manager, "wifi_manager", 4096, NULL, WIFI_MANAGER_TASK_PRIORITY, &task_wifi_manager);
 }
@@ -604,6 +626,11 @@ void wifi_manager_stop()
     // delete wifi manager message queue
     vQueueDelete(wifi_manager_queue);
 	wifi_manager_queue = NULL;
+
+    if (accessp_records != NULL) {
+	    free(accessp_records);
+	    accessp_records = NULL;
+    }
 
     vEventGroupDelete(wifi_manager_event_group);
 	wifi_manager_event_group = NULL;

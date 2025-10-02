@@ -1018,6 +1018,10 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
         desc->page != ADMIN_PORTAL_PAGE_AUTH)
         create_session(req, token, sizeof(token));
 
+    // Trigger start scan Wifi routine
+    if (desc->page == ADMIN_PORTAL_PAGE_WIFI)
+        trigger_scan_wifi();
+
     return send_page_content(req, desc);
 }
 
