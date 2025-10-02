@@ -25,6 +25,8 @@
 #include "lwip/ip4_addr.h"
 
 #include "bits.h"
+#include <string.h>
+#include <stdio.h>
 
 static const char *TAG = "WIFI Manager";
 
@@ -41,6 +43,9 @@ static esp_netif_t* esp_netif_ap = NULL;
 
 // STA WiFi records
 static wifi_ap_record_t *accessp_records = NULL;
+
+// Global buffer to store JSON representation of access points
+static char *accessp_json = NULL;
 
 // The actual WiFi settings in use
 struct wifi_settings_t wifi_settings = {
@@ -564,7 +569,7 @@ void wifi_manager(void * pvParameters)
                     uint16_t ap_num = MAX_AP_NUM;
                     ERROR_CHECK(esp_wifi_scan_get_ap_records(&ap_num, accessp_records),
                                 "Scan WiFi failed");
-                    // create_json_from_ap_records(accessp_records);
+                    create_json_from_ap_records(accessp_records, ap_num);
                 }
 
 				/* callback */
@@ -579,6 +584,113 @@ void wifi_manager(void * pvParameters)
         }
     } // end of for loop
     vTaskDelete( NULL );
+}
+
+void create_json_from_ap_records(wifi_ap_record_t *ap_records, uint16_t ap_count)
+{
+    if (accessp_json == NULL || ap_records == NULL) {
+        LOGE(TAG, "accessp_json or ap_records is NULL");
+        return;
+    }
+
+    // Calculate total buffer size
+    size_t buffer_size = MAX_AP_NUM * MAXONEJSONRECORD + 4;
+    LOGI(TAG, "Starting JSON generation: %d APs found, buffer size: %zu bytes", ap_count, buffer_size);
+
+    // Sort AP records by RSSI (better signal first)
+    // Create a copy array with indices for sorting
+    typedef struct {
+        uint16_t index;
+        int8_t rssi;
+    } ap_sort_entry_t;
+    
+    ap_sort_entry_t sort_array[MAX_AP_NUM];
+    for (uint16_t i = 0; i < ap_count && i < MAX_AP_NUM; i++) {
+        sort_array[i].index = i;
+        sort_array[i].rssi = ap_records[i].rssi;
+    }
+    
+    // Simple bubble sort by RSSI (better signal = higher RSSI value = less negative)
+    for (uint16_t i = 0; i < ap_count - 1; i++) {
+        for (uint16_t j = 0; j < ap_count - 1 - i; j++) {
+            if (sort_array[j].rssi < sort_array[j + 1].rssi) {
+                // Swap entries
+                ap_sort_entry_t temp = sort_array[j];
+                sort_array[j] = sort_array[j + 1];
+                sort_array[j + 1] = temp;
+            }
+        }
+    }
+
+    // Start with opening bracket
+    strcpy(accessp_json, "[\n");
+    
+    bool first_entry = true;
+    size_t current_length = strlen(accessp_json);
+    int processed_count = 0;
+    int skipped_empty = 0;
+    int skipped_duplicate = 0;
+    
+    // Process APs in sorted order
+    for (uint16_t i = 0; i < ap_count; i++) {
+        uint16_t ap_idx = sort_array[i].index;
+        
+        // Filter out empty SSIDs
+        if (ap_records[ap_idx].ssid[0] == '\0') {
+            skipped_empty++;
+            continue;
+        }
+        
+        // Check for duplicate SSIDs by comparing with previously processed entries
+        bool is_duplicate = false;
+        for (uint16_t j = 0; j < i; j++) {
+            uint16_t prev_ap_idx = sort_array[j].index;
+            if (ap_records[prev_ap_idx].ssid[0] != '\0' && 
+                strcmp((char*)ap_records[ap_idx].ssid, (char*)ap_records[prev_ap_idx].ssid) == 0) {
+                is_duplicate = true;
+                break;
+            }
+        }
+        
+        if (is_duplicate) {
+            skipped_duplicate++;
+            continue;
+        }
+        
+        // Create JSON entry first to check its size
+        char json_entry[MAXONEJSONRECORD];
+        int entry_len = snprintf(json_entry, sizeof(json_entry), 
+                "%s{\"ssid\":\"%s\",\"chan\":%d,\"rssi\":%d,\"auth\":%d}",
+                first_entry ? "" : ",\n",
+                (char*)ap_records[ap_idx].ssid,
+                ap_records[ap_idx].primary,
+                ap_records[ap_idx].rssi,
+                ap_records[ap_idx].authmode);
+        
+        // Check if adding this entry would exceed buffer size (leave space for closing "]")
+        if (current_length + entry_len + 3 >= buffer_size) {
+            LOGW(TAG, "JSON buffer would overflow, stopping at entry %d", i);
+            break;
+        }
+        
+        // Add the entry to the buffer
+        strcat(accessp_json, json_entry);
+        current_length += entry_len;
+        first_entry = false;
+        processed_count++;
+        
+        LOGI(TAG, "Added AP %d: '%s' ch:%d rssi:%d auth:%d", 
+             processed_count, (char*)ap_records[ap_idx].ssid, 
+             ap_records[ap_idx].primary, ap_records[ap_idx].rssi, ap_records[ap_idx].authmode);
+    }
+    
+    // Close the JSON array
+    strcat(accessp_json, "\n]");
+}
+
+const char* wifi_manager_get_ap_json()
+{
+    return accessp_json;
 }
 
 void wifi_manager_start(void)
@@ -614,6 +726,17 @@ void wifi_manager_start(void)
     // WiFi STA records
     accessp_records = (wifi_ap_record_t*)malloc(sizeof(wifi_ap_record_t) * MAX_AP_NUM);
     
+    // JSON buffer for access points
+    size_t json_buffer_size = MAX_AP_NUM * MAXONEJSONRECORD + 4; // 4 bytes for "[\n" and "]\0"
+    accessp_json = (char*)malloc(json_buffer_size);
+    if (accessp_json != NULL) {
+        accessp_json[0] = '\0'; // Initialize as empty string
+        LOGI(TAG, "Allocated JSON buffer: %zu bytes (%d APs * %d bytes/AP + 4)", 
+             json_buffer_size, MAX_AP_NUM, MAXONEJSONRECORD);
+    } else {
+        LOGE(TAG, "Failed to allocate JSON buffer of %zu bytes", json_buffer_size);
+    }
+    
     xTaskCreate(&wifi_manager, "wifi_manager", 4096, NULL, WIFI_MANAGER_TASK_PRIORITY, &task_wifi_manager);
 }
 
@@ -630,6 +753,11 @@ void wifi_manager_stop()
     if (accessp_records != NULL) {
 	    free(accessp_records);
 	    accessp_records = NULL;
+    }
+
+    if (accessp_json != NULL) {
+        free(accessp_json);
+        accessp_json = NULL;
     }
 
     vEventGroupDelete(wifi_manager_event_group);
