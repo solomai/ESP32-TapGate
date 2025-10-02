@@ -24,6 +24,11 @@
 // Defines the maximum number of access points that can be scanned.
 #define MAX_AP_NUM 							15
 
+// Defines the maximum size of one JSON record in the accessp_json buffer
+// Format: {"ssid":"SSID_NAME","chan":11,"rssi":-82,"auth":4},
+// Max SSID length is 32, so we need about 120 bytes per record including formatting and comma/newline
+#define MAXONEJSONRECORD					120
+
 // Access Point WiFi Channel. Be careful you might not see the access point if you use a channel not allowed in your country.
 #define DEFAULT_AP_CHANNEL                  1
 
@@ -153,6 +158,12 @@ esp_netif_t* wifi_manager_get_esp_netif_sta();
 
 // returns the current esp_netif object for the Access Point
 esp_netif_t* wifi_manager_get_esp_netif_ap();
+
+// Creates JSON from access point records and stores it in the global accessp_json buffer
+void create_json_from_ap_records(wifi_ap_record_t *ap_records, uint16_t ap_count);
+
+// Gets the JSON string of scanned access points
+const char* wifi_manager_get_ap_json();
 
 // stored wifi configuration. used by HTTP server
 esp_err_t wifi_manager_save_config();
