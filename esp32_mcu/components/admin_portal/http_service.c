@@ -1147,6 +1147,48 @@ static esp_err_t handle_asset_entry(httpd_req_t *req)
     return send_asset(req, asset);
 }
 
+// Wildcard handler for all assets - saves handler slots
+static esp_err_t handle_asset_wildcard(httpd_req_t *req)
+{
+    if (!req || !req->uri) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
+    }
+
+    // Find matching asset by URI
+    for (size_t i = 0; i < sizeof(g_assets) / sizeof(g_assets[0]); ++i) {
+        const admin_portal_asset_t *asset = &g_assets[i];
+        if (strcmp(req->uri, asset->uri) == 0) {
+            LOGI(TAG, "Serving asset %s via wildcard handler", asset->uri);
+            return send_asset(req, asset);
+        }
+    }
+
+    // Asset not found
+    LOGW(TAG, "Asset not found: %s", req->uri);
+    return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Asset not found");
+}
+
+// Wildcard handler for all GET API endpoints - saves handler slots
+static esp_err_t handle_api_wildcard(httpd_req_t *req)
+{
+    if (!req || !req->uri) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
+    }
+
+    // Route to appropriate handler based on URI
+    if (strcmp(req->uri, "/api/initial-data.js") == 0) {
+        return handle_initial_data(req);
+    } else if (strcmp(req->uri, "/api/session") == 0) {
+        return handle_session_info(req);
+    } else if (strcmp(req->uri, "/api/wifi_networks") == 0) {
+        return handle_wifi_networks(req);
+    }
+
+    // API endpoint not found
+    LOGW(TAG, "API endpoint not found: %s", req->uri);
+    return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "API endpoint not found");
+}
+
 esp_err_t admin_portal_http_service_start(httpd_handle_t server)
 {
     if (!server)
@@ -1202,36 +1244,41 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
     }
     LOGI(TAG, "All page handlers registered (~%d handlers so far)", (int)(1 + sizeof(g_pages)/sizeof(g_pages[0]) * 2));
 
-    for (size_t i = 0; i < sizeof(g_assets) / sizeof(g_assets[0]); ++i)
-    {
-        const admin_portal_asset_t *asset = &g_assets[i];
-        httpd_uri_t asset_uri = {
-            .uri = asset->uri,
-            .method = HTTP_GET,
-            .handler = handle_asset_entry,
-            .user_ctx = (void *)asset,
-        };
-        ESP_ERROR_CHECK(httpd_register_uri_handler(server, &asset_uri));
-    }
-    LOGI(TAG, "All asset handlers registered (%d assets)", (int)sizeof(g_assets)/sizeof(g_assets[0]));
-
-
-    httpd_uri_t initial_data = {
-        .uri = "/api/initial-data.js",
+    // Single wildcard handler for all assets instead of individual handlers
+    httpd_uri_t assets_wildcard = {
+        .uri = "/assets/*",
         .method = HTTP_GET,
-        .handler = handle_initial_data,
+        .handler = handle_asset_wildcard,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &initial_data));
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &assets_wildcard));
+    LOGI(TAG, "Assets wildcard handler registered (1 handler for all assets)");
 
-    httpd_uri_t api_session = {
-        .uri = "/api/session",
+    // Remove individual asset registrations - handled by wildcard above
+    // for (size_t i = 0; i < sizeof(g_assets) / sizeof(g_assets[0]); ++i)
+    // {
+    //     const admin_portal_asset_t *asset = &g_assets[i];
+    //     httpd_uri_t asset_uri = {
+    //         .uri = asset->uri,
+    //         .method = HTTP_GET,
+    //         .handler = handle_asset_entry,
+    //         .user_ctx = (void *)asset,
+    //     };
+    //     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &asset_uri));
+    // }
+    // LOGI(TAG, "All asset handlers registered (%d assets)", (int)sizeof(g_assets)/sizeof(g_assets[0]));
+
+
+    // Single wildcard handler for all API endpoints - saves handler slots
+    httpd_uri_t api_wildcard = {
+        .uri = "/api/*",
         .method = HTTP_GET,
-        .handler = handle_session_info,
+        .handler = handle_api_wildcard,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_session));
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_wildcard));
 
+    // POST API endpoints still need individual handlers due to method differences
     httpd_uri_t api_enroll = {
         .uri = "/api/enroll",
         .method = HTTP_POST,
@@ -1271,31 +1318,13 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device));
-    LOGI(TAG, "All API handlers registered (7 API endpoints)");
+    LOGI(TAG, "API handlers registered (1 GET wildcard + 5 POST handlers)");
 
-    // WiFi networks API - high priority registration
-    httpd_uri_t api_wifi_networks = {
-        .uri = "/api/wifi_networks",
-        .method = HTTP_GET,
-        .handler = handle_wifi_networks,
-        .user_ctx = NULL,
-    };
-    esp_err_t wifi_api_err = httpd_register_uri_handler(server, &api_wifi_networks);
-    if (wifi_api_err == ESP_OK) {
-        LOGI(TAG, "WiFi networks API endpoint registered successfully at /api/wifi_networks");
-    } else {
-        LOGE(TAG, "Failed to register WiFi networks API endpoint: %s", esp_err_to_name(wifi_api_err));
-    }
+    // Note: WiFi networks API is now handled by the /api/* wildcard handler above
+    // No need for separate registration - this saves handler slots
 
     // Note: Skipping OPTIONS wildcard handler to save handler slots
     // CORS is handled in individual endpoints
-    // httpd_uri_t api_options_wildcard = {
-    //     .uri = "/api/*",
-    //     .method = HTTP_OPTIONS,
-    //     .handler = handle_options,
-    //     .user_ctx = NULL,
-    // };
-    // ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_options_wildcard));
 
     LOGI(TAG, "Admin portal service registered");
     return ESP_OK;
