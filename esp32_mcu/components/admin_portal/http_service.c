@@ -25,6 +25,8 @@
 #include "pages/page_events.h"
 #include "pages/page_main.h"
 #include "pages/page_wifi.h"
+#include "pages/page_network_connect.h"
+#include "pages/page_add_network.h"
 
 static const char *TAG = "AdminPortal";
 
@@ -47,6 +49,8 @@ static const admin_portal_page_descriptor_t *const g_pages[] = {
     &admin_portal_page_change_psw,
     &admin_portal_page_device,
     &admin_portal_page_wifi,
+    &admin_portal_page_network_connect,
+    &admin_portal_page_add_network,
     &admin_portal_page_clients,
     &admin_portal_page_events,
     &admin_portal_page_main,
@@ -115,6 +119,10 @@ static const char *page_name(admin_portal_page_t page)
             return "device";
         case ADMIN_PORTAL_PAGE_WIFI:
             return "wifi";
+        case ADMIN_PORTAL_PAGE_NETWORK_CONNECT:
+            return "network_connect";
+        case ADMIN_PORTAL_PAGE_ADD_NETWORK:
+            return "add_network";
         case ADMIN_PORTAL_PAGE_CLIENTS:
             return "clients";
         case ADMIN_PORTAL_PAGE_EVENTS:
@@ -953,6 +961,103 @@ static esp_err_t handle_change_password(httpd_req_t *req)
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/device/\"}");
 }
 
+static esp_err_t handle_wifi_scan(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+
+    if (status == ADMIN_PORTAL_SESSION_BUSY) {
+        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    }
+    
+    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state)) {
+        return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
+    }
+
+    // Trigger WiFi scan
+    trigger_scan_wifi();
+    
+    return send_json(req, "200 OK", "{\"status\":\"ok\"}");
+}
+
+static esp_err_t handle_wifi_networks(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+
+    if (status == ADMIN_PORTAL_SESSION_BUSY) {
+        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    }
+    
+    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state)) {
+        return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
+    }
+
+    // Get the JSON data from wifi_manager
+    const char *networks_json = wifi_manager_get_ap_json();
+    
+    if (!networks_json) {
+        return send_json(req, "200 OK", "[]");
+    }
+
+    httpd_resp_set_status(req, "200 OK");
+    httpd_resp_set_type(req, "application/json");
+    set_cors_headers_with_expose(req, "Set-Cookie");
+    set_cache_headers(req);
+    
+    return httpd_resp_send(req, networks_json, HTTPD_RESP_USE_STRLEN);
+}
+
+static esp_err_t handle_wifi_connect(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+
+    if (status == ADMIN_PORTAL_SESSION_BUSY) {
+        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    }
+    
+    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state)) {
+        return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
+    }
+
+    char *body = read_body(req);
+    if (!body) {
+        LOGI(TAG, "WiFi connect failed: request body missing");
+        return send_json(req, "400 Bad Request", "{\"status\":\"error\",\"code\":\"invalid_request\"}");
+    }
+
+    char ssid[MAX_SSID_SIZE] = {0};
+    char password[MAX_PASSWORD_SIZE] = {0};
+    
+    bool has_ssid = form_get_field(body, "ssid", ssid, sizeof(ssid));
+    bool has_password = form_get_field(body, "password", password, sizeof(password));
+    
+    free(body);
+
+    if (!has_ssid || ssid[0] == '\0') {
+        LOGI(TAG, "WiFi connect failed: invalid SSID");
+        return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_ssid\"}");
+    }
+
+    // Update WiFi settings
+    strncpy(wifi_settings.sta_ssid, ssid, sizeof(wifi_settings.sta_ssid) - 1);
+    wifi_settings.sta_ssid[sizeof(wifi_settings.sta_ssid) - 1] = '\0';
+    
+    if (has_password) {
+        strncpy(wifi_settings.sta_pwd, password, sizeof(wifi_settings.sta_pwd) - 1);
+        wifi_settings.sta_pwd[sizeof(wifi_settings.sta_pwd) - 1] = '\0';
+    } else {
+        wifi_settings.sta_pwd[0] = '\0';
+    }
+
+    // Save configuration and connect
+    wifi_manager_save_config();
+    
+    LOGI(TAG, "WiFi connect initiated for SSID: %s", ssid);
+    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/wifi/\"}");
+}
+
 static esp_err_t handle_update_device(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
@@ -1165,6 +1270,30 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device));
+
+    httpd_uri_t api_wifi_scan = {
+        .uri = "/api/wifi/scan",
+        .method = HTTP_POST,
+        .handler = handle_wifi_scan,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_wifi_scan));
+
+    httpd_uri_t api_wifi_networks = {
+        .uri = "/api/wifi/networks",
+        .method = HTTP_GET,
+        .handler = handle_wifi_networks,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_wifi_networks));
+
+    httpd_uri_t api_wifi_connect = {
+        .uri = "/api/wifi/connect",
+        .method = HTTP_POST,
+        .handler = handle_wifi_connect,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_wifi_connect));
 
     // Register single wildcard OPTIONS handler for all API endpoints (mobile browser compatibility)
     httpd_uri_t api_options_wildcard = {

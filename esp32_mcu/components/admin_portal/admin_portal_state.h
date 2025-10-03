@@ -13,6 +13,8 @@ typedef enum {
     ADMIN_PORTAL_PAGE_CHANGE_PASSWORD,
     ADMIN_PORTAL_PAGE_DEVICE,
     ADMIN_PORTAL_PAGE_WIFI,
+    ADMIN_PORTAL_PAGE_NETWORK_CONNECT,
+    ADMIN_PORTAL_PAGE_ADD_NETWORK,
     ADMIN_PORTAL_PAGE_CLIENTS,
     ADMIN_PORTAL_PAGE_EVENTS,
     ADMIN_PORTAL_PAGE_MAIN,
@@ -28,6 +30,8 @@ static inline const char* admin_portal_page_to_str(admin_portal_page_t page)
         case ADMIN_PORTAL_PAGE_CHANGE_PASSWORD: return "CHANGE_PASSWORD";
         case ADMIN_PORTAL_PAGE_DEVICE:          return "DEVICE";
         case ADMIN_PORTAL_PAGE_WIFI:            return "WIFI";
+        case ADMIN_PORTAL_PAGE_NETWORK_CONNECT: return "NETWORK_CONNECT";
+        case ADMIN_PORTAL_PAGE_ADD_NETWORK:     return "ADD_NETWORK";
         case ADMIN_PORTAL_PAGE_CLIENTS:         return "CLIENTS";
         case ADMIN_PORTAL_PAGE_EVENTS:          return "EVENTS";
         case ADMIN_PORTAL_PAGE_MAIN:            return "MAIN";

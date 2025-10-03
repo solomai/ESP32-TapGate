@@ -134,6 +134,29 @@
       }
     }
 
+    if (actionKey === "connectWifi") {
+      const passwordInput = form.elements["password"];
+      if (passwordInput && !passwordInput.value) {
+        setFieldError(form, "password", true);
+        setMessage(form, "Please enter the network password.");
+        focusField(form, "password");
+        return false;
+      }
+    }
+
+    if (actionKey === "addWifi") {
+      const ssidInput = form.elements["ssid"];
+      if (ssidInput && !ssidInput.value.trim()) {
+        setFieldError(form, "ssid", true);
+        setMessage(form, "Please enter network name.");
+        focusField(form, "ssid");
+        if (typeof ssidInput.select === "function") {
+          ssidInput.select();
+        }
+        return false;
+      }
+    }
+
     return true;
   }
 
@@ -377,11 +400,173 @@
     });
   }
 
+  // WiFi functionality
+  function getSignalIcon(rssi) {
+    if (rssi >= -50) return '/assets/wifi3.svg';
+    if (rssi >= -65) return '/assets/wifi2.svg';
+    if (rssi >= -80) return '/assets/wifi1.svg';
+    return '/assets/wifi0.svg';
+  }
+
+  function initializeWiFiPage() {
+    console.log("Initializing WiFi page functionality");
+    
+    const addNetworkBtn = document.getElementById('add-network-btn');
+    if (addNetworkBtn) {
+      addNetworkBtn.addEventListener('click', () => {
+        window.location.href = '/add-network/';
+      });
+    }
+
+    // Load available networks
+    loadAvailableNetworks();
+    
+    // Auto-refresh networks every 30 seconds
+    setInterval(loadAvailableNetworks, 30000);
+  }
+
+  async function loadAvailableNetworks() {
+    const scanStatus = document.getElementById('scan-status');
+    const networksList = document.getElementById('networks-list');
+    
+    if (!networksList) return;
+
+    try {
+      // Show scanning status
+      if (scanStatus) {
+        scanStatus.style.display = 'block';
+        scanStatus.textContent = 'Scanning...';
+      }
+
+      // Trigger scan first
+      await fetch('/api/wifi/scan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        }
+      });
+
+      // Wait a bit for scan to complete
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Get networks
+      const response = await fetch('/api/wifi/networks');
+      if (!response.ok) throw new Error('Failed to load networks');
+      
+      const networks = await response.json();
+      
+      // Hide scanning status
+      if (scanStatus) {
+        scanStatus.style.display = 'none';
+      }
+
+      // Clear existing networks
+      networksList.innerHTML = '';
+
+      if (!networks || networks.length === 0) {
+        networksList.innerHTML = '<div class="network-item">No networks found</div>';
+        return;
+      }
+
+      // Sort networks by signal strength
+      networks.sort((a, b) => b.rssi - a.rssi);
+
+      // Create network items
+      networks.forEach(network => {
+        const networkItem = document.createElement('div');
+        networkItem.className = 'network-item clickable';
+        
+        const icon = document.createElement('img');
+        icon.className = 'wifi-icon';
+        icon.src = getSignalIcon(network.rssi);
+        icon.alt = 'WiFi Signal';
+
+        const name = document.createElement('span');
+        name.className = 'network-name';
+        name.textContent = network.ssid;
+
+        const lockIcon = document.createElement('span');
+        lockIcon.className = 'lock-indicator';
+        if (network.auth > 0) {
+          lockIcon.innerHTML = '🔒';
+        }
+
+        networkItem.appendChild(icon);
+        networkItem.appendChild(name);
+        networkItem.appendChild(lockIcon);
+
+        networkItem.addEventListener('click', () => {
+          connectToNetwork(network.ssid);
+        });
+
+        networksList.appendChild(networkItem);
+      });
+
+    } catch (error) {
+      console.error('Error loading networks:', error);
+      if (scanStatus) {
+        scanStatus.textContent = 'Error loading networks';
+      }
+    }
+  }
+
+  function connectToNetwork(ssid) {
+    // Store the selected SSID for the connect page
+    sessionStorage.setItem('selectedSSID', ssid);
+    window.location.href = '/network-connect/';
+  }
+
+  function initializeNetworkConnectPage() {
+    const title = document.getElementById('network-title');
+    const ssidFromStorage = sessionStorage.getItem('selectedSSID');
+    
+    if (ssidFromStorage && title) {
+      title.textContent = `Connect to ${ssidFromStorage}`;
+    }
+
+    // Add hidden SSID field to form
+    const form = document.querySelector('form[data-action="connectWifi"]');
+    if (form && ssidFromStorage) {
+      const hiddenSSID = document.createElement('input');
+      hiddenSSID.type = 'hidden';
+      hiddenSSID.name = 'ssid';
+      hiddenSSID.value = ssidFromStorage;
+      form.appendChild(hiddenSSID);
+    }
+  }
+
+  function initializeAddNetworkPage() {
+    // Add form validation for add network
+    const form = document.querySelector('form[data-action="addWifi"]');
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        const ssidField = form.elements['ssid'];
+        if (!ssidField || !ssidField.value.trim()) {
+          e.preventDefault();
+          setMessage(form, 'Please enter a network name.');
+          setFieldError(form, 'ssid', true);
+          focusField(form, 'ssid');
+          return false;
+        }
+      });
+    }
+  }
+
   function initializePage() {
     console.log("Initializing simple form handling (no AJAX)");
     ensureRequiredElements();
     attachFormHandlers();
     applyInitialData();
+
+    // Initialize page-specific functionality
+    const body = document.body;
+    if (body.classList.contains('page-wifi')) {
+      initializeWiFiPage();
+    } else if (body.classList.contains('page-network-connect')) {
+      initializeNetworkConnectPage();
+    } else if (body.classList.contains('page-add-network')) {
+      initializeAddNetworkPage();
+    }
   }
 
   // Initialize when DOM is ready
