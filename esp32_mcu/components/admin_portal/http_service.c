@@ -1147,27 +1147,6 @@ static esp_err_t handle_asset_entry(httpd_req_t *req)
     return send_asset(req, asset);
 }
 
-// Wildcard handler for all assets - saves handler slots
-static esp_err_t handle_asset_wildcard(httpd_req_t *req)
-{
-    if (!req || req->uri[0] == '\0') {
-        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
-    }
-
-    // Find matching asset by URI
-    for (size_t i = 0; i < sizeof(g_assets) / sizeof(g_assets[0]); ++i) {
-        const admin_portal_asset_t *asset = &g_assets[i];
-        if (strcmp(req->uri, asset->uri) == 0) {
-            LOGI(TAG, "Serving asset %s via wildcard handler", asset->uri);
-            return send_asset(req, asset);
-        }
-    }
-
-    // Asset not found
-    LOGW(TAG, "Asset not found: %s", req->uri);
-    return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Asset not found");
-}
-
 // Wildcard handler for all GET API endpoints - saves handler slots
 static esp_err_t handle_api_wildcard(httpd_req_t *req)
 {
@@ -1244,29 +1223,19 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
     }
     LOGI(TAG, "All page handlers registered (~%d handlers so far)", (int)(1 + sizeof(g_pages)/sizeof(g_pages[0]) * 2));
 
-    // Single wildcard handler for all assets instead of individual handlers
-    httpd_uri_t assets_wildcard = {
-        .uri = "/assets/*",
-        .method = HTTP_GET,
-        .handler = handle_asset_wildcard,
-        .user_ctx = NULL,
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &assets_wildcard));
-    LOGI(TAG, "Assets wildcard handler registered (1 handler for all assets)");
-
-    // Remove individual asset registrations - handled by wildcard above
-    // for (size_t i = 0; i < sizeof(g_assets) / sizeof(g_assets[0]); ++i)
-    // {
-    //     const admin_portal_asset_t *asset = &g_assets[i];
-    //     httpd_uri_t asset_uri = {
-    //         .uri = asset->uri,
-    //         .method = HTTP_GET,
-    //         .handler = handle_asset_entry,
-    //         .user_ctx = (void *)asset,
-    //     };
-    //     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &asset_uri));
-    // }
-    // LOGI(TAG, "All asset handlers registered (%d assets)", (int)sizeof(g_assets)/sizeof(g_assets[0]));
+    // Register individual asset handlers (wildcard doesn't work reliably)
+    for (size_t i = 0; i < sizeof(g_assets) / sizeof(g_assets[0]); ++i)
+    {
+        const admin_portal_asset_t *asset = &g_assets[i];
+        httpd_uri_t asset_uri = {
+            .uri = asset->uri,
+            .method = HTTP_GET,
+            .handler = handle_asset_entry,
+            .user_ctx = (void *)asset,
+        };
+        ESP_ERROR_CHECK(httpd_register_uri_handler(server, &asset_uri));
+    }
+    LOGI(TAG, "All asset handlers registered (%d assets)", (int)sizeof(g_assets)/sizeof(g_assets[0]));
 
 
     // Single wildcard handler for all API endpoints - saves handler slots
