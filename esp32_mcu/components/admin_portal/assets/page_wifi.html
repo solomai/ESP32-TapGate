@@ -107,28 +107,50 @@
 
       // Load WiFi networks from server
       function loadWifiNetworks() {
+        console.log('Loading WiFi networks from /api/wifi_networks');
         fetch('/api/wifi_networks', {
           method: 'GET',
           credentials: 'include'
         })
-        .then(response => response.json())
+        .then(response => {
+          console.log('Response status:', response.status);
+          console.log('Response headers:', [...response.headers.entries()]);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          return response.json();
+        })
         .then(data => {
+          console.log('Received data:', data);
+          
           if (data.status === 'ok') {
             if (data.scanning) {
               // Still scanning, check again in 2 seconds
+              console.log('Still scanning, checking again in 2 seconds');
               document.getElementById('scan-status').textContent = 'Scanning...';
               setTimeout(loadWifiNetworks, 2000);
             } else {
               // Scan completed, display networks
+              console.log('Scan completed, displaying networks:', data.networks);
               displayNetworks(data.networks || []);
             }
           } else {
-            document.getElementById('scan-status').textContent = 'Failed to load networks';
+            console.error('API returned error status:', data);
+            document.getElementById('scan-status').textContent = 'Server error: ' + (data.code || 'unknown');
           }
         })
         .catch(error => {
           console.error('Network loading error:', error);
-          document.getElementById('scan-status').textContent = 'Failed to load networks. Please refresh the page.';
+          const scanStatus = document.getElementById('scan-status');
+          if (scanStatus) {
+            scanStatus.innerHTML = `Failed to load networks: ${error.message}<br><button id="retry-btn" style="margin-top: 10px; padding: 5px 10px;">Retry</button>`;
+            // Add retry button handler
+            const retryBtn = document.getElementById('retry-btn');
+            if (retryBtn) {
+              retryBtn.addEventListener('click', loadWifiNetworks);
+            }
+          }
         });
       }
 

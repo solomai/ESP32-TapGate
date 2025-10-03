@@ -117,5 +117,16 @@ void session_set_idle_timeout(uint32_t timeout_value)
 
 void trigger_scan_wifi()
 {
+    LOGI("ADMIN_PORTAL", "=== Starting WiFi scan trigger ===");
+    
+    // Check if wifi_manager JSON buffer is available
+    const char* current_json = wifi_manager_get_ap_json();
+    LOGI("ADMIN_PORTAL", "Current JSON buffer state: %s", current_json ? current_json : "NULL");
+    LOGI("ADMIN_PORTAL", "Current JSON length: %zu", current_json ? strlen(current_json) : 0);
+    
+    LOGI("ADMIN_PORTAL", "Triggering WiFi scan via wifi_manager_scan_async()");
     wifi_manager_scan_async();
+    LOGI("ADMIN_PORTAL", "WiFi scan async call completed");
+    
+    LOGI("ADMIN_PORTAL", "=== WiFi scan trigger finished ===");
 }
