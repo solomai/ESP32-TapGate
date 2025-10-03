@@ -1269,8 +1269,6 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device));
 
-        }
-
     // Test endpoint to verify registration works
     httpd_uri_t api_test = {
         .uri = "/api/test",
