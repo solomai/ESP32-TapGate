@@ -28,6 +28,10 @@
 
 static const char *TAG = "AdminPortal";
 
+// WiFi scan results storage
+static char g_wifi_scan_results[2048] = {0};
+static bool g_wifi_scan_ready = false;
+
 // WiFi scan completion callback
 static void wifi_scan_done_callback(void* arg)
 {
@@ -58,10 +62,6 @@ typedef struct {
 
 static httpd_handle_t g_server = NULL;
 static admin_portal_state_t g_state;
-
-// WiFi scan results storage
-static char g_wifi_scan_results[2048] = {0};
-static bool g_wifi_scan_ready = false;
 
 static const admin_portal_page_descriptor_t *const g_pages[] = {
     &admin_portal_page_enroll,
