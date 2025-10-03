@@ -179,19 +179,16 @@ nav.menu .button-link {
 
 .logoff-btn {
   width: 100%;
-  background: #1f2937 !important;
-  border-color: #374151 !important;
   color: #ef4444 !important;
 }
 
 .logoff-btn:hover,
 .logoff-btn:focus {
-  background: #374151 !important;
-  border-color: #4b5563 !important;
+  color: #f87171 !important;
 }
 
 .logoff-btn:active {
-  background: #111827 !important;
+  color: #dc2626 !important;
 }
 
 body.page-busy main.card,
