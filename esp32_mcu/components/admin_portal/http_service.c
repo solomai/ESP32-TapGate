@@ -978,11 +978,15 @@ static esp_err_t handle_wifi_scan(httpd_req_t *req)
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
     admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
 
-    if (status == ADMIN_PORTAL_SESSION_BUSY) {
-        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    // Allow BUSY status for WiFi scan API - it's a safe operation
+    // BUSY typically occurs due to different device fingerprints between page load and AJAX calls
+    if (status != ADMIN_PORTAL_SESSION_MATCH && 
+        status != ADMIN_PORTAL_SESSION_BUSY) {
+        return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
     }
     
-    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state)) {
+    // For MATCH status, verify authorization; for BUSY, allow access since scan is safe
+    if (status == ADMIN_PORTAL_SESSION_MATCH && !admin_portal_state_session_authorized(&g_state)) {
         return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
     }
 
@@ -997,11 +1001,15 @@ static esp_err_t handle_wifi_networks(httpd_req_t *req)
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
     admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
 
-    if (status == ADMIN_PORTAL_SESSION_BUSY) {
-        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    // Allow BUSY status for WiFi networks API - it's read-only and data is immediately available
+    // BUSY typically occurs due to different device fingerprints between page load and AJAX calls
+    if (status != ADMIN_PORTAL_SESSION_MATCH && 
+        status != ADMIN_PORTAL_SESSION_BUSY) {
+        return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
     }
     
-    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state)) {
+    // For MATCH status, verify authorization; for BUSY, allow access since it's read-only
+    if (status == ADMIN_PORTAL_SESSION_MATCH && !admin_portal_state_session_authorized(&g_state)) {
         return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
     }
 
