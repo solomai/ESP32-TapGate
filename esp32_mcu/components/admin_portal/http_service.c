@@ -1150,7 +1150,7 @@ static esp_err_t handle_asset_entry(httpd_req_t *req)
 // Wildcard handler for all assets - saves handler slots
 static esp_err_t handle_asset_wildcard(httpd_req_t *req)
 {
-    if (!req || !req->uri) {
+    if (!req || req->uri[0] == '\0') {
         return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
     }
 
@@ -1171,7 +1171,7 @@ static esp_err_t handle_asset_wildcard(httpd_req_t *req)
 // Wildcard handler for all GET API endpoints - saves handler slots
 static esp_err_t handle_api_wildcard(httpd_req_t *req)
 {
-    if (!req || !req->uri) {
+    if (!req || req->uri[0] == '\0') {
         return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
     }
 
