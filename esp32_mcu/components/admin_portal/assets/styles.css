@@ -179,24 +179,176 @@ nav.menu .button-link {
 
 .logoff-btn {
   width: 100%;
-  background: #1f2937 !important;
-  border-color: #374151 !important;
   color: #ef4444 !important;
 }
 
 .logoff-btn:hover,
 .logoff-btn:focus {
-  background: #374151 !important;
-  border-color: #4b5563 !important;
+  color: #f87171 !important;
 }
 
 .logoff-btn:active {
-  background: #111827 !important;
+  color: #dc2626 !important;
 }
 
 body.page-busy main.card,
 body.page-off main.card {
   max-width: 480px;
+}
+
+/* WiFi page specific styles */
+body.page-wifi main {
+  max-width: 480px;
+  width: calc(100% - 32px);
+  margin: 0 auto;
+  padding: 24px 0;
+}
+
+body.page-wifi h1 {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+body.page-wifi h2 {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0 0 16px 0;
+  color: #E6EEF8;
+}
+
+.current-network,
+.available-networks {
+  margin-bottom: 32px;
+}
+
+.card {
+  background: rgba(16, 22, 29, 0.85);
+  border: 1px solid #1f2a37;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.network-card {
+  padding: 16px;
+}
+
+.network-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  transition: background-color 120ms ease;
+}
+
+.network-item.clickable {
+  cursor: pointer;
+}
+
+.network-item.clickable:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.network-item .wifi-icon {
+  width: 20px;
+  height: 20px;
+  filter: invert(1);
+}
+
+.network-item .network-name {
+  flex: 1;
+  font-size: 15px;
+  color: #E6EEF8;
+}
+
+.network-item .lock-indicator {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.networks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 20px;
+}
+
+/* Add network item styling */
+.add-network-item {
+  margin-top: 8px;
+  border-top: 1px solid #1f2a37;
+  padding-top: 16px;
+}
+
+.add-network-item:hover {
+  background-color: rgba(34, 197, 94, 0.1) !important;
+}
+
+.add-network-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #22c55e;
+  flex-shrink: 0;
+}
+
+.scan-status {
+  text-align: center;
+  padding: 20px;
+  color: #94A3B8;
+  font-style: italic;
+}
+
+.actions .button-link {
+  width: 100%;
+  background: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #9CA3AF !important;
+}
+
+body.page-network-connect main,
+body.page-add-network main {
+  max-width: 420px;
+  width: calc(100% - 32px);
+  margin: 0 auto;
+  padding: 24px 0;
+}
+
+body.page-network-connect .card,
+body.page-add-network .card {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Ensure input fields have same width as buttons */
+body.page-add-network input[type="text"],
+body.page-add-network input[type="password"],
+body.page-network-connect input[type="password"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+body.page-add-network .actions,
+body.page-network-connect .actions {
+  width: 100%;
+}
+
+body.page-add-network .actions button,
+body.page-network-connect .actions button {
+  width: 100%;
+}
+
+.form-message {
+  min-height: 20px;
+  font-size: 14px;
+  color: #F87171;
+  text-align: center;
 }
 
 @media (max-width: 480px) {
@@ -206,5 +358,15 @@ body.page-off main.card {
 
   .logo {
     width: 80px;
+  }
+
+  body.page-wifi main,
+  body.page-network-connect main,
+  body.page-add-network main {
+    padding: 16px 0;
+  }
+
+  .card {
+    padding: 20px;
   }
 }

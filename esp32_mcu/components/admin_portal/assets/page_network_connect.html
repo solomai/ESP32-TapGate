@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TapGate · Connect to Network</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <script src="/api/initial-data.js"></script>
+  <script defer src="/assets/app.js"></script>
+</head>
+<body class="page page-network-connect">
+  <main>
+    <div class="card">
+      <h1 id="network-title">Connect to Network</h1>
+      
+      <form data-action="connectWifi" action="/api/wifi/connect" method="POST" class="form-grid">
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            placeholder="Enter password" 
+            required
+            autocomplete="current-password"
+          >
+        </div>
+        
+        <div class="form-message" data-message></div>
+        
+        <div class="actions">
+          <button type="submit" class="button-primary">Connect</button>
+        </div>
+        
+        <div class="actions">
+          <button type="button" class="button-primary" onclick="window.location.href='/wifi/'">Back</button>
+        </div>
+      </form>
+    </div>
+  </main>
+</body>
+</html>
