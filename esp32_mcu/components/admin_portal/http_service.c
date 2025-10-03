@@ -1208,26 +1208,6 @@ static esp_err_t handle_asset_entry(httpd_req_t *req)
     return send_asset(req, asset);
 }
 
-// Wildcard handler for all GET API endpoints - saves handler slots
-static esp_err_t handle_api_wildcard(httpd_req_t *req)
-{
-    if (!req || req->uri[0] == '\0') {
-        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
-    }
-
-    // Route to appropriate handler based on URI
-    if (strcmp(req->uri, "/api/initial-data.js") == 0) {
-        return handle_initial_data(req);
-    } else if (strcmp(req->uri, "/api/session") == 0) {
-        return handle_session_info(req);
-    } else if (strcmp(req->uri, "/api/wifi_networks") == 0) {
-        return handle_wifi_networks(req);
-    }
-
-    // API endpoint not found
-    LOGW(TAG, "API endpoint not found: %s", req->uri);
-    return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "API endpoint not found");
-}
 
 esp_err_t admin_portal_http_service_start(httpd_handle_t server)
 {
@@ -1309,14 +1289,31 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
     LOGI(TAG, "All asset handlers registered (%d assets)", (int)sizeof(g_assets)/sizeof(g_assets[0]));
 
 
-    // Single wildcard handler for all API endpoints - saves handler slots
-    httpd_uri_t api_wildcard = {
-        .uri = "/api/*",
+    // Register individual API endpoints instead of wildcard (more reliable)
+    httpd_uri_t initial_data = {
+        .uri = "/api/initial-data.js",
         .method = HTTP_GET,
-        .handler = handle_api_wildcard,
+        .handler = handle_initial_data,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_wildcard));
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &initial_data));
+
+    httpd_uri_t api_session = {
+        .uri = "/api/session",
+        .method = HTTP_GET,
+        .handler = handle_session_info,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_session));
+
+    httpd_uri_t api_wifi_networks = {
+        .uri = "/api/wifi_networks",
+        .method = HTTP_GET,
+        .handler = handle_wifi_networks,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_wifi_networks));
+    LOGI(TAG, "API GET handlers registered (3 individual endpoints)");
 
     // POST API endpoints still need individual handlers due to method differences
     httpd_uri_t api_enroll = {
@@ -1358,10 +1355,10 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device));
-    LOGI(TAG, "API handlers registered (1 GET wildcard + 5 POST handlers)");
+    LOGI(TAG, "API POST handlers registered (5 individual endpoints)");
 
-    // Note: WiFi networks API is now handled by the /api/* wildcard handler above
-    // No need for separate registration - this saves handler slots
+    // Note: All API endpoints now use individual handlers for maximum reliability
+    // Total handlers: ~1 root + ~18 pages + 7 assets + 3 GET APIs + 5 POST APIs ≈ 34 handlers
 
     // Note: Skipping OPTIONS wildcard handler to save handler slots
     // CORS is handled in individual endpoints
