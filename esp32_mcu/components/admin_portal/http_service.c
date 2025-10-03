@@ -1269,20 +1269,7 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device));
 
-    // Test endpoint to verify registration works
-    httpd_uri_t api_test = {
-        .uri = "/api/test",
-        .method = HTTP_GET,
-        .handler = handle_wifi_networks, // Reuse same handler for test
-        .user_ctx = NULL,
-    };
-    esp_err_t test_api_err = httpd_register_uri_handler(server, &api_test);
-    if (test_api_err == ESP_OK) {
-        LOGI(TAG, "Test API endpoint registered successfully at /api/test");
-    } else {
-        LOGE(TAG, "Failed to register test API endpoint: %s", esp_err_to_name(test_api_err));
-    }
-
+    // WiFi networks API - high priority registration
     httpd_uri_t api_wifi_networks = {
         .uri = "/api/wifi_networks",
         .method = HTTP_GET,
@@ -1296,14 +1283,15 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         LOGE(TAG, "Failed to register WiFi networks API endpoint: %s", esp_err_to_name(wifi_api_err));
     }
 
-    // Register single wildcard OPTIONS handler for all API endpoints (mobile browser compatibility)
-    httpd_uri_t api_options_wildcard = {
-        .uri = "/api/*",
-        .method = HTTP_OPTIONS,
-        .handler = handle_options,
-        .user_ctx = NULL,
-    };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_options_wildcard));
+    // Note: Skipping OPTIONS wildcard handler to save handler slots
+    // CORS is handled in individual endpoints
+    // httpd_uri_t api_options_wildcard = {
+    //     .uri = "/api/*",
+    //     .method = HTTP_OPTIONS,
+    //     .handler = handle_options,
+    //     .user_ctx = NULL,
+    // };
+    // ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_options_wildcard));
 
     LOGI(TAG, "Admin portal service registered");
     return ESP_OK;
