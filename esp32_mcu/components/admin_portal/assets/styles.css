@@ -277,22 +277,34 @@ body.page-wifi h2 {
   margin-bottom: 20px;
 }
 
+/* Add network item styling */
+.add-network-item {
+  margin-top: 8px;
+  border-top: 1px solid #1f2a37;
+  padding-top: 16px;
+}
+
+.add-network-item:hover {
+  background-color: rgba(34, 197, 94, 0.1) !important;
+}
+
+.add-network-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #22c55e;
+  flex-shrink: 0;
+}
+
 .scan-status {
   text-align: center;
   padding: 20px;
   color: #94A3B8;
   font-style: italic;
-}
-
-.network-actions {
-  border-top: 1px solid #1f2a37;
-  padding-top: 20px;
-  margin-bottom: 20px;
-}
-
-.button-primary {
-  width: 100%;
-  margin-bottom: 12px;
 }
 
 .actions .button-link {

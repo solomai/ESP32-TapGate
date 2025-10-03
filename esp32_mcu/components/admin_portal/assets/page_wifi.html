@@ -32,12 +32,14 @@
           <!-- Networks will be populated by JavaScript -->
         </div>
         
-        <div class="network-actions">
-          <button type="button" class="button-primary" id="add-network-btn">Add network</button>
+        <!-- Add network item styled like a network entry -->
+        <div class="network-item clickable add-network-item" id="add-network-btn">
+          <span class="add-network-icon">+</span>
+          <span class="network-name">Add network</span>
         </div>
         
         <div class="actions">
-          <a href="/main/" class="button-link">Back</a>
+          <button type="button" class="button-primary" onclick="window.location.href='/main/'">Back</button>
         </div>
       </div>
     </section>
