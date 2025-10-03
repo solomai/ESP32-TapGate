@@ -1020,6 +1020,19 @@ static esp_err_t handle_wifi_networks(httpd_req_t *req)
     return httpd_resp_send(req, networks_json, HTTPD_RESP_USE_STRLEN);
 }
 
+static esp_err_t handle_wifi_unregister(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+
+    if (status == ADMIN_PORTAL_SESSION_MATCH) {
+        // Unregister this session from WiFi notifications
+        admin_portal_unregister_wifi_page_session(token);
+    }
+    
+    return send_json(req, "200 OK", "{\"status\":\"ok\"}");
+}
+
 static esp_err_t handle_wifi_connect(httpd_req_t *req)
 {
     char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
@@ -1136,8 +1149,11 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
         create_session(req, token, sizeof(token));
 
     // Trigger start scan Wifi routine
-    if (desc->page == ADMIN_PORTAL_PAGE_WIFI)
+    if (desc->page == ADMIN_PORTAL_PAGE_WIFI) {
         trigger_scan_wifi();
+        // Register this session for WiFi scan notifications
+        admin_portal_register_wifi_page_session(token);
+    }
 
     return send_page_content(req, desc);
 }
@@ -1337,6 +1353,17 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
     };
     if (ESP_OK != httpd_register_uri_handler(server, &api_wifi_networks)) {
         LOGE(TAG, "Failed to register wifi networks handler");
+        return ESP_FAIL;
+    }
+
+    httpd_uri_t api_wifi_unregister = {
+        .uri = "/api/wifi/unregister",
+        .method = HTTP_POST,
+        .handler = handle_wifi_unregister,
+        .user_ctx = NULL,
+    };
+    if (ESP_OK != httpd_register_uri_handler(server, &api_wifi_unregister)) {
+        LOGE(TAG, "Failed to register wifi unregister handler");
         return ESP_FAIL;
     }
 

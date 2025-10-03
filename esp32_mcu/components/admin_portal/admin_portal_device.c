@@ -16,7 +16,20 @@
 // Default session Idle timeout in minutes
 #define DEFAULT_IDLE_TIMEOUT_MINUTES 15U
 
+// Maximum number of concurrent WiFi page sessions
+#define MAX_WIFI_PAGE_SESSIONS 4
+
 static const char TAG[] = "HTTP Server";
+
+// Structure to track active WiFi page sessions
+typedef struct {
+    char session_token[33]; // 32 chars + null terminator
+    bool active;
+} wifi_page_session_t;
+
+// Array to track active WiFi page sessions
+static wifi_page_session_t wifi_page_sessions[MAX_WIFI_PAGE_SESSIONS];
+static bool wifi_callback_registered = false;
 
 static size_t strnlen_safe(const char *str, size_t max_len)
 {
@@ -118,4 +131,84 @@ void session_set_idle_timeout(uint32_t timeout_value)
 void trigger_scan_wifi()
 {
     wifi_manager_scan_async();
+}
+
+// WiFi scan completion callback
+static void wifi_scan_done_callback(void* param)
+{
+    LOGI(TAG, "WiFi scan completed, checking for active WiFi page sessions");
+    
+    // Check if any WiFi page sessions are active
+    bool has_active_sessions = false;
+    for (int i = 0; i < MAX_WIFI_PAGE_SESSIONS; i++) {
+        if (wifi_page_sessions[i].active) {
+            has_active_sessions = true;
+            LOGD(TAG, "Active WiFi session found: %.8s...", wifi_page_sessions[i].session_token);
+        }
+    }
+    
+    if (has_active_sessions) {
+        admin_portal_notify_wifi_scan_complete();
+    } else {
+        LOGD(TAG, "No active WiFi page sessions, skipping notification");
+    }
+}
+
+void admin_portal_register_wifi_page_session(const char* session_token)
+{
+    if (!session_token) {
+        LOGE(TAG, "Invalid session token for WiFi page registration");
+        return;
+    }
+    
+    // Register callback if not already done
+    if (!wifi_callback_registered) {
+        esp_err_t err = wifi_manager_set_callback(WM_EVENT_SCAN_DONE, wifi_scan_done_callback);
+        if (err == ESP_OK) {
+            wifi_callback_registered = true;
+            LOGI(TAG, "WiFi scan callback registered successfully");
+        } else {
+            LOGE(TAG, "Failed to register WiFi scan callback: %s", esp_err_to_name(err));
+            return;
+        }
+    }
+    
+    // Find an empty slot or replace existing session
+    for (int i = 0; i < MAX_WIFI_PAGE_SESSIONS; i++) {
+        if (!wifi_page_sessions[i].active || 
+            strcmp(wifi_page_sessions[i].session_token, session_token) == 0) {
+            strncpy(wifi_page_sessions[i].session_token, session_token, sizeof(wifi_page_sessions[i].session_token) - 1);
+            wifi_page_sessions[i].session_token[sizeof(wifi_page_sessions[i].session_token) - 1] = '\0';
+            wifi_page_sessions[i].active = true;
+            LOGD(TAG, "Registered WiFi page session: %.8s...", session_token);
+            return;
+        }
+    }
+    
+    LOGW(TAG, "No available slots for WiFi page session registration");
+}
+
+void admin_portal_unregister_wifi_page_session(const char* session_token)
+{
+    if (!session_token) {
+        return;
+    }
+    
+    for (int i = 0; i < MAX_WIFI_PAGE_SESSIONS; i++) {
+        if (wifi_page_sessions[i].active && 
+            strcmp(wifi_page_sessions[i].session_token, session_token) == 0) {
+            wifi_page_sessions[i].active = false;
+            wifi_page_sessions[i].session_token[0] = '\0';
+            LOGD(TAG, "Unregistered WiFi page session: %.8s...", session_token);
+            return;
+        }
+    }
+}
+
+void admin_portal_notify_wifi_scan_complete()
+{
+    // This function will be called by the scan callback
+    // For now, it just logs that the scan is complete
+    // The web interface will use polling to get updated data
+    LOGI(TAG, "WiFi scan completed - web clients should refresh network list");
 }
