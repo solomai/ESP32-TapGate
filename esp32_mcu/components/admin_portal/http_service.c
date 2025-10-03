@@ -85,11 +85,23 @@ extern const uint8_t _binary_styles_css_gz_start[];
 extern const uint8_t _binary_styles_css_gz_end[];
 extern const uint8_t _binary_app_js_gz_start[];
 extern const uint8_t _binary_app_js_gz_end[];
+extern const uint8_t _binary_wifi0_svg_start[];
+extern const uint8_t _binary_wifi0_svg_end[];
+extern const uint8_t _binary_wifi1_svg_start[];
+extern const uint8_t _binary_wifi1_svg_end[];
+extern const uint8_t _binary_wifi2_svg_start[];
+extern const uint8_t _binary_wifi2_svg_end[];
+extern const uint8_t _binary_wifi3_svg_start[];
+extern const uint8_t _binary_wifi3_svg_end[];
 
 static const admin_portal_asset_t g_assets[] = {
     { .uri = "/assets/logo.png", .start = _binary_logo_png_start, .end = _binary_logo_png_end, .content_type = "image/png", .compressed = false },
     { .uri = "/assets/styles.css", .start = _binary_styles_css_gz_start, .end = _binary_styles_css_gz_end, .content_type = "text/css", .compressed = true },
     { .uri = "/assets/app.js", .start = _binary_app_js_gz_start, .end = _binary_app_js_gz_end, .content_type = "application/javascript", .compressed = true },
+    { .uri = "/assets/wifi0.svg", .start = _binary_wifi0_svg_start, .end = _binary_wifi0_svg_end, .content_type = "image/svg+xml", .compressed = false },
+    { .uri = "/assets/wifi1.svg", .start = _binary_wifi1_svg_start, .end = _binary_wifi1_svg_end, .content_type = "image/svg+xml", .compressed = false },
+    { .uri = "/assets/wifi2.svg", .start = _binary_wifi2_svg_start, .end = _binary_wifi2_svg_end, .content_type = "image/svg+xml", .compressed = false },
+    { .uri = "/assets/wifi3.svg", .start = _binary_wifi3_svg_start, .end = _binary_wifi3_svg_end, .content_type = "image/svg+xml", .compressed = false },
 };
 
 static const char *session_status_name(admin_portal_session_status_t status)
