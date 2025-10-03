@@ -54,10 +54,31 @@ static void wifi_scan_done_callback(void* arg)
             
             if (json_len > max_copy) {
                 LOGW(TAG, "JSON data too large (%zu bytes), truncating to %zu bytes", json_len, max_copy);
+                // Truncate at a safe JSON boundary - find last complete network entry
+                size_t safe_len = max_copy;
+                // Look for last complete "}," or "}]" pattern
+                for (size_t i = max_copy - 10; i > 0; i--) {
+                    if (networks_json[i] == '}' && (networks_json[i+1] == ',' || networks_json[i+1] == ']')) {
+                        safe_len = i + (networks_json[i+1] == ']' ? 2 : 1);
+                        break;
+                    }
+                }
+                // If we couldn't find a safe boundary, use empty array
+                if (safe_len >= max_copy - 10) {
+                    strcpy(g_wifi_scan_results, "[]");
+                    LOGW(TAG, "Could not safely truncate JSON, using empty array");
+                } else {
+                    strncpy(g_wifi_scan_results, networks_json, safe_len);
+                    g_wifi_scan_results[safe_len] = '\0';
+                    // Ensure proper JSON closure
+                    if (g_wifi_scan_results[safe_len-1] == ',') {
+                        g_wifi_scan_results[safe_len-1] = ']';
+                    }
+                }
+            } else {
+                strncpy(g_wifi_scan_results, networks_json, max_copy);
+                g_wifi_scan_results[max_copy] = '\0';
             }
-            
-            strncpy(g_wifi_scan_results, networks_json, max_copy);
-            g_wifi_scan_results[max_copy] = '\0';
             g_wifi_scan_ready = true;
             LOGI(TAG, "WiFi scan results stored successfully, %zu bytes copied", strlen(g_wifi_scan_results));
             LOGI(TAG, "Stored data: %s", g_wifi_scan_results);
@@ -1065,7 +1086,9 @@ static esp_err_t handle_wifi_networks(httpd_req_t *req)
         return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
     }
 
-    char response[3072];  // Increased buffer size for safety
+    // Use significantly larger buffer to prevent compiler truncation warnings
+    // g_wifi_scan_results is max 4096 bytes + JSON wrapper ~100 bytes = ~4200 bytes needed
+    char response[4500];  // Conservative size to silence -Werror=format-truncation
     bool scan_ready_copy;
     
     // Thread-safe access to scan results
@@ -1073,11 +1096,29 @@ static esp_err_t handle_wifi_networks(httpd_req_t *req)
         scan_ready_copy = g_wifi_scan_ready;
         
         if (scan_ready_copy && strlen(g_wifi_scan_results) > 0) {
-            // Safely copy scan results while holding mutex
-            snprintf(response, sizeof(response), "{\"status\":\"ok\",\"networks\":%s,\"scanning\":false}", g_wifi_scan_results);
-            LOGI(TAG, "Returning completed scan results");
+            // Conservative check for potential overflow
+            size_t json_len = strlen(g_wifi_scan_results);
+            size_t wrapper_overhead = 100; // Conservative estimate for JSON wrapper
+            size_t needed_size = json_len + wrapper_overhead;
+            
+            if (needed_size <= sizeof(response)) {
+                // Use safer formatting with explicit size check
+                int written = snprintf(response, sizeof(response), "{\"status\":\"ok\",\"networks\":%s,\"scanning\":false}", g_wifi_scan_results);
+                if (written < 0 || written >= (int)sizeof(response)) {
+                    LOGW(TAG, "Response formatting failed or truncated, using fallback");
+                    strncpy(response, "{\"status\":\"error\",\"code\":\"format_error\",\"scanning\":false}", sizeof(response) - 1);
+                    response[sizeof(response) - 1] = '\0';
+                } else {
+                    LOGI(TAG, "Returning completed scan results (%d bytes)", written);
+                }
+            } else {
+                LOGW(TAG, "WiFi JSON too large (%zu bytes needed, %zu available), returning error", needed_size, sizeof(response));
+                strncpy(response, "{\"status\":\"error\",\"code\":\"data_too_large\",\"scanning\":false}", sizeof(response) - 1);
+                response[sizeof(response) - 1] = '\0';
+            }
         } else {
-            snprintf(response, sizeof(response), "{\"status\":\"ok\",\"networks\":[],\"scanning\":true}");
+            strncpy(response, "{\"status\":\"ok\",\"networks\":[],\"scanning\":true}", sizeof(response) - 1);
+            response[sizeof(response) - 1] = '\0';
             LOGI(TAG, "Scan still in progress or no results, returning scanning=true");
         }
         
