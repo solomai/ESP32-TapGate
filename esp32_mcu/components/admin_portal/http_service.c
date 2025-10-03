@@ -35,18 +35,22 @@ static bool g_wifi_scan_ready = false;
 // WiFi scan completion callback
 static void wifi_scan_done_callback(void* arg)
 {
-    LOGI(TAG, "WiFi scan completed, updating results");
+    LOGI(TAG, "WiFi scan completed, retrieving AP JSON data");
     
     const char* networks_json = wifi_manager_get_ap_json();
-    if (networks_json) {
+    LOGI(TAG, "Retrieved JSON from wifi_manager: %s", networks_json ? networks_json : "NULL");
+    
+    if (networks_json && strlen(networks_json) > 0) {
+        // Copy the real JSON data from WiFi manager's accessp_json
         strncpy(g_wifi_scan_results, networks_json, sizeof(g_wifi_scan_results) - 1);
         g_wifi_scan_results[sizeof(g_wifi_scan_results) - 1] = '\0';
         g_wifi_scan_ready = true;
-        LOGI(TAG, "WiFi networks JSON updated: %s", g_wifi_scan_results);
+        LOGI(TAG, "WiFi scan results stored successfully, %zu bytes", strlen(g_wifi_scan_results));
     } else {
+        // No networks found or JSON not ready, return empty array
         strcpy(g_wifi_scan_results, "[]");
         g_wifi_scan_ready = true;
-        LOGI(TAG, "No WiFi networks found");
+        LOGW(TAG, "No WiFi networks found or JSON not available, using empty array");
     }
 }
 
