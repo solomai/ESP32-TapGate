@@ -7,13 +7,36 @@
   <link rel="stylesheet" href="/assets/styles.css">
   <script src="/api/initial-data.js"></script>
   <script defer src="/assets/app.js"></script>
+  <script defer src="/assets/wifi.js"></script>
 </head>
 <body class="page page-wifi">
   <main class="card">
     <h1>WiFi</h1>
-    <p class="notice">WiFi status and configuration overview.</p>
-    <div class="actions">
-      <a href="/main/" class="button-link">Back</a>
+    
+    <div class="wifi-section">
+      <h2>Current network</h2>
+      <div class="network-card current-network" id="current-network">
+        <div class="network-item">
+          <img src="/assets/wifi3.svg" alt="WiFi" class="wifi-icon" id="current-wifi-icon">
+          <span class="network-name" id="current-network-name">Not connected</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="wifi-section">
+      <h2>Available networks</h2>
+      <div class="network-card available-networks">
+        <div id="scan-status" class="scan-status">Scanning...</div>
+        <div id="networks-list" class="networks-list" style="display: none;"></div>
+        
+        <div class="actions">
+          <button type="button" class="button-link" id="add-network-btn">Add network</button>
+        </div>
+        
+        <div class="actions" style="margin-top: 20px;">
+          <a href="/main/" class="button-link">Back</a>
+        </div>
+      </div>
     </div>
   </main>
 </body>

@@ -199,6 +199,106 @@ body.page-off main.card {
   max-width: 480px;
 }
 
+/* WiFi page specific styles */
+.page-wifi main.card {
+  max-width: 500px;
+}
+
+.wifi-section {
+  margin-bottom: 24px;
+}
+
+.wifi-section h2 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #9CA3AF;
+}
+
+.network-card {
+  background: rgba(8, 12, 17, 0.6);
+  border: 1px solid #1f2a37;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.network-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #1f2a37;
+  transition: background-color 120ms ease;
+}
+
+.network-item:last-child {
+  border-bottom: none;
+}
+
+.network-item.clickable {
+  cursor: pointer;
+  padding: 12px 8px;
+  border-radius: 8px;
+  margin: 4px 0;
+  border-bottom: none;
+}
+
+.network-item.clickable:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.wifi-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.network-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.network-name {
+  font-weight: 500;
+  color: #E6EEF8;
+}
+
+.network-security {
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+.network-signal {
+  font-size: 12px;
+  color: #6B7280;
+  flex-shrink: 0;
+}
+
+.scan-status {
+  text-align: center;
+  padding: 20px;
+  color: #9CA3AF;
+  font-style: italic;
+}
+
+.networks-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.current-network .network-item {
+  border-bottom: none;
+  padding: 12px 0;
+}
+
+/* Form styles for network pages */
+.page-add-network main.card,
+.page-network-connect main.card {
+  max-width: 420px;
+}
+
 @media (max-width: 480px) {
   main.card {
     padding: 32px 24px;
@@ -206,5 +306,9 @@ body.page-off main.card {
 
   .logo {
     width: 80px;
+  }
+  
+  .page-wifi main.card {
+    max-width: calc(100% - 32px);
   }
 }

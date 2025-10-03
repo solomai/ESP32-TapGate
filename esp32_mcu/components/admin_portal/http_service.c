@@ -25,6 +25,8 @@
 #include "pages/page_events.h"
 #include "pages/page_main.h"
 #include "pages/page_wifi.h"
+#include "pages/page_add_network.h"
+#include "pages/page_network_connect.h"
 
 static const char *TAG = "AdminPortal";
 
@@ -47,6 +49,8 @@ static const admin_portal_page_descriptor_t *const g_pages[] = {
     &admin_portal_page_change_psw,
     &admin_portal_page_device,
     &admin_portal_page_wifi,
+    &admin_portal_page_add_network,
+    &admin_portal_page_network_connect,
     &admin_portal_page_clients,
     &admin_portal_page_events,
     &admin_portal_page_main,
@@ -59,11 +63,26 @@ extern const uint8_t _binary_styles_css_gz_start[];
 extern const uint8_t _binary_styles_css_gz_end[];
 extern const uint8_t _binary_app_js_gz_start[];
 extern const uint8_t _binary_app_js_gz_end[];
+extern const uint8_t _binary_wifi_js_gz_start[];
+extern const uint8_t _binary_wifi_js_gz_end[];
+extern const uint8_t _binary_wifi0_svg_start[];
+extern const uint8_t _binary_wifi0_svg_end[];
+extern const uint8_t _binary_wifi1_svg_start[];
+extern const uint8_t _binary_wifi1_svg_end[];
+extern const uint8_t _binary_wifi2_svg_start[];
+extern const uint8_t _binary_wifi2_svg_end[];
+extern const uint8_t _binary_wifi3_svg_start[];
+extern const uint8_t _binary_wifi3_svg_end[];
 
 static const admin_portal_asset_t g_assets[] = {
     { .uri = "/assets/logo.png", .start = _binary_logo_png_start, .end = _binary_logo_png_end, .content_type = "image/png", .compressed = false },
     { .uri = "/assets/styles.css", .start = _binary_styles_css_gz_start, .end = _binary_styles_css_gz_end, .content_type = "text/css", .compressed = true },
     { .uri = "/assets/app.js", .start = _binary_app_js_gz_start, .end = _binary_app_js_gz_end, .content_type = "application/javascript", .compressed = true },
+    { .uri = "/assets/wifi.js", .start = _binary_wifi_js_gz_start, .end = _binary_wifi_js_gz_end, .content_type = "application/javascript", .compressed = true },
+    { .uri = "/assets/wifi0.svg", .start = _binary_wifi0_svg_start, .end = _binary_wifi0_svg_end, .content_type = "image/svg+xml", .compressed = false },
+    { .uri = "/assets/wifi1.svg", .start = _binary_wifi1_svg_start, .end = _binary_wifi1_svg_end, .content_type = "image/svg+xml", .compressed = false },
+    { .uri = "/assets/wifi2.svg", .start = _binary_wifi2_svg_start, .end = _binary_wifi2_svg_end, .content_type = "image/svg+xml", .compressed = false },
+    { .uri = "/assets/wifi3.svg", .start = _binary_wifi3_svg_start, .end = _binary_wifi3_svg_end, .content_type = "image/svg+xml", .compressed = false },
 };
 
 static const char *session_status_name(admin_portal_session_status_t status)
@@ -991,6 +1010,142 @@ static esp_err_t handle_update_device(httpd_req_t *req)
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
 }
 
+static esp_err_t handle_scan_wifi(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+
+    if (status == ADMIN_PORTAL_SESSION_BUSY) {
+        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    }
+    
+    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state)) {
+        return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
+    }
+
+    trigger_scan_wifi();
+    LOGI(TAG, "WiFi scan triggered");
+    return send_json(req, "200 OK", "{\"status\":\"ok\"}");
+}
+
+static esp_err_t handle_wifi_networks(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+
+    if (status == ADMIN_PORTAL_SESSION_BUSY) {
+        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    }
+    
+    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state)) {
+        return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
+    }
+
+    const char* networks_json = wifi_manager_get_ap_json();
+    char response[2048];
+    snprintf(response, sizeof(response), "{\"status\":\"ok\",\"networks\":%s}", networks_json ? networks_json : "[]");
+    
+    LOGI(TAG, "WiFi networks retrieved");
+    return send_json(req, "200 OK", response);
+}
+
+static esp_err_t handle_current_network(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+
+    if (status == ADMIN_PORTAL_SESSION_BUSY) {
+        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    }
+    
+    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state)) {
+        return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
+    }
+
+    // For now, return simple mock data - you can enhance this to get actual connection status
+    char response[256];
+    snprintf(response, sizeof(response), "{\"status\":\"ok\",\"connected\":false,\"ssid\":\"\",\"rssi\":-50}");
+    
+    LOGI(TAG, "Current network status retrieved");
+    return send_json(req, "200 OK", response);
+}
+
+static esp_err_t handle_connect_network(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+
+    if (status == ADMIN_PORTAL_SESSION_BUSY) {
+        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    }
+    
+    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state)) {
+        return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
+    }
+
+    char *body = read_body(req);
+    if (!body) {
+        LOGI(TAG, "Connect network failed: request body missing");
+        return send_json(req, "400 Bad Request", "{\"status\":\"error\",\"code\":\"invalid_request\"}");
+    }
+
+    char ssid[MAX_SSID_SIZE];
+    char password[MAX_PASSWORD_SIZE];
+    bool has_ssid = form_get_field(body, "ssid", ssid, sizeof(ssid));
+    bool has_password = form_get_field(body, "password", password, sizeof(password));
+    free(body);
+
+    if (!has_ssid || ssid[0] == '\0') {
+        LOGI(TAG, "Connect network failed: invalid SSID");
+        return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_ssid\"}");
+    }
+
+    // Store the credentials and attempt connection
+    // Note: You'll need to implement the actual WiFi connection logic here
+    LOGI(TAG, "Attempting to connect to WiFi network: %s", ssid);
+    
+    // For now, return success - implement actual connection logic
+    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/wifi/\"}");
+}
+
+static esp_err_t handle_add_network(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+
+    if (status == ADMIN_PORTAL_SESSION_BUSY) {
+        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    }
+    
+    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state)) {
+        return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
+    }
+
+    char *body = read_body(req);
+    if (!body) {
+        LOGI(TAG, "Add network failed: request body missing");
+        return send_json(req, "400 Bad Request", "{\"status\":\"error\",\"code\":\"invalid_request\"}");
+    }
+
+    char ssid[MAX_SSID_SIZE];
+    char password[MAX_PASSWORD_SIZE];
+    bool has_ssid = form_get_field(body, "ssid", ssid, sizeof(ssid));
+    bool has_password = form_get_field(body, "password", password, sizeof(password));
+    free(body);
+
+    if (!has_ssid || ssid[0] == '\0') {
+        LOGI(TAG, "Add network failed: invalid SSID");
+        return send_json(req, "200 OK", "{\"status\":\"error\",\"code\":\"invalid_ssid\"}");
+    }
+
+    // Store the credentials and attempt connection
+    // Note: You'll need to implement the actual WiFi connection logic here
+    LOGI(TAG, "Attempting to add and connect to WiFi network: %s", ssid);
+    
+    // For now, return success - implement actual connection logic
+    return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/wifi/\"}");
+}
+
 static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_descriptor_t *desc)
 {
     if (!desc)
@@ -1165,6 +1320,46 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device));
+
+    httpd_uri_t api_scan_wifi = {
+        .uri = "/api/scan_wifi",
+        .method = HTTP_POST,
+        .handler = handle_scan_wifi,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_scan_wifi));
+
+    httpd_uri_t api_wifi_networks = {
+        .uri = "/api/wifi_networks",
+        .method = HTTP_GET,
+        .handler = handle_wifi_networks,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_wifi_networks));
+
+    httpd_uri_t api_current_network = {
+        .uri = "/api/current_network",
+        .method = HTTP_GET,
+        .handler = handle_current_network,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_current_network));
+
+    httpd_uri_t api_connect_network = {
+        .uri = "/api/connect_network",
+        .method = HTTP_POST,
+        .handler = handle_connect_network,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_connect_network));
+
+    httpd_uri_t api_add_network = {
+        .uri = "/api/add_network",
+        .method = HTTP_POST,
+        .handler = handle_add_network,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_add_network));
 
     // Register single wildcard OPTIONS handler for all API endpoints (mobile browser compatibility)
     httpd_uri_t api_options_wildcard = {

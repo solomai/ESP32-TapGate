@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TapGate · Add Network</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <script src="/api/initial-data.js"></script>
+  <script defer src="/assets/app.js"></script>
+  <script defer src="/assets/wifi.js"></script>
+</head>
+<body class="page page-add-network">
+  <main class="card">
+    <h1>Add Network</h1>
+    
+    <form data-action="add_network" method="post" action="/api/add_network">
+      <div class="form-grid">
+        <label>
+          Network name
+          <input type="text" name="ssid" placeholder="Enter network name" required>
+        </label>
+        
+        <label>
+          Password
+          <input type="password" name="password" placeholder="Enter password">
+        </label>
+      </div>
+      
+      <div data-message class="message"></div>
+      
+      <div class="actions">
+        <button type="submit">Connect</button>
+        <a href="/wifi/" class="button-link">Cancel</a>
+      </div>
+    </form>
+  </main>
+</body>
+</html>
