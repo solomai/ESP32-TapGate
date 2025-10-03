@@ -128,22 +128,8 @@
         })
         .catch(error => {
           console.error('Network loading error:', error);
-          document.getElementById('scan-status').textContent = 'Network error. Using demo data...';
-          loadMockData();
+          document.getElementById('scan-status').textContent = 'Failed to load networks. Please refresh the page.';
         });
-      }
-
-      // Mock data for fallback
-      function loadMockData() {
-        const mockNetworks = [
-          {"ssid":"Pantum-AP-A6D49F","chan":11,"rssi":-55,"auth":4},
-          {"ssid":"netis_2.4G","chan":1,"rssi":-73,"auth":4},
-          {"ssid":"SkyNet_Guest","chan":11,"rssi":-77,"auth":3},
-          {"ssid":"SkyNet","chan":11,"rssi":-81,"auth":3},
-          {"ssid":"MyWifi","chan":7,"rssi":-89,"auth":4}
-        ];
-        
-        displayNetworks(mockNetworks);
       }
 
       // Initialize page
