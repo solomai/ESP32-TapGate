@@ -102,7 +102,35 @@
         networksList.style.display = 'block';
       }
 
-      // Mock data for testing
+      // Load WiFi networks from server
+      function loadWifiNetworks() {
+        fetch('/api/wifi_networks', {
+          method: 'GET',
+          credentials: 'include'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'ok') {
+            if (data.scanning) {
+              // Still scanning, check again in 2 seconds
+              document.getElementById('scan-status').textContent = 'Scanning...';
+              setTimeout(loadWifiNetworks, 2000);
+            } else {
+              // Scan completed, display networks
+              displayNetworks(data.networks || []);
+            }
+          } else {
+            document.getElementById('scan-status').textContent = 'Failed to load networks';
+          }
+        })
+        .catch(error => {
+          console.error('Network loading error:', error);
+          document.getElementById('scan-status').textContent = 'Network error. Using demo data...';
+          loadMockData();
+        });
+      }
+
+      // Mock data for fallback
       function loadMockData() {
         const mockNetworks = [
           {"ssid":"Pantum-AP-A6D49F","chan":11,"rssi":-55,"auth":4},
@@ -112,17 +140,15 @@
           {"ssid":"MyWifi","chan":7,"rssi":-89,"auth":4}
         ];
         
-        setTimeout(() => {
-          displayNetworks(mockNetworks);
-        }, 2000);
+        displayNetworks(mockNetworks);
       }
 
       // Initialize page
       function initWifiPage() {
         console.log('Initializing WiFi page');
         
-        // Load mock data for now
-        loadMockData();
+        // Start checking for WiFi networks immediately
+        loadWifiNetworks();
 
         // Add network button placeholder
         const addNetworkBtn = document.getElementById('add-network-btn');

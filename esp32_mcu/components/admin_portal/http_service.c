@@ -28,6 +28,24 @@
 
 static const char *TAG = "AdminPortal";
 
+// WiFi scan completion callback
+static void wifi_scan_done_callback(void* arg)
+{
+    LOGI(TAG, "WiFi scan completed, updating results");
+    
+    const char* networks_json = wifi_manager_get_ap_json();
+    if (networks_json) {
+        strncpy(g_wifi_scan_results, networks_json, sizeof(g_wifi_scan_results) - 1);
+        g_wifi_scan_results[sizeof(g_wifi_scan_results) - 1] = '\0';
+        g_wifi_scan_ready = true;
+        LOGI(TAG, "WiFi networks JSON updated: %s", g_wifi_scan_results);
+    } else {
+        strcpy(g_wifi_scan_results, "[]");
+        g_wifi_scan_ready = true;
+        LOGI(TAG, "No WiFi networks found");
+    }
+}
+
 #define ADMIN_PORTAL_COOKIE_NAME     "tg_session"
 
 typedef struct {
@@ -40,6 +58,10 @@ typedef struct {
 
 static httpd_handle_t g_server = NULL;
 static admin_portal_state_t g_state;
+
+// WiFi scan results storage
+static char g_wifi_scan_results[2048] = {0};
+static bool g_wifi_scan_ready = false;
 
 static const admin_portal_page_descriptor_t *const g_pages[] = {
     &admin_portal_page_enroll,
@@ -991,6 +1013,30 @@ static esp_err_t handle_update_device(httpd_req_t *req)
     return send_json(req, "200 OK", "{\"status\":\"ok\",\"redirect\":\"/main/\"}");
 }
 
+static esp_err_t handle_wifi_networks(httpd_req_t *req)
+{
+    char token[ADMIN_PORTAL_TOKEN_MAX_LEN + 1] = {0};
+    admin_portal_session_status_t status = evaluate_session(req, token, sizeof(token));
+
+    if (status == ADMIN_PORTAL_SESSION_BUSY) {
+        return send_json(req, "409 Conflict", "{\"status\":\"busy\"}");
+    }
+    
+    if (status != ADMIN_PORTAL_SESSION_MATCH || !admin_portal_state_session_authorized(&g_state)) {
+        return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
+    }
+
+    char response[2560];
+    if (g_wifi_scan_ready && strlen(g_wifi_scan_results) > 0) {
+        snprintf(response, sizeof(response), "{\"status\":\"ok\",\"networks\":%s,\"scanning\":false}", g_wifi_scan_results);
+    } else {
+        snprintf(response, sizeof(response), "{\"status\":\"ok\",\"networks\":[],\"scanning\":true}");
+    }
+    
+    LOGI(TAG, "WiFi networks API called, scan_ready=%d", g_wifi_scan_ready);
+    return send_json(req, "200 OK", response);
+}
+
 static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_descriptor_t *desc)
 {
     if (!desc)
@@ -1019,8 +1065,13 @@ static esp_err_t handle_page_request(httpd_req_t *req, const admin_portal_page_d
         create_session(req, token, sizeof(token));
 
     // Trigger start scan Wifi routine
-    if (desc->page == ADMIN_PORTAL_PAGE_WIFI)
+    if (desc->page == ADMIN_PORTAL_PAGE_WIFI) {
+        // Clear previous scan results and start new scan
+        g_wifi_scan_ready = false;
+        strcpy(g_wifi_scan_results, "[]");
         trigger_scan_wifi();
+        LOGI(TAG, "WiFi page accessed, scan triggered");
+    }
 
     return send_page_content(req, desc);
 }
@@ -1069,6 +1120,18 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
 
     g_server = server;
     load_initial_state();
+    
+    // Register WiFi scan callback
+    esp_err_t callback_err = wifi_manager_set_callback(WM_EVENT_SCAN_DONE, wifi_scan_done_callback);
+    if (callback_err != ESP_OK) {
+        LOGW(TAG, "Failed to register WiFi scan callback: %s", esp_err_to_name(callback_err));
+    } else {
+        LOGI(TAG, "WiFi scan callback registered successfully");
+    }
+    
+    // Clear previous scan results
+    g_wifi_scan_ready = false;
+    strcpy(g_wifi_scan_results, "[]");
 
     httpd_uri_t root_get = {
         .uri = "/",
@@ -1165,6 +1228,14 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device));
+
+    httpd_uri_t api_wifi_networks = {
+        .uri = "/api/wifi_networks",
+        .method = HTTP_GET,
+        .handler = handle_wifi_networks,
+        .user_ctx = NULL,
+    };
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_wifi_networks));
 
     // Register single wildcard OPTIONS handler for all API endpoints (mobile browser compatibility)
     httpd_uri_t api_options_wildcard = {
