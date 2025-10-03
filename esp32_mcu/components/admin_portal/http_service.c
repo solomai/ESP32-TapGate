@@ -26,11 +26,14 @@
 #include "pages/page_main.h"
 #include "pages/page_wifi.h"
 
+#include "freertos/semphr.h"
+
 static const char *TAG = "AdminPortal";
 
-// WiFi scan results storage
-static char g_wifi_scan_results[2048] = {0};
+// WiFi scan results storage - increased buffer size for safety
+static char g_wifi_scan_results[4096] = {0};  // Increased from 2048 to 4096
 static bool g_wifi_scan_ready = false;
+static SemaphoreHandle_t g_wifi_scan_mutex = NULL;  // Thread safety for scan results
 
 // WiFi scan completion callback
 static void wifi_scan_done_callback(void* arg)
@@ -42,25 +45,31 @@ static void wifi_scan_done_callback(void* arg)
     LOGI(TAG, "Retrieved JSON from wifi_manager: %s", networks_json ? networks_json : "NULL");
     LOGI(TAG, "JSON length: %zu", networks_json ? strlen(networks_json) : 0);
     
-    if (networks_json && strlen(networks_json) > 0) {
-        // Copy the real JSON data from WiFi manager's accessp_json
-        size_t json_len = strlen(networks_json);
-        size_t max_copy = sizeof(g_wifi_scan_results) - 1;
-        
-        if (json_len > max_copy) {
-            LOGW(TAG, "JSON data too large (%zu bytes), truncating to %zu bytes", json_len, max_copy);
+    // Thread-safe access to global scan results
+    if (g_wifi_scan_mutex && xSemaphoreTake(g_wifi_scan_mutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+        if (networks_json && strlen(networks_json) > 0) {
+            // Copy the real JSON data from WiFi manager's accessp_json
+            size_t json_len = strlen(networks_json);
+            size_t max_copy = sizeof(g_wifi_scan_results) - 1;
+            
+            if (json_len > max_copy) {
+                LOGW(TAG, "JSON data too large (%zu bytes), truncating to %zu bytes", json_len, max_copy);
+            }
+            
+            strncpy(g_wifi_scan_results, networks_json, max_copy);
+            g_wifi_scan_results[max_copy] = '\0';
+            g_wifi_scan_ready = true;
+            LOGI(TAG, "WiFi scan results stored successfully, %zu bytes copied", strlen(g_wifi_scan_results));
+            LOGI(TAG, "Stored data: %s", g_wifi_scan_results);
+        } else {
+            // No networks found or JSON not ready, return empty array
+            strcpy(g_wifi_scan_results, "[]");
+            g_wifi_scan_ready = true;
+            LOGW(TAG, "No WiFi networks found or JSON not available, using empty array");
         }
-        
-        strncpy(g_wifi_scan_results, networks_json, max_copy);
-        g_wifi_scan_results[max_copy] = '\0';
-        g_wifi_scan_ready = true;
-        LOGI(TAG, "WiFi scan results stored successfully, %zu bytes copied", strlen(g_wifi_scan_results));
-        LOGI(TAG, "Stored data: %s", g_wifi_scan_results);
+        xSemaphoreGive(g_wifi_scan_mutex);
     } else {
-        // No networks found or JSON not ready, return empty array
-        strcpy(g_wifi_scan_results, "[]");
-        g_wifi_scan_ready = true;
-        LOGW(TAG, "No WiFi networks found or JSON not available, using empty array");
+        LOGE(TAG, "Failed to acquire mutex for WiFi scan results update");
     }
     
     LOGI(TAG, "=== Callback completed, g_wifi_scan_ready=%d ===", g_wifi_scan_ready);
@@ -1056,18 +1065,29 @@ static esp_err_t handle_wifi_networks(httpd_req_t *req)
         return send_json(req, "403 Forbidden", "{\"status\":\"error\",\"code\":\"unauthorized\"}");
     }
 
-    LOGI(TAG, "WiFi networks API called, scan_ready=%d, results_length=%zu", g_wifi_scan_ready, strlen(g_wifi_scan_results));
-    LOGI(TAG, "Current scan results: %s", g_wifi_scan_results);
-
-    char response[2560];
-    if (g_wifi_scan_ready && strlen(g_wifi_scan_results) > 0) {
-        snprintf(response, sizeof(response), "{\"status\":\"ok\",\"networks\":%s,\"scanning\":false}", g_wifi_scan_results);
-        LOGI(TAG, "Returning completed scan results");
-    } else {
-        snprintf(response, sizeof(response), "{\"status\":\"ok\",\"networks\":[],\"scanning\":true}");
-        LOGI(TAG, "Scan still in progress or no results, returning scanning=true");
-    }
+    char response[3072];  // Increased buffer size for safety
+    bool scan_ready_copy;
     
+    // Thread-safe access to scan results
+    if (g_wifi_scan_mutex && xSemaphoreTake(g_wifi_scan_mutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+        scan_ready_copy = g_wifi_scan_ready;
+        
+        if (scan_ready_copy && strlen(g_wifi_scan_results) > 0) {
+            // Safely copy scan results while holding mutex
+            snprintf(response, sizeof(response), "{\"status\":\"ok\",\"networks\":%s,\"scanning\":false}", g_wifi_scan_results);
+            LOGI(TAG, "Returning completed scan results");
+        } else {
+            snprintf(response, sizeof(response), "{\"status\":\"ok\",\"networks\":[],\"scanning\":true}");
+            LOGI(TAG, "Scan still in progress or no results, returning scanning=true");
+        }
+        
+        xSemaphoreGive(g_wifi_scan_mutex);
+    } else {
+        LOGE(TAG, "Failed to acquire mutex for WiFi scan results read");
+        return send_json(req, "500 Internal Server Error", "{\"status\":\"error\",\"code\":\"mutex_timeout\"}");
+    }
+
+    LOGI(TAG, "WiFi networks API called, scan_ready=%d", scan_ready_copy);
     return send_json(req, "200 OK", response);
 }
 
@@ -1175,6 +1195,16 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
 
     g_server = server;
     load_initial_state();
+    
+    // Initialize WiFi scan mutex for thread safety
+    if (!g_wifi_scan_mutex) {
+        g_wifi_scan_mutex = xSemaphoreCreateMutex();
+        if (!g_wifi_scan_mutex) {
+            LOGE(TAG, "Failed to create WiFi scan mutex");
+            return ESP_ERR_NO_MEM;
+        }
+        LOGI(TAG, "WiFi scan mutex created successfully");
+    }
     
     // Register WiFi scan callback
     LOGI(TAG, "Attempting to register WiFi scan callback...");
@@ -1306,5 +1336,12 @@ void admin_portal_http_service_stop(void)
 
     g_server = NULL;
     admin_portal_state_clear_session(&g_state);
+    
+    // Cleanup WiFi scan mutex
+    if (g_wifi_scan_mutex) {
+        vSemaphoreDelete(g_wifi_scan_mutex);
+        g_wifi_scan_mutex = NULL;
+        LOGI(TAG, "WiFi scan mutex deleted");
+    }
 }
 

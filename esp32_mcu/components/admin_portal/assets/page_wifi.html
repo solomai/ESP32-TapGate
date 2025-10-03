@@ -105,9 +105,12 @@
         networksList.style.display = 'block';
       }
 
-      // Load WiFi networks from server
+      // Load WiFi networks from server with timeout protection
+      let pollAttempts = 0;
+      const MAX_POLL_ATTEMPTS = 30; // Maximum 60 seconds of polling (30 * 2s)
+      
       function loadWifiNetworks() {
-        console.log('Loading WiFi networks from /api/wifi_networks');
+        console.log('Loading WiFi networks from /api/wifi_networks, attempt:', pollAttempts + 1);
         fetch('/api/wifi_networks', {
           method: 'GET',
           credentials: 'include'
@@ -126,12 +129,26 @@
           
           if (data.status === 'ok') {
             if (data.scanning) {
-              // Still scanning, check again in 2 seconds
-              console.log('Still scanning, checking again in 2 seconds');
-              document.getElementById('scan-status').textContent = 'Scanning...';
-              setTimeout(loadWifiNetworks, 2000);
+              // Still scanning, check again in 2 seconds with timeout protection
+              pollAttempts++;
+              if (pollAttempts < MAX_POLL_ATTEMPTS) {
+                console.log('Still scanning, checking again in 2 seconds (attempt ' + pollAttempts + '/' + MAX_POLL_ATTEMPTS + ')');
+                document.getElementById('scan-status').textContent = 'Scanning... (' + pollAttempts + '/' + MAX_POLL_ATTEMPTS + ')';
+                setTimeout(loadWifiNetworks, 2000);
+              } else {
+                console.error('Polling timeout reached, stopping');
+                document.getElementById('scan-status').innerHTML = 'Scan timeout. <button id="retry-btn" style="margin-top: 10px; padding: 5px 10px;">Retry</button>';
+                const retryBtn = document.getElementById('retry-btn');
+                if (retryBtn) {
+                  retryBtn.addEventListener('click', () => {
+                    pollAttempts = 0; // Reset counter
+                    loadWifiNetworks();
+                  });
+                }
+              }
             } else {
               // Scan completed, display networks
+              pollAttempts = 0; // Reset counter for next scan
               console.log('Scan completed, displaying networks:', data.networks);
               displayNetworks(data.networks || []);
             }
@@ -148,7 +165,10 @@
             // Add retry button handler
             const retryBtn = document.getElementById('retry-btn');
             if (retryBtn) {
-              retryBtn.addEventListener('click', loadWifiNetworks);
+              retryBtn.addEventListener('click', () => {
+                pollAttempts = 0; // Reset polling counter
+                loadWifiNetworks();
+              });
             }
           }
         });
