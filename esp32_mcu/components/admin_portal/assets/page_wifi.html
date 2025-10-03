@@ -28,14 +28,17 @@
         <div id="scan-status" class="scan-status">Scanning...</div>
         <div id="networks-list" class="networks-list" style="display: none;"></div>
         
-        <div class="actions">
-          <button type="button" class="button-link" id="add-network-btn">Add network</button>
-        </div>
-        
-        <div class="actions" style="margin-top: 20px;">
-          <a href="/main/" class="button-link">Back</a>
+        <!-- Add network as part of the list -->
+        <div class="network-item add-network-item" id="add-network-btn">
+          <div class="add-network-icon">+</div>
+          <span class="network-name">Add network</span>
         </div>
       </div>
+    </div>
+    
+    <!-- Back button moved outside the card -->
+    <div class="actions">
+      <a href="/main/" class="button-link">Back</a>
     </div>
   </main>
 
@@ -150,7 +153,7 @@
         // Start checking for WiFi networks immediately
         loadWifiNetworks();
 
-        // Add network button placeholder
+        // Add network button (now styled as list item)
         const addNetworkBtn = document.getElementById('add-network-btn');
         if (addNetworkBtn) {
           addNetworkBtn.addEventListener('click', () => {
