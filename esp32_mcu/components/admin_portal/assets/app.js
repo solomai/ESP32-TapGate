@@ -402,10 +402,10 @@
 
   // WiFi functionality
   function getSignalIcon(rssi) {
-    if (rssi >= -50) return '/assets/wifi3.svg';
-    if (rssi >= -65) return '/assets/wifi2.svg';
-    if (rssi >= -80) return '/assets/wifi1.svg';
-    return '/assets/wifi0.svg';
+    if (rssi >= -50) return '/assets/wifi0.svg';  // Strongest signal
+    if (rssi >= -65) return '/assets/wifi1.svg';  // Good signal
+    if (rssi >= -80) return '/assets/wifi2.svg';  // Weak signal
+    return '/assets/wifi3.svg';                   // Weakest signal
   }
 
   function initializeWiFiPage() {
