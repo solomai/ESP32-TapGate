@@ -11,10 +11,135 @@
 <body class="page page-wifi">
   <main class="card">
     <h1>WiFi</h1>
-    <p class="notice">WiFi status and configuration overview.</p>
-    <div class="actions">
-      <a href="/main/" class="button-link">Back</a>
+    
+    <div class="wifi-section">
+      <h2>Current network</h2>
+      <div class="network-card current-network" id="current-network">
+        <div class="network-item">
+          <img src="/assets/wifi3.svg" alt="WiFi" class="wifi-icon" id="current-wifi-icon">
+          <span class="network-name" id="current-network-name">Not connected</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="wifi-section">
+      <h2>Available networks</h2>
+      <div class="network-card available-networks">
+        <div id="scan-status" class="scan-status">Scanning...</div>
+        <div id="networks-list" class="networks-list" style="display: none;"></div>
+        
+        <div class="actions">
+          <button type="button" class="button-link" id="add-network-btn">Add network</button>
+        </div>
+        
+        <div class="actions" style="margin-top: 20px;">
+          <a href="/main/" class="button-link">Back</a>
+        </div>
+      </div>
     </div>
   </main>
+
+  <script>
+    (function() {
+      // WiFi signal strength mapping
+      function getWifiIcon(rssi) {
+        if (rssi >= -50) return '/assets/wifi3.svg';
+        if (rssi >= -60) return '/assets/wifi2.svg'; 
+        if (rssi >= -70) return '/assets/wifi1.svg';
+        return '/assets/wifi0.svg';
+      }
+
+      // Format security type
+      function formatAuth(auth) {
+        switch (auth) {
+          case 0: return 'Open';
+          case 1: return 'WEP';
+          case 2: return 'WPA';
+          case 3: return 'WPA2';
+          case 4: return 'WPA/WPA2';
+          default: return 'Secured';
+        }
+      }
+
+      // Create network item HTML
+      function createNetworkItem(network, isClickable = true) {
+        const icon = getWifiIcon(network.rssi);
+        const security = network.auth > 0 ? '🔒' : '';
+        const clickableClass = isClickable ? 'clickable' : '';
+        
+        return `
+          <div class="network-item ${clickableClass}" data-ssid="${network.ssid}" data-auth="${network.auth}">
+            <img src="${icon}" alt="WiFi" class="wifi-icon">
+            <div class="network-info">
+              <span class="network-name">${network.ssid}</span>
+              <span class="network-security">${security} ${formatAuth(network.auth)}</span>
+            </div>
+            <span class="network-signal">${network.rssi} dBm</span>
+          </div>
+        `;
+      }
+
+      // Display networks
+      function displayNetworks(networks) {
+        const scanStatus = document.getElementById('scan-status');
+        const networksList = document.getElementById('networks-list');
+        
+        if (!networksList) return;
+
+        if (networks.length === 0) {
+          if (scanStatus) {
+            scanStatus.textContent = 'No networks found';
+          }
+          return;
+        }
+
+        if (scanStatus) {
+          scanStatus.style.display = 'none';
+        }
+
+        networks.sort((a, b) => b.rssi - a.rssi);
+        networksList.innerHTML = networks.map(network => createNetworkItem(network, true)).join('');
+        networksList.style.display = 'block';
+      }
+
+      // Mock data for testing
+      function loadMockData() {
+        const mockNetworks = [
+          {"ssid":"Pantum-AP-A6D49F","chan":11,"rssi":-55,"auth":4},
+          {"ssid":"netis_2.4G","chan":1,"rssi":-73,"auth":4},
+          {"ssid":"SkyNet_Guest","chan":11,"rssi":-77,"auth":3},
+          {"ssid":"SkyNet","chan":11,"rssi":-81,"auth":3},
+          {"ssid":"MyWifi","chan":7,"rssi":-89,"auth":4}
+        ];
+        
+        setTimeout(() => {
+          displayNetworks(mockNetworks);
+        }, 2000);
+      }
+
+      // Initialize page
+      function initWifiPage() {
+        console.log('Initializing WiFi page');
+        
+        // Load mock data for now
+        loadMockData();
+
+        // Add network button placeholder
+        const addNetworkBtn = document.getElementById('add-network-btn');
+        if (addNetworkBtn) {
+          addNetworkBtn.addEventListener('click', () => {
+            alert('Add network functionality coming soon');
+          });
+        }
+      }
+
+      // Initialize when DOM is ready
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initWifiPage);
+      } else {
+        initWifiPage();
+      }
+    })();
+  </script>
 </body>
 </html>
