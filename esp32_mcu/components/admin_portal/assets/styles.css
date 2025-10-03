@@ -329,6 +329,24 @@ body.page-add-network .card {
   gap: 24px;
 }
 
+/* Ensure input fields have same width as buttons */
+body.page-add-network input[type="text"],
+body.page-add-network input[type="password"],
+body.page-network-connect input[type="password"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+body.page-add-network .actions,
+body.page-network-connect .actions {
+  width: 100%;
+}
+
+body.page-add-network .actions button,
+body.page-network-connect .actions button {
+  width: 100%;
+}
+
 .form-message {
   min-height: 20px;
   font-size: 14px;
