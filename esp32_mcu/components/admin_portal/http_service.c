@@ -1180,6 +1180,7 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &root_get));
+    LOGI(TAG, "Root handler registered (1/~32)");
 
     for (size_t i = 0; i < sizeof(g_pages) / sizeof(g_pages[0]); ++i)
     {
@@ -1199,6 +1200,7 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
             ESP_ERROR_CHECK(httpd_register_uri_handler(server, &alt_uri));
         }
     }
+    LOGI(TAG, "All page handlers registered (~%d handlers so far)", (int)(1 + sizeof(g_pages)/sizeof(g_pages[0]) * 2));
 
     for (size_t i = 0; i < sizeof(g_assets) / sizeof(g_assets[0]); ++i)
     {
@@ -1211,6 +1213,7 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         };
         ESP_ERROR_CHECK(httpd_register_uri_handler(server, &asset_uri));
     }
+    LOGI(TAG, "All asset handlers registered (%d assets)", (int)sizeof(g_assets)/sizeof(g_assets[0]));
 
 
     httpd_uri_t initial_data = {
@@ -1268,6 +1271,7 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .user_ctx = NULL,
     };
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device));
+    LOGI(TAG, "All API handlers registered (7 API endpoints)");
 
     // WiFi networks API - high priority registration
     httpd_uri_t api_wifi_networks = {
