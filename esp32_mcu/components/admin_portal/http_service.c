@@ -63,11 +63,23 @@ extern const uint8_t _binary_styles_css_gz_start[];
 extern const uint8_t _binary_styles_css_gz_end[];
 extern const uint8_t _binary_app_js_gz_start[];
 extern const uint8_t _binary_app_js_gz_end[];
+extern const uint8_t _binary_wifi0_svg_start[];
+extern const uint8_t _binary_wifi0_svg_end[];
+extern const uint8_t _binary_wifi1_svg_start[];
+extern const uint8_t _binary_wifi1_svg_end[];
+extern const uint8_t _binary_wifi2_svg_start[];
+extern const uint8_t _binary_wifi2_svg_end[];
+extern const uint8_t _binary_wifi3_svg_start[];
+extern const uint8_t _binary_wifi3_svg_end[];
 
 static const admin_portal_asset_t g_assets[] = {
     { .uri = "/assets/logo.png", .start = _binary_logo_png_start, .end = _binary_logo_png_end, .content_type = "image/png", .compressed = false },
     { .uri = "/assets/styles.css", .start = _binary_styles_css_gz_start, .end = _binary_styles_css_gz_end, .content_type = "text/css", .compressed = true },
     { .uri = "/assets/app.js", .start = _binary_app_js_gz_start, .end = _binary_app_js_gz_end, .content_type = "application/javascript", .compressed = true },
+    { .uri = "/assets/wifi0.svg", .start = _binary_wifi0_svg_start, .end = _binary_wifi0_svg_end, .content_type = "image/svg+xml", .compressed = false },
+    { .uri = "/assets/wifi1.svg", .start = _binary_wifi1_svg_start, .end = _binary_wifi1_svg_end, .content_type = "image/svg+xml", .compressed = false },
+    { .uri = "/assets/wifi2.svg", .start = _binary_wifi2_svg_start, .end = _binary_wifi2_svg_end, .content_type = "image/svg+xml", .compressed = false },
+    { .uri = "/assets/wifi3.svg", .start = _binary_wifi3_svg_start, .end = _binary_wifi3_svg_end, .content_type = "image/svg+xml", .compressed = false },
 };
 
 static const char *session_status_name(admin_portal_session_status_t status)
@@ -1181,7 +1193,11 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .handler = handle_root,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &root_get));
+    esp_err_t err = httpd_register_uri_handler(server, &root_get);
+    if (err != ESP_OK) {
+        LOGE(TAG, "Failed to register root handler: %s", esp_err_to_name(err));
+        return err;
+    }
 
     for (size_t i = 0; i < sizeof(g_pages) / sizeof(g_pages[0]); ++i)
     {
@@ -1192,13 +1208,20 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
             .handler = handle_page_entry,
             .user_ctx = (void *)desc,
         };
-        ESP_ERROR_CHECK(httpd_register_uri_handler(server, &page_uri));
+        esp_err_t err = httpd_register_uri_handler(server, &page_uri);
+        if (err != ESP_OK) {
+            LOGW(TAG, "Failed to register page handler %s: %s", desc->route, esp_err_to_name(err));
+            continue;
+        }
 
         if (desc->alternate_route)
         {
             httpd_uri_t alt_uri = page_uri;
             alt_uri.uri = desc->alternate_route;
-            ESP_ERROR_CHECK(httpd_register_uri_handler(server, &alt_uri));
+            err = httpd_register_uri_handler(server, &alt_uri);
+            if (err != ESP_OK) {
+                LOGW(TAG, "Failed to register alternate route %s: %s", desc->alternate_route, esp_err_to_name(err));
+            }
         }
     }
 
@@ -1211,17 +1234,23 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
             .handler = handle_asset_entry,
             .user_ctx = (void *)asset,
         };
-        ESP_ERROR_CHECK(httpd_register_uri_handler(server, &asset_uri));
+        esp_err_t err = httpd_register_uri_handler(server, &asset_uri);
+        if (err != ESP_OK) {
+            LOGW(TAG, "Failed to register asset %s: %s", asset->uri, esp_err_to_name(err));
+        }
     }
 
-
+    // Register critical API endpoints (these must succeed)
     httpd_uri_t initial_data = {
         .uri = "/api/initial-data.js",
         .method = HTTP_GET,
         .handler = handle_initial_data,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &initial_data));
+    if (ESP_OK != httpd_register_uri_handler(server, &initial_data)) {
+        LOGE(TAG, "Failed to register initial data handler");
+        return ESP_FAIL;
+    }
 
     httpd_uri_t api_session = {
         .uri = "/api/session",
@@ -1229,7 +1258,10 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .handler = handle_session_info,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_session));
+    if (ESP_OK != httpd_register_uri_handler(server, &api_session)) {
+        LOGE(TAG, "Failed to register session handler");
+        return ESP_FAIL;
+    }
 
     httpd_uri_t api_enroll = {
         .uri = "/api/enroll",
@@ -1237,7 +1269,10 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .handler = handle_enroll,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_enroll));
+    if (ESP_OK != httpd_register_uri_handler(server, &api_enroll)) {
+        LOGE(TAG, "Failed to register enroll handler");
+        return ESP_FAIL;
+    }
 
     httpd_uri_t api_login = {
         .uri = "/api/login",
@@ -1245,7 +1280,10 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .handler = handle_login,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_login));
+    if (ESP_OK != httpd_register_uri_handler(server, &api_login)) {
+        LOGE(TAG, "Failed to register login handler");
+        return ESP_FAIL;
+    }
 
     httpd_uri_t api_logoff = {
         .uri = "/api/logoff",
@@ -1253,7 +1291,10 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .handler = handle_logoff,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_logoff));
+    if (ESP_OK != httpd_register_uri_handler(server, &api_logoff)) {
+        LOGE(TAG, "Failed to register logoff handler");
+        return ESP_FAIL;
+    }
 
     httpd_uri_t api_change = {
         .uri = "/api/change-password",
@@ -1261,7 +1302,10 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .handler = handle_change_password,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_change));
+    if (ESP_OK != httpd_register_uri_handler(server, &api_change)) {
+        LOGE(TAG, "Failed to register change password handler");
+        return ESP_FAIL;
+    }
 
     httpd_uri_t api_device = {
         .uri = "/api/device",
@@ -1269,7 +1313,10 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .handler = handle_update_device,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_device));
+    if (ESP_OK != httpd_register_uri_handler(server, &api_device)) {
+        LOGE(TAG, "Failed to register device handler");
+        return ESP_FAIL;
+    }
 
     httpd_uri_t api_wifi_scan = {
         .uri = "/api/wifi/scan",
@@ -1277,7 +1324,10 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .handler = handle_wifi_scan,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_wifi_scan));
+    if (ESP_OK != httpd_register_uri_handler(server, &api_wifi_scan)) {
+        LOGE(TAG, "Failed to register wifi scan handler");
+        return ESP_FAIL;
+    }
 
     httpd_uri_t api_wifi_networks = {
         .uri = "/api/wifi/networks",
@@ -1285,7 +1335,10 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .handler = handle_wifi_networks,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_wifi_networks));
+    if (ESP_OK != httpd_register_uri_handler(server, &api_wifi_networks)) {
+        LOGE(TAG, "Failed to register wifi networks handler");
+        return ESP_FAIL;
+    }
 
     httpd_uri_t api_wifi_connect = {
         .uri = "/api/wifi/connect",
@@ -1293,7 +1346,10 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .handler = handle_wifi_connect,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_wifi_connect));
+    if (ESP_OK != httpd_register_uri_handler(server, &api_wifi_connect)) {
+        LOGE(TAG, "Failed to register wifi connect handler");
+        return ESP_FAIL;
+    }
 
     // Register single wildcard OPTIONS handler for all API endpoints (mobile browser compatibility)
     httpd_uri_t api_options_wildcard = {
@@ -1302,7 +1358,10 @@ esp_err_t admin_portal_http_service_start(httpd_handle_t server)
         .handler = handle_options,
         .user_ctx = NULL,
     };
-    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &api_options_wildcard));
+    if (ESP_OK != httpd_register_uri_handler(server, &api_options_wildcard)) {
+        LOGE(TAG, "Failed to register OPTIONS wildcard handler");
+        return ESP_FAIL;
+    }
 
     LOGI(TAG, "Admin portal service registered");
     return ESP_OK;
