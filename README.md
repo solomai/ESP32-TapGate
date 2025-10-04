@@ -3,33 +3,32 @@
 **TapGate** is a standalone extension module for gate automation systems that adds the ability to control gate via a smartphone application.
 
 ### Goal
-Develop a hardware - software system (IoT + mobile app) for remote control of standard electronic gate controllers.
+Develop a hardware - software system (IoT + client (mobile) app) for remote control of standard electronic gate controllers.
 
 ### Device Interaction
-A single IoT device can be controlled by multiple instances of the mobile app:
+A single IoT device can be controlled by multiple instances of the client app:
 ```bash
-             / 1 mobile app 
- IoT (ESP32) - 2 mobile app
-             \ n mobile app
+             / 1 client app 
+ IoT (ESP32) - 2 client app
+             \ n client app
 ```
-
-### Prototype Scope
-- Choose a technology stack for rapid development of working code.
-- Design a communication protocol between devices (registration, connection, command transmission, state notifications).
-- Develop software modules for communication over Bluetooth and over the Internet as reusable components (submodules) for future versions.
-
 
 ### Key Features
 
-- **Local control via Bluetooth**  
+- **Local control via Bluetooth**
   Control the gate automation system from a smartphone at short range, without requiring an internet connection.
 
-- **Remote control via Wi-Fi/Internet**  
+- **Remote control via Wi-Fi/Internet**
   Operate the system over the internet using MQTT (supports both sequred anonymous and authenticated access) when Bluetooth is not available.
   Supports anonymous MQTT servers when no external server is available.
   Encrypts and validates data sent over anonymous MQTT for added security.
 
-- **Home Assistant integration**  
+- **Unified client app**
+  A single client application with admin tools, handles onboarding, day-to-day control, and device management across BLE, Wi-Fi STA, and Wi-Fi AP channels.
+  Users only need to install the mobile client, no browser flows or multiple interfaces are required during setup or later use.
+  Direct access to every communication channel enables flexible provisioning, OTA upgrades, logging, and other management features from the same codebase.
+
+- **Home Assistant integration**
   Integration with Home Assistant is possible via a trusted MQTT broker, either over the internet or within a local network.
 
 ### Communication: Parallel Use of Bluetooth and MQTT channels

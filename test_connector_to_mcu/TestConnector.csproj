@@ -64,4 +64,9 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.5" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<!-- Linked Services files from mobile_client_MAUI project -->
+		<Compile Include="..\mobile_client_MAUI\Services\*.cs" Link="Services\%(Filename)%(Extension)" />
+	</ItemGroup>
+
 </Project>
