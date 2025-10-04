@@ -21,15 +21,20 @@ A single IoT device can be controlled by multiple instances of the mobile app:
 
 ### Key Features
 
-- **Local control via Bluetooth**  
+- **Local control via Bluetooth**
   Control the gate automation system from a smartphone at short range, without requiring an internet connection.
 
-- **Remote control via Wi-Fi/Internet**  
+- **Remote control via Wi-Fi/Internet**
   Operate the system over the internet using MQTT (supports both sequred anonymous and authenticated access) when Bluetooth is not available.
   Supports anonymous MQTT servers when no external server is available.
   Encrypts and validates data sent over anonymous MQTT for added security.
 
-- **Home Assistant integration**  
+- **Unified MAUI administration app**
+  A single client application handles onboarding, day-to-day control, and device management across BLE, Wi-Fi STA, and Wi-Fi AP channels.
+  Users only need to install the mobile client—no browser flows or multiple interfaces are required during setup or later use.
+  Direct access to every communication channel enables flexible provisioning, OTA upgrades, logging, and other management features from the same codebase.
+
+- **Home Assistant integration**
   Integration with Home Assistant is possible via a trusted MQTT broker, either over the internet or within a local network.
 
 ### Communication: Parallel Use of Bluetooth and MQTT channels
