@@ -403,10 +403,10 @@
   // WiFi functionality
   function getSignalIcon(rssi) {
     // Standard WiFi RSSI levels for optimal user experience
-    if (rssi >= -55) return '/assets/wifi0.svg';  // Excellent signal (-30 to -55 dBm)
-    if (rssi >= -70) return '/assets/wifi1.svg';  // Good signal (-55 to -70 dBm)
-    if (rssi >= -85) return '/assets/wifi2.svg';  // Fair signal (-70 to -85 dBm)
-    return '/assets/wifi3.svg';                   // Poor signal (< -85 dBm)
+    if (rssi >= -65) return '/assets/wifi0.svg';  // Excellent signal
+    if (rssi >= -75) return '/assets/wifi1.svg';  // Good signal
+    if (rssi >= -85) return '/assets/wifi2.svg';  // Fair signal
+    return '/assets/wifi3.svg';                   // Poor signal
   }
 
   function initializeWiFiPage() {
