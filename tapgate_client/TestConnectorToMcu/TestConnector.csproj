@@ -65,8 +65,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<!-- Linked Services files from mobile_client_MAUI project -->
-		<Compile Include="..\mobile_client_MAUI\Services\*.cs" Link="Services\%(Filename)%(Extension)" />
+		<!-- Linked Services files from mobile_client_MAUI project (preserve full folder structure) -->
+		<Compile Include="..\MobileClientMAUI\Core\**\*.cs">
+			<Link>Core\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		</Compile>
 	</ItemGroup>
 
 </Project>

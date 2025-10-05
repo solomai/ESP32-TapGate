@@ -1,18 +1,15 @@
-using TapGate.Services;
 using TapGate.Components;
 
 namespace TapGate;
 
 public partial class MainPage : ContentPage
 {
-    private readonly Connector _connector = new();
     private readonly StatusTextManager _statusTextManager;
 
     public MainPage()
     {
         InitializeComponent();
         _statusTextManager = new StatusTextManager(StatusTextLabel);
-        _connector.StatusUpdate += OnStatusUpdate;
         SetGateName("gate is not configured yet");
         SetGateStatus(EnumGateState.Offline);
         SetStatusText(string.Empty);
@@ -124,7 +121,6 @@ public partial class MainPage : ContentPage
     void OnDoAction(object sender, EventArgs e)
     {
         SetStatusText("DoAction"); // TODO: Debug mockup
-        _connector.DoAction("default");
     }
 
     void OnStatusUpdate(object? sender, string status)

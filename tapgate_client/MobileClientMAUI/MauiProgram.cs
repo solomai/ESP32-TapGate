@@ -19,8 +19,6 @@ namespace TapGate
 #if DEBUG
             builder.Logging.AddDebug();
 #endif
-            builder.Services.AddSingleton<Connector>();
-
             return builder.Build();
         }
     }
