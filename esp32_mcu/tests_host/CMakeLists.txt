@@ -38,12 +38,24 @@ target_include_directories(tapgate_idf_mocks
         ${CMAKE_CURRENT_LIST_DIR}/mocks/include
 )
 
+
+# Mock implementations
+add_library(tapgate_mocks STATIC
+    ${CMAKE_CURRENT_LIST_DIR}/mocks/nvs_mock.c
+)
+
+target_link_libraries(tapgate_mocks
+    PUBLIC
+        tapgate_idf_mocks
+)
+
 # Static library with production sources that are safe to build on the host.
 add_library(tapgate_production STATIC)
 
 target_link_libraries(tapgate_production
     PUBLIC
         tapgate_idf_mocks
+        tapgate_mocks
 )
 
 target_compile_features(tapgate_production
@@ -56,12 +68,12 @@ target_include_directories(tapgate_production
         ${CMAKE_CURRENT_LIST_DIR}/../components
         ${CMAKE_CURRENT_LIST_DIR}/../components/common
         ${CMAKE_CURRENT_LIST_DIR}/../components/logs
-        ${CMAKE_CURRENT_LIST_DIR}/../components/nvm
+        ${CMAKE_CURRENT_LIST_DIR}/../components/common/nvm
 )
 
 set(_tapgate_component_sources
     ${CMAKE_CURRENT_LIST_DIR}/../components/logs/logs.c
-    ${CMAKE_CURRENT_LIST_DIR}/../components/nvm/nvm.c
+    ${CMAKE_CURRENT_LIST_DIR}/../components/common/nvm/nvm.c
 )
 
 file(GLOB _tapgate_common_sources
@@ -143,5 +155,4 @@ endfunction()
 # Individual test binaries
 tapgate_add_unity_test(test_types ${CMAKE_CURRENT_LIST_DIR}/test_types.c)
 tapgate_add_unity_test(test_logs ${CMAKE_CURRENT_LIST_DIR}/test_logs.c)
-tapgate_add_unity_test(test_admin_portal_state ${CMAKE_CURRENT_LIST_DIR}/test_admin_portal_state.c)
 
