@@ -8,9 +8,6 @@
 #include "nvm/nvm.h"
 #include "logs.h"
 #include "constants.h"
-#include "wifi_manager.h"
-#include "dns_server.h"
-#include "http_server.h"
 
 #include "led.h"
 
@@ -58,12 +55,6 @@ void app_main(void)
         #endif
     }
 
-    // register wfif manager callbacks
-    wifi_manager_set_callback(WM_ORDER_START_AP, &cb_ap_start);
-    wifi_manager_set_callback(WM_ORDER_STOP_AP, &cb_ap_stop);
-    
-    // start wifi manager in separeted thread
-    wifi_manager_start();
 
     // Main loop
     while (1) {

@@ -54,20 +54,14 @@ target_compile_features(tapgate_production
 target_include_directories(tapgate_production
     PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/../components
-        ${CMAKE_CURRENT_LIST_DIR}/../components/rsapem
-        ${CMAKE_CURRENT_LIST_DIR}/../components/clients
         ${CMAKE_CURRENT_LIST_DIR}/../components/common
         ${CMAKE_CURRENT_LIST_DIR}/../components/logs
         ${CMAKE_CURRENT_LIST_DIR}/../components/nvm
-        ${CMAKE_CURRENT_LIST_DIR}/../components/admin_portal
 )
 
 set(_tapgate_component_sources
-    ${CMAKE_CURRENT_LIST_DIR}/../components/rsapem/rsapem.c
-    ${CMAKE_CURRENT_LIST_DIR}/../components/clients/clients.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/logs/logs.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/nvm/nvm.c
-    ${CMAKE_CURRENT_LIST_DIR}/../components/admin_portal/admin_portal_state.c
 )
 
 file(GLOB _tapgate_common_sources

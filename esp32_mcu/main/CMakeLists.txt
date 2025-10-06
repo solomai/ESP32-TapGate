@@ -6,8 +6,6 @@ idf_component_register(
         common
         entity_store
         ecies_crypto
-        wifi_manager
-        admin_portal
         diagnostic
         esp_common
         driver
