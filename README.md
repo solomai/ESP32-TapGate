@@ -46,6 +46,47 @@ see [ESP32 MCU Documentation](esp32_mcu/README.md).
 For details about the mobile application, communication flow, and integration with the ESP32 device,<br>
 see [Mobile Client Documentation](mobile_client_MAUI/README.md).  
 
+## 🚀 Quick Start
+
+### Development Environment Setup
+
+To set up the development environment for building this project:
+
+**Windows:**
+```cmd
+setup-dev-env.bat
+```
+
+**Unix/Linux/macOS:**
+```bash
+./setup-dev-env.sh
+```
+
+This will automatically:
+- Check system requirements (Python 3, Git, CMake)
+- Install protobuf dependencies
+- Verify nanopb generator functionality
+- Test project build capability
+- Provide next steps for ESP-IDF and MAUI setup
+
+### Building Components
+
+**ESP32 Firmware:**
+```bash
+cd esp32_mcu
+idf.py build
+```
+
+**Host Tests:**
+```bash
+cd esp32_mcu
+TAPGATE_BUILD_MODE=host cmake -S . -B build_host
+cmake --build build_host
+```
+
+**MAUI Client:**
+Open `tapgate_client/TapGateClient.sln` in Visual Studio.  
+
 
 ## 📜 License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

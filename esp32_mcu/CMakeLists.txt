@@ -66,7 +66,7 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(${PROJECT_NAME})
 
 # Add your components
-set(EXTRA_COMPONENT_DIRS components)
+set(EXTRA_COMPONENT_DIRS components "${CMAKE_CURRENT_SOURCE_DIR}/messages")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti" CACHE STRING "" FORCE)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")

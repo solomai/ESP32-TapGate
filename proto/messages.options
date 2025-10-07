@@ -1,0 +1,7 @@
+# nanopb options for messages.proto
+
+# Set maximum string size for payload field
+tapgate.MsgAction.payload max_size:256
+
+# Optimize for size
+* type:FT_STATIC
