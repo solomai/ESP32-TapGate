@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package tapgate; // Keep same package across C and C#
+
+message MsgHeader {
+  uint32 uid = 1;
+  uint32 msg_id = 2;
+}
+
+message MsgAction {
+  MsgHeader header = 1;
+  string payload = 2;
+}
+
+message MsgStatus {
+  MsgHeader header = 1;
+  bool ok = 2;
+}
