@@ -7,6 +7,7 @@ idf_component_register(
         entity_store
         ecies_crypto
         diagnostic
+        messages
         esp_common
         driver
 )

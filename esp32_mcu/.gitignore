@@ -1,2 +1,17 @@
+# Build directories
 build/
 build-host-tests/
+build_*/
+
+# Generated Python cache
+__pycache__/
+
+# Generated nanopb proto files (cached)
+*_pb2.py
+
+# Temporary files
+*.tmp
+*.log
+
+# ESP-IDF specific
+sdkconfig.old
