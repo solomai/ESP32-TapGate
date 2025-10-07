@@ -31,12 +31,12 @@ echo "Generating messages.pb.h and messages.pb.c..."
     "$PROJECT_ROOT/proto/messages.proto"
 
 if [ $? -eq 0 ]; then
-    echo "✓ Protobuf files regenerated successfully!"
+    echo "[OK] Protobuf files regenerated successfully!"
     echo "Files updated:"
     echo "  - messages/messages.pb.h"
     echo "  - messages/messages.pb.c"
 else
-    echo "✗ Failed to regenerate protobuf files"
+    echo "[NOK] Failed to regenerate protobuf files"
     exit 1
 fi
 

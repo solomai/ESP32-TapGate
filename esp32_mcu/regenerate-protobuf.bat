@@ -83,16 +83,16 @@ if %GENERATION_RESULT% == 0 (
     
     REM Check if files actually exist
     if exist "messages.pb.h" (
-        echo ✓ messages.pb.h created
+        echo [OK] messages.pb.h created
     ) else (
-        echo ✗ messages.pb.h NOT found!
+        echo [NOK] messages.pb.h NOT found!
         set "GENERATION_RESULT=1"
     )
     
     if exist "messages.pb.c" (
-        echo ✓ messages.pb.c created
+        echo [OK] messages.pb.c created
     ) else (
-        echo ✗ messages.pb.c NOT found!
+        echo [NOK] messages.pb.c NOT found!
         set "GENERATION_RESULT=1"
     )
     

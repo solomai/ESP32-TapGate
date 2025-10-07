@@ -1,0 +1,2 @@
+# Mark the vendored nanopb library so it doesn't count towards language statistics
+esp32_mcu/components/nanopb/** linguist-vendored
