@@ -10,8 +10,12 @@
 #endif
 
 /* Struct definitions */
+typedef PB_BYTES_ARRAY_T(32) tapgate_MsgHeader_eph_pub_t;
+typedef PB_BYTES_ARRAY_T(12) tapgate_MsgHeader_nonce_t;
 typedef struct _tapgate_MsgHeader {
-    uint32_t uid;
+    char client_id[15]; /* fixed 15 bytes, use nanopb max_size:15 */
+    tapgate_MsgHeader_eph_pub_t eph_pub; /* fixed 32 bytes, use nanopb max_size:32 */
+    tapgate_MsgHeader_nonce_t nonce; /* fixed 12 bytes, use nanopb max_size:12 */
     uint32_t msg_id;
 } tapgate_MsgHeader;
 
@@ -33,16 +37,18 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define tapgate_MsgHeader_init_default           {0, 0}
+#define tapgate_MsgHeader_init_default           {"", {0, {0}}, {0, {0}}, 0}
 #define tapgate_MsgAction_init_default           {false, tapgate_MsgHeader_init_default, ""}
 #define tapgate_MsgStatus_init_default           {false, tapgate_MsgHeader_init_default, 0}
-#define tapgate_MsgHeader_init_zero              {0, 0}
+#define tapgate_MsgHeader_init_zero              {"", {0, {0}}, {0, {0}}, 0}
 #define tapgate_MsgAction_init_zero              {false, tapgate_MsgHeader_init_zero, ""}
 #define tapgate_MsgStatus_init_zero              {false, tapgate_MsgHeader_init_zero, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
-#define tapgate_MsgHeader_uid_tag                1
-#define tapgate_MsgHeader_msg_id_tag             2
+#define tapgate_MsgHeader_client_id_tag          1
+#define tapgate_MsgHeader_eph_pub_tag            2
+#define tapgate_MsgHeader_nonce_tag              3
+#define tapgate_MsgHeader_msg_id_tag             4
 #define tapgate_MsgAction_header_tag             1
 #define tapgate_MsgAction_payload_tag            2
 #define tapgate_MsgStatus_header_tag             1
@@ -50,8 +56,10 @@ extern "C" {
 
 /* Struct field encoding specification for nanopb */
 #define tapgate_MsgHeader_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, UINT32,   uid,               1) \
-X(a, STATIC,   SINGULAR, UINT32,   msg_id,            2)
+X(a, STATIC,   SINGULAR, STRING,   client_id,         1) \
+X(a, STATIC,   SINGULAR, BYTES,    eph_pub,           2) \
+X(a, STATIC,   SINGULAR, BYTES,    nonce,             3) \
+X(a, STATIC,   SINGULAR, UINT32,   msg_id,            4)
 #define tapgate_MsgHeader_CALLBACK NULL
 #define tapgate_MsgHeader_DEFAULT NULL
 
@@ -80,9 +88,9 @@ extern const pb_msgdesc_t tapgate_MsgStatus_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define TAPGATE_MESSAGES_PB_H_MAX_SIZE           tapgate_MsgAction_size
-#define tapgate_MsgAction_size                   272
-#define tapgate_MsgHeader_size                   12
-#define tapgate_MsgStatus_size                   16
+#define tapgate_MsgAction_size                   330
+#define tapgate_MsgHeader_size                   70
+#define tapgate_MsgStatus_size                   74
 
 #ifdef __cplusplus
 } /* extern "C" */

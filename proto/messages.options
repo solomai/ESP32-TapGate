@@ -1,5 +1,14 @@
 # nanopb options for messages.proto
 
+#set maximum size for client_id
+tapgate.MsgHeader.client_id max_size:15
+
+#set maximum size for eph_pub
+tapgate.MsgHeader.eph_pub max_size:32
+
+#set maximum size for nonce
+tapgate.MsgHeader.nonce max_size:12
+
 # Set maximum string size for payload field
 tapgate.MsgAction.payload max_size:256
 
