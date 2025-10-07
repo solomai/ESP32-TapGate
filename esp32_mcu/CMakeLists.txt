@@ -62,11 +62,11 @@ if(NOT DEFINED ENV{IDF_PATH} OR NOT EXISTS "$ENV{IDF_PATH}/tools/cmake/project.c
 endif()
 
 # The following boilerplate must remain in this order for ESP-IDF projects.
+# Add your components BEFORE calling project()
+set(EXTRA_COMPONENT_DIRS components messages)
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(${PROJECT_NAME})
-
-# Add your components
-set(EXTRA_COMPONENT_DIRS components "${CMAKE_CURRENT_SOURCE_DIR}/messages")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti" CACHE STRING "" FORCE)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
