@@ -1,15 +1,6 @@
 # Unified entry point for both ESP-IDF firmware build and host-side tests.
 cmake_minimum_required(VERSION 3.20)
 
-# Disable specific warnings project-wide (C & C++)
-if(MSVC)
-    # MSVC warning flags
-    add_compile_options(/wd4101 /wd4189 /wd4996)  # Disable unused variable warnings and deprecation warnings
-else()
-    # GCC/Clang warning flags
-    add_compile_options(-Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable)
-endif()
-
 set(PROJECT_NAME esp32-tapgate)
 set(PROJECT_VER "1.0.0")
 
@@ -30,6 +21,15 @@ string(TOLOWER "${TAPGATE_BUILD_MODE}" TAPGATE_BUILD_MODE_LOWER)
 
 if(TAPGATE_BUILD_MODE_LOWER STREQUAL "host")
     project(${PROJECT_NAME}_host_tests LANGUAGES C)
+
+    # Disable specific warnings project-wide (C & C++) - must be after project()
+    if(MSVC)
+        # MSVC warning flags
+        add_compile_options(/wd4101 /wd4189 /wd4996)  # Disable unused variable warnings and deprecation warnings
+    else()
+        # GCC/Clang warning flags
+        add_compile_options(-Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable)
+    endif()
 
     set(CMAKE_C_STANDARD 11)
     set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -73,6 +73,15 @@ set(EXTRA_COMPONENT_DIRS components messages)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(${PROJECT_NAME})
+
+# Disable specific warnings project-wide (C & C++) - must be after project()
+if(MSVC)
+    # MSVC warning flags
+    add_compile_options(/wd4101 /wd4189 /wd4996)  # Disable unused variable warnings and deprecation warnings
+else()
+    # GCC/Clang warning flags
+    add_compile_options(-Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable)
+endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti" CACHE STRING "" FORCE)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
