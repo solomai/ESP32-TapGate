@@ -83,4 +83,8 @@
 	  </MauiXaml>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Core\Messages\" />
+	</ItemGroup>
+
 </Project>

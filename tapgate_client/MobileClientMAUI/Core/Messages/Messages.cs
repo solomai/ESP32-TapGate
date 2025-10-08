@@ -24,18 +24,24 @@ namespace Tapgate {
     static MessagesReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "Cg5tZXNzYWdlcy5wcm90bxIHdGFwZ2F0ZSJOCglNc2dIZWFkZXISEQoJY2xp",
-            "ZW50X2lkGAEgASgJEg8KB2VwaF9wdWIYAiABKAwSDQoFbm9uY2UYAyABKAwS",
-            "DgoGbXNnX2lkGAQgASgNIkAKCU1zZ0FjdGlvbhIiCgZoZWFkZXIYASABKAsy",
-            "Ei50YXBnYXRlLk1zZ0hlYWRlchIPCgdwYXlsb2FkGAIgASgJIjsKCU1zZ1N0",
-            "YXR1cxIiCgZoZWFkZXIYASABKAsyEi50YXBnYXRlLk1zZ0hlYWRlchIKCgJv",
-            "axgCIAEoCGIGcHJvdG8z"));
+            "Cg5tZXNzYWdlcy5wcm90bxIHdGFwZ2F0ZSJyCg1NZXNzYWdlT25XaXJlEjIK",
+            "BmVucm9sbBgBIAEoCzIgLnRhcGdhdGUuTWVzc2FnZUNsaWVudEVucm9sbG1l",
+            "bnRIABImCgNvcHQYAiABKAsyFy50YXBnYXRlLlJlZ3VsYXJNZXNzYWdlSABC",
+            "BQoDbXNnIj8KF01lc3NhZ2VDbGllbnRFbnJvbGxtZW50EhMKC3NlY3JldF9j",
+            "b2RlGAEgAigJEg8KB3B1Yl9rZXkYAiACKAwicAoOUmVndWxhck1lc3NhZ2US",
+            "EQoJY2xpZW50X2lkGAEgAigJEg8KB2VwaF9wdWIYAiACKAwSDQoFbm9uY2UY",
+            "AyACKAwSGQoRZW5jcnlwdGVkX3BheWxvYWQYBCACKAwSEAoIZXBfY3JjMzIY",
+            "BSACKA0iUgoXTWVzc2FnZUVuY3J5cHRlZFBheWxvYWQSFAoMY2xpZW50X25v",
+            "bmNlGAEgAigNEhAKCG1zZ19jb2RlGAIgAigNEg8KB3BheWxvYWQYAyACKAwi",
+            "EQoPTWVzc2FnZURvQWN0aW9u"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Tapgate.MsgHeader), global::Tapgate.MsgHeader.Parser, new[]{ "ClientId", "EphPub", "Nonce", "MsgId" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Tapgate.MsgAction), global::Tapgate.MsgAction.Parser, new[]{ "Header", "Payload" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Tapgate.MsgStatus), global::Tapgate.MsgStatus.Parser, new[]{ "Header", "Ok" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tapgate.MessageOnWire), global::Tapgate.MessageOnWire.Parser, new[]{ "Enroll", "Opt" }, new[]{ "Msg" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tapgate.MessageClientEnrollment), global::Tapgate.MessageClientEnrollment.Parser, new[]{ "SecretCode", "PubKey" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tapgate.RegularMessage), global::Tapgate.RegularMessage.Parser, new[]{ "ClientId", "EphPub", "Nonce", "EncryptedPayload", "EpCrc32" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tapgate.MessageEncryptedPayload), global::Tapgate.MessageEncryptedPayload.Parser, new[]{ "ClientNonce", "MsgCode", "Payload" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Tapgate.MessageDoAction), global::Tapgate.MessageDoAction.Parser, null, null, null, null, null)
           }));
     }
     #endregion
@@ -43,16 +49,16 @@ namespace Tapgate {
   }
   #region Messages
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class MsgHeader : pb::IMessage<MsgHeader>
+  public sealed partial class MessageOnWire : pb::IMessage<MessageOnWire>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<MsgHeader> _parser = new pb::MessageParser<MsgHeader>(() => new MsgHeader());
+    private static readonly pb::MessageParser<MessageOnWire> _parser = new pb::MessageParser<MessageOnWire>(() => new MessageOnWire());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<MsgHeader> Parser { get { return _parser; } }
+    public static pb::MessageParser<MessageOnWire> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -68,7 +74,7 @@ namespace Tapgate {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public MsgHeader() {
+    public MessageOnWire() {
       OnConstruction();
     }
 
@@ -76,96 +82,88 @@ namespace Tapgate {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public MsgHeader(MsgHeader other) : this() {
-      clientId_ = other.clientId_;
-      ephPub_ = other.ephPub_;
-      nonce_ = other.nonce_;
-      msgId_ = other.msgId_;
+    public MessageOnWire(MessageOnWire other) : this() {
+      switch (other.MsgCase) {
+        case MsgOneofCase.Enroll:
+          Enroll = other.Enroll.Clone();
+          break;
+        case MsgOneofCase.Opt:
+          Opt = other.Opt.Clone();
+          break;
+      }
+
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public MsgHeader Clone() {
-      return new MsgHeader(this);
+    public MessageOnWire Clone() {
+      return new MessageOnWire(this);
     }
 
-    /// <summary>Field number for the "client_id" field.</summary>
-    public const int ClientIdFieldNumber = 1;
-    private string clientId_ = "";
-    /// <summary>
-    /// fixed 15 bytes, use nanopb max_size:15
-    /// </summary>
+    /// <summary>Field number for the "enroll" field.</summary>
+    public const int EnrollFieldNumber = 1;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string ClientId {
-      get { return clientId_; }
+    public global::Tapgate.MessageClientEnrollment Enroll {
+      get { return msgCase_ == MsgOneofCase.Enroll ? (global::Tapgate.MessageClientEnrollment) msg_ : null; }
       set {
-        clientId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+        msg_ = value;
+        msgCase_ = value == null ? MsgOneofCase.None : MsgOneofCase.Enroll;
       }
     }
 
-    /// <summary>Field number for the "eph_pub" field.</summary>
-    public const int EphPubFieldNumber = 2;
-    private pb::ByteString ephPub_ = pb::ByteString.Empty;
-    /// <summary>
-    /// fixed 32 bytes, use nanopb max_size:32
-    /// </summary>
+    /// <summary>Field number for the "opt" field.</summary>
+    public const int OptFieldNumber = 2;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pb::ByteString EphPub {
-      get { return ephPub_; }
+    public global::Tapgate.RegularMessage Opt {
+      get { return msgCase_ == MsgOneofCase.Opt ? (global::Tapgate.RegularMessage) msg_ : null; }
       set {
-        ephPub_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+        msg_ = value;
+        msgCase_ = value == null ? MsgOneofCase.None : MsgOneofCase.Opt;
       }
     }
 
-    /// <summary>Field number for the "nonce" field.</summary>
-    public const int NonceFieldNumber = 3;
-    private pb::ByteString nonce_ = pb::ByteString.Empty;
-    /// <summary>
-    /// fixed 12 bytes, use nanopb max_size:12
-    /// </summary>
+    private object msg_;
+    /// <summary>Enum of possible cases for the "msg" oneof.</summary>
+    public enum MsgOneofCase {
+      None = 0,
+      Enroll = 1,
+      Opt = 2,
+    }
+    private MsgOneofCase msgCase_ = MsgOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pb::ByteString Nonce {
-      get { return nonce_; }
-      set {
-        nonce_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
+    public MsgOneofCase MsgCase {
+      get { return msgCase_; }
     }
 
-    /// <summary>Field number for the "msg_id" field.</summary>
-    public const int MsgIdFieldNumber = 4;
-    private uint msgId_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public uint MsgId {
-      get { return msgId_; }
-      set {
-        msgId_ = value;
-      }
+    public void ClearMsg() {
+      msgCase_ = MsgOneofCase.None;
+      msg_ = null;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as MsgHeader);
+      return Equals(other as MessageOnWire);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(MsgHeader other) {
+    public bool Equals(MessageOnWire other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (ClientId != other.ClientId) return false;
-      if (EphPub != other.EphPub) return false;
-      if (Nonce != other.Nonce) return false;
-      if (MsgId != other.MsgId) return false;
+      if (!object.Equals(Enroll, other.Enroll)) return false;
+      if (!object.Equals(Opt, other.Opt)) return false;
+      if (MsgCase != other.MsgCase) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -173,10 +171,9 @@ namespace Tapgate {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (ClientId.Length != 0) hash ^= ClientId.GetHashCode();
-      if (EphPub.Length != 0) hash ^= EphPub.GetHashCode();
-      if (Nonce.Length != 0) hash ^= Nonce.GetHashCode();
-      if (MsgId != 0) hash ^= MsgId.GetHashCode();
+      if (msgCase_ == MsgOneofCase.Enroll) hash ^= Enroll.GetHashCode();
+      if (msgCase_ == MsgOneofCase.Opt) hash ^= Opt.GetHashCode();
+      hash ^= (int) msgCase_;
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -195,21 +192,13 @@ namespace Tapgate {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (ClientId.Length != 0) {
+      if (msgCase_ == MsgOneofCase.Enroll) {
         output.WriteRawTag(10);
-        output.WriteString(ClientId);
+        output.WriteMessage(Enroll);
       }
-      if (EphPub.Length != 0) {
+      if (msgCase_ == MsgOneofCase.Opt) {
         output.WriteRawTag(18);
-        output.WriteBytes(EphPub);
-      }
-      if (Nonce.Length != 0) {
-        output.WriteRawTag(26);
-        output.WriteBytes(Nonce);
-      }
-      if (MsgId != 0) {
-        output.WriteRawTag(32);
-        output.WriteUInt32(MsgId);
+        output.WriteMessage(Opt);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -221,21 +210,13 @@ namespace Tapgate {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (ClientId.Length != 0) {
+      if (msgCase_ == MsgOneofCase.Enroll) {
         output.WriteRawTag(10);
-        output.WriteString(ClientId);
+        output.WriteMessage(Enroll);
       }
-      if (EphPub.Length != 0) {
+      if (msgCase_ == MsgOneofCase.Opt) {
         output.WriteRawTag(18);
-        output.WriteBytes(EphPub);
-      }
-      if (Nonce.Length != 0) {
-        output.WriteRawTag(26);
-        output.WriteBytes(Nonce);
-      }
-      if (MsgId != 0) {
-        output.WriteRawTag(32);
-        output.WriteUInt32(MsgId);
+        output.WriteMessage(Opt);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -247,17 +228,11 @@ namespace Tapgate {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (ClientId.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(ClientId);
+      if (msgCase_ == MsgOneofCase.Enroll) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Enroll);
       }
-      if (EphPub.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeBytesSize(EphPub);
-      }
-      if (Nonce.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeBytesSize(Nonce);
-      }
-      if (MsgId != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(MsgId);
+      if (msgCase_ == MsgOneofCase.Opt) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Opt);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -267,21 +242,729 @@ namespace Tapgate {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(MsgHeader other) {
+    public void MergeFrom(MessageOnWire other) {
       if (other == null) {
         return;
       }
-      if (other.ClientId.Length != 0) {
+      switch (other.MsgCase) {
+        case MsgOneofCase.Enroll:
+          if (Enroll == null) {
+            Enroll = new global::Tapgate.MessageClientEnrollment();
+          }
+          Enroll.MergeFrom(other.Enroll);
+          break;
+        case MsgOneofCase.Opt:
+          if (Opt == null) {
+            Opt = new global::Tapgate.RegularMessage();
+          }
+          Opt.MergeFrom(other.Opt);
+          break;
+      }
+
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            global::Tapgate.MessageClientEnrollment subBuilder = new global::Tapgate.MessageClientEnrollment();
+            if (msgCase_ == MsgOneofCase.Enroll) {
+              subBuilder.MergeFrom(Enroll);
+            }
+            input.ReadMessage(subBuilder);
+            Enroll = subBuilder;
+            break;
+          }
+          case 18: {
+            global::Tapgate.RegularMessage subBuilder = new global::Tapgate.RegularMessage();
+            if (msgCase_ == MsgOneofCase.Opt) {
+              subBuilder.MergeFrom(Opt);
+            }
+            input.ReadMessage(subBuilder);
+            Opt = subBuilder;
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            global::Tapgate.MessageClientEnrollment subBuilder = new global::Tapgate.MessageClientEnrollment();
+            if (msgCase_ == MsgOneofCase.Enroll) {
+              subBuilder.MergeFrom(Enroll);
+            }
+            input.ReadMessage(subBuilder);
+            Enroll = subBuilder;
+            break;
+          }
+          case 18: {
+            global::Tapgate.RegularMessage subBuilder = new global::Tapgate.RegularMessage();
+            if (msgCase_ == MsgOneofCase.Opt) {
+              subBuilder.MergeFrom(Opt);
+            }
+            input.ReadMessage(subBuilder);
+            Opt = subBuilder;
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Enroll new client message
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class MessageClientEnrollment : pb::IMessage<MessageClientEnrollment>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<MessageClientEnrollment> _parser = new pb::MessageParser<MessageClientEnrollment>(() => new MessageClientEnrollment());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<MessageClientEnrollment> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Tapgate.MessagesReflection.Descriptor.MessageTypes[1]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public MessageClientEnrollment() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public MessageClientEnrollment(MessageClientEnrollment other) : this() {
+      secretCode_ = other.secretCode_;
+      pubKey_ = other.pubKey_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public MessageClientEnrollment Clone() {
+      return new MessageClientEnrollment(this);
+    }
+
+    /// <summary>Field number for the "secret_code" field.</summary>
+    public const int SecretCodeFieldNumber = 1;
+    private readonly static string SecretCodeDefaultValue = "";
+
+    private string secretCode_;
+    /// <summary>
+    /// Secret code, use nanopb max_size:15 chars 
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string SecretCode {
+      get { return secretCode_ ?? SecretCodeDefaultValue; }
+      set {
+        secretCode_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+    /// <summary>Gets whether the "secret_code" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasSecretCode {
+      get { return secretCode_ != null; }
+    }
+    /// <summary>Clears the value of the "secret_code" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearSecretCode() {
+      secretCode_ = null;
+    }
+
+    /// <summary>Field number for the "pub_key" field.</summary>
+    public const int PubKeyFieldNumber = 2;
+    private readonly static pb::ByteString PubKeyDefaultValue = pb::ByteString.Empty;
+
+    private pb::ByteString pubKey_;
+    /// <summary>
+    /// Public key, use nanopb max_size:32 bytes
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pb::ByteString PubKey {
+      get { return pubKey_ ?? PubKeyDefaultValue; }
+      set {
+        pubKey_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+    /// <summary>Gets whether the "pub_key" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasPubKey {
+      get { return pubKey_ != null; }
+    }
+    /// <summary>Clears the value of the "pub_key" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearPubKey() {
+      pubKey_ = null;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as MessageClientEnrollment);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(MessageClientEnrollment other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (SecretCode != other.SecretCode) return false;
+      if (PubKey != other.PubKey) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (HasSecretCode) hash ^= SecretCode.GetHashCode();
+      if (HasPubKey) hash ^= PubKey.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (HasSecretCode) {
+        output.WriteRawTag(10);
+        output.WriteString(SecretCode);
+      }
+      if (HasPubKey) {
+        output.WriteRawTag(18);
+        output.WriteBytes(PubKey);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (HasSecretCode) {
+        output.WriteRawTag(10);
+        output.WriteString(SecretCode);
+      }
+      if (HasPubKey) {
+        output.WriteRawTag(18);
+        output.WriteBytes(PubKey);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (HasSecretCode) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(SecretCode);
+      }
+      if (HasPubKey) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(PubKey);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(MessageClientEnrollment other) {
+      if (other == null) {
+        return;
+      }
+      if (other.HasSecretCode) {
+        SecretCode = other.SecretCode;
+      }
+      if (other.HasPubKey) {
+        PubKey = other.PubKey;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            SecretCode = input.ReadString();
+            break;
+          }
+          case 18: {
+            PubKey = input.ReadBytes();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            SecretCode = input.ReadString();
+            break;
+          }
+          case 18: {
+            PubKey = input.ReadBytes();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Regular message packed on-wire
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class RegularMessage : pb::IMessage<RegularMessage>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<RegularMessage> _parser = new pb::MessageParser<RegularMessage>(() => new RegularMessage());
+    private pb::UnknownFieldSet _unknownFields;
+    private int _hasBits0;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<RegularMessage> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Tapgate.MessagesReflection.Descriptor.MessageTypes[2]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RegularMessage() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RegularMessage(RegularMessage other) : this() {
+      _hasBits0 = other._hasBits0;
+      clientId_ = other.clientId_;
+      ephPub_ = other.ephPub_;
+      nonce_ = other.nonce_;
+      encryptedPayload_ = other.encryptedPayload_;
+      epCrc32_ = other.epCrc32_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RegularMessage Clone() {
+      return new RegularMessage(this);
+    }
+
+    /// <summary>Field number for the "client_id" field.</summary>
+    public const int ClientIdFieldNumber = 1;
+    private readonly static string ClientIdDefaultValue = "";
+
+    private string clientId_;
+    /// <summary>
+    /// use nanopb max_size:15 bytes
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ClientId {
+      get { return clientId_ ?? ClientIdDefaultValue; }
+      set {
+        clientId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+    /// <summary>Gets whether the "client_id" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasClientId {
+      get { return clientId_ != null; }
+    }
+    /// <summary>Clears the value of the "client_id" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearClientId() {
+      clientId_ = null;
+    }
+
+    /// <summary>Field number for the "eph_pub" field.</summary>
+    public const int EphPubFieldNumber = 2;
+    private readonly static pb::ByteString EphPubDefaultValue = pb::ByteString.Empty;
+
+    private pb::ByteString ephPub_;
+    /// <summary>
+    /// use nanopb max_size:32 bytes
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pb::ByteString EphPub {
+      get { return ephPub_ ?? EphPubDefaultValue; }
+      set {
+        ephPub_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+    /// <summary>Gets whether the "eph_pub" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasEphPub {
+      get { return ephPub_ != null; }
+    }
+    /// <summary>Clears the value of the "eph_pub" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearEphPub() {
+      ephPub_ = null;
+    }
+
+    /// <summary>Field number for the "nonce" field.</summary>
+    public const int NonceFieldNumber = 3;
+    private readonly static pb::ByteString NonceDefaultValue = pb::ByteString.Empty;
+
+    private pb::ByteString nonce_;
+    /// <summary>
+    /// use nanopb max_size:12 bytes
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pb::ByteString Nonce {
+      get { return nonce_ ?? NonceDefaultValue; }
+      set {
+        nonce_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+    /// <summary>Gets whether the "nonce" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasNonce {
+      get { return nonce_ != null; }
+    }
+    /// <summary>Clears the value of the "nonce" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearNonce() {
+      nonce_ = null;
+    }
+
+    /// <summary>Field number for the "encrypted_payload" field.</summary>
+    public const int EncryptedPayloadFieldNumber = 4;
+    private readonly static pb::ByteString EncryptedPayloadDefaultValue = pb::ByteString.Empty;
+
+    private pb::ByteString encryptedPayload_;
+    /// <summary>
+    /// use nanopb max size:440 bytes
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pb::ByteString EncryptedPayload {
+      get { return encryptedPayload_ ?? EncryptedPayloadDefaultValue; }
+      set {
+        encryptedPayload_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+    /// <summary>Gets whether the "encrypted_payload" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasEncryptedPayload {
+      get { return encryptedPayload_ != null; }
+    }
+    /// <summary>Clears the value of the "encrypted_payload" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearEncryptedPayload() {
+      encryptedPayload_ = null;
+    }
+
+    /// <summary>Field number for the "ep_crc32" field.</summary>
+    public const int EpCrc32FieldNumber = 5;
+    private readonly static uint EpCrc32DefaultValue = 0;
+
+    private uint epCrc32_;
+    /// <summary>
+    /// encrypted payload CRC 32
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint EpCrc32 {
+      get { if ((_hasBits0 & 1) != 0) { return epCrc32_; } else { return EpCrc32DefaultValue; } }
+      set {
+        _hasBits0 |= 1;
+        epCrc32_ = value;
+      }
+    }
+    /// <summary>Gets whether the "ep_crc32" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasEpCrc32 {
+      get { return (_hasBits0 & 1) != 0; }
+    }
+    /// <summary>Clears the value of the "ep_crc32" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearEpCrc32() {
+      _hasBits0 &= ~1;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as RegularMessage);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(RegularMessage other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ClientId != other.ClientId) return false;
+      if (EphPub != other.EphPub) return false;
+      if (Nonce != other.Nonce) return false;
+      if (EncryptedPayload != other.EncryptedPayload) return false;
+      if (EpCrc32 != other.EpCrc32) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (HasClientId) hash ^= ClientId.GetHashCode();
+      if (HasEphPub) hash ^= EphPub.GetHashCode();
+      if (HasNonce) hash ^= Nonce.GetHashCode();
+      if (HasEncryptedPayload) hash ^= EncryptedPayload.GetHashCode();
+      if (HasEpCrc32) hash ^= EpCrc32.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (HasClientId) {
+        output.WriteRawTag(10);
+        output.WriteString(ClientId);
+      }
+      if (HasEphPub) {
+        output.WriteRawTag(18);
+        output.WriteBytes(EphPub);
+      }
+      if (HasNonce) {
+        output.WriteRawTag(26);
+        output.WriteBytes(Nonce);
+      }
+      if (HasEncryptedPayload) {
+        output.WriteRawTag(34);
+        output.WriteBytes(EncryptedPayload);
+      }
+      if (HasEpCrc32) {
+        output.WriteRawTag(40);
+        output.WriteUInt32(EpCrc32);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (HasClientId) {
+        output.WriteRawTag(10);
+        output.WriteString(ClientId);
+      }
+      if (HasEphPub) {
+        output.WriteRawTag(18);
+        output.WriteBytes(EphPub);
+      }
+      if (HasNonce) {
+        output.WriteRawTag(26);
+        output.WriteBytes(Nonce);
+      }
+      if (HasEncryptedPayload) {
+        output.WriteRawTag(34);
+        output.WriteBytes(EncryptedPayload);
+      }
+      if (HasEpCrc32) {
+        output.WriteRawTag(40);
+        output.WriteUInt32(EpCrc32);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (HasClientId) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ClientId);
+      }
+      if (HasEphPub) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(EphPub);
+      }
+      if (HasNonce) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(Nonce);
+      }
+      if (HasEncryptedPayload) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(EncryptedPayload);
+      }
+      if (HasEpCrc32) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(EpCrc32);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(RegularMessage other) {
+      if (other == null) {
+        return;
+      }
+      if (other.HasClientId) {
         ClientId = other.ClientId;
       }
-      if (other.EphPub.Length != 0) {
+      if (other.HasEphPub) {
         EphPub = other.EphPub;
       }
-      if (other.Nonce.Length != 0) {
+      if (other.HasNonce) {
         Nonce = other.Nonce;
       }
-      if (other.MsgId != 0) {
-        MsgId = other.MsgId;
+      if (other.HasEncryptedPayload) {
+        EncryptedPayload = other.EncryptedPayload;
+      }
+      if (other.HasEpCrc32) {
+        EpCrc32 = other.EpCrc32;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -314,8 +997,12 @@ namespace Tapgate {
             Nonce = input.ReadBytes();
             break;
           }
-          case 32: {
-            MsgId = input.ReadUInt32();
+          case 34: {
+            EncryptedPayload = input.ReadBytes();
+            break;
+          }
+          case 40: {
+            EpCrc32 = input.ReadUInt32();
             break;
           }
         }
@@ -349,8 +1036,12 @@ namespace Tapgate {
             Nonce = input.ReadBytes();
             break;
           }
-          case 32: {
-            MsgId = input.ReadUInt32();
+          case 34: {
+            EncryptedPayload = input.ReadBytes();
+            break;
+          }
+          case 40: {
+            EpCrc32 = input.ReadUInt32();
             break;
           }
         }
@@ -360,22 +1051,26 @@ namespace Tapgate {
 
   }
 
+  /// <summary>
+  /// Encrypted payload is part of on-wire message
+  /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class MsgAction : pb::IMessage<MsgAction>
+  public sealed partial class MessageEncryptedPayload : pb::IMessage<MessageEncryptedPayload>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<MsgAction> _parser = new pb::MessageParser<MsgAction>(() => new MsgAction());
+    private static readonly pb::MessageParser<MessageEncryptedPayload> _parser = new pb::MessageParser<MessageEncryptedPayload>(() => new MessageEncryptedPayload());
     private pb::UnknownFieldSet _unknownFields;
+    private int _hasBits0;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<MsgAction> Parser { get { return _parser; } }
+    public static pb::MessageParser<MessageEncryptedPayload> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Tapgate.MessagesReflection.Descriptor.MessageTypes[1]; }
+      get { return global::Tapgate.MessagesReflection.Descriptor.MessageTypes[3]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -386,7 +1081,7 @@ namespace Tapgate {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public MsgAction() {
+    public MessageEncryptedPayload() {
       OnConstruction();
     }
 
@@ -394,58 +1089,126 @@ namespace Tapgate {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public MsgAction(MsgAction other) : this() {
-      header_ = other.header_ != null ? other.header_.Clone() : null;
+    public MessageEncryptedPayload(MessageEncryptedPayload other) : this() {
+      _hasBits0 = other._hasBits0;
+      clientNonce_ = other.clientNonce_;
+      msgCode_ = other.msgCode_;
       payload_ = other.payload_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public MsgAction Clone() {
-      return new MsgAction(this);
+    public MessageEncryptedPayload Clone() {
+      return new MessageEncryptedPayload(this);
     }
 
-    /// <summary>Field number for the "header" field.</summary>
-    public const int HeaderFieldNumber = 1;
-    private global::Tapgate.MsgHeader header_;
+    /// <summary>Field number for the "client_nonce" field.</summary>
+    public const int ClientNonceFieldNumber = 1;
+    private readonly static uint ClientNonceDefaultValue = 0;
+
+    private uint clientNonce_;
+    /// <summary>
+    /// anti-replay
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Tapgate.MsgHeader Header {
-      get { return header_; }
+    public uint ClientNonce {
+      get { if ((_hasBits0 & 1) != 0) { return clientNonce_; } else { return ClientNonceDefaultValue; } }
       set {
-        header_ = value;
+        _hasBits0 |= 1;
+        clientNonce_ = value;
       }
+    }
+    /// <summary>Gets whether the "client_nonce" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasClientNonce {
+      get { return (_hasBits0 & 1) != 0; }
+    }
+    /// <summary>Clears the value of the "client_nonce" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearClientNonce() {
+      _hasBits0 &= ~1;
+    }
+
+    /// <summary>Field number for the "msg_code" field.</summary>
+    public const int MsgCodeFieldNumber = 2;
+    private readonly static uint MsgCodeDefaultValue = 0;
+
+    private uint msgCode_;
+    /// <summary>
+    /// message opt code
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint MsgCode {
+      get { if ((_hasBits0 & 2) != 0) { return msgCode_; } else { return MsgCodeDefaultValue; } }
+      set {
+        _hasBits0 |= 2;
+        msgCode_ = value;
+      }
+    }
+    /// <summary>Gets whether the "msg_code" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasMsgCode {
+      get { return (_hasBits0 & 2) != 0; }
+    }
+    /// <summary>Clears the value of the "msg_code" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearMsgCode() {
+      _hasBits0 &= ~2;
     }
 
     /// <summary>Field number for the "payload" field.</summary>
-    public const int PayloadFieldNumber = 2;
-    private string payload_ = "";
+    public const int PayloadFieldNumber = 3;
+    private readonly static pb::ByteString PayloadDefaultValue = pb::ByteString.Empty;
+
+    private pb::ByteString payload_;
+    /// <summary>
+    /// other fields depend on type of message
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string Payload {
-      get { return payload_; }
+    public pb::ByteString Payload {
+      get { return payload_ ?? PayloadDefaultValue; }
       set {
         payload_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
       }
+    }
+    /// <summary>Gets whether the "payload" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasPayload {
+      get { return payload_ != null; }
+    }
+    /// <summary>Clears the value of the "payload" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearPayload() {
+      payload_ = null;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as MsgAction);
+      return Equals(other as MessageEncryptedPayload);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(MsgAction other) {
+    public bool Equals(MessageEncryptedPayload other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (!object.Equals(Header, other.Header)) return false;
+      if (ClientNonce != other.ClientNonce) return false;
+      if (MsgCode != other.MsgCode) return false;
       if (Payload != other.Payload) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -454,8 +1217,9 @@ namespace Tapgate {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (header_ != null) hash ^= Header.GetHashCode();
-      if (Payload.Length != 0) hash ^= Payload.GetHashCode();
+      if (HasClientNonce) hash ^= ClientNonce.GetHashCode();
+      if (HasMsgCode) hash ^= MsgCode.GetHashCode();
+      if (HasPayload) hash ^= Payload.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -474,13 +1238,17 @@ namespace Tapgate {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (header_ != null) {
-        output.WriteRawTag(10);
-        output.WriteMessage(Header);
+      if (HasClientNonce) {
+        output.WriteRawTag(8);
+        output.WriteUInt32(ClientNonce);
       }
-      if (Payload.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(Payload);
+      if (HasMsgCode) {
+        output.WriteRawTag(16);
+        output.WriteUInt32(MsgCode);
+      }
+      if (HasPayload) {
+        output.WriteRawTag(26);
+        output.WriteBytes(Payload);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -492,13 +1260,17 @@ namespace Tapgate {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (header_ != null) {
-        output.WriteRawTag(10);
-        output.WriteMessage(Header);
+      if (HasClientNonce) {
+        output.WriteRawTag(8);
+        output.WriteUInt32(ClientNonce);
       }
-      if (Payload.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(Payload);
+      if (HasMsgCode) {
+        output.WriteRawTag(16);
+        output.WriteUInt32(MsgCode);
+      }
+      if (HasPayload) {
+        output.WriteRawTag(26);
+        output.WriteBytes(Payload);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -510,11 +1282,14 @@ namespace Tapgate {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (header_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Header);
+      if (HasClientNonce) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ClientNonce);
       }
-      if (Payload.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Payload);
+      if (HasMsgCode) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(MsgCode);
+      }
+      if (HasPayload) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(Payload);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -524,17 +1299,17 @@ namespace Tapgate {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(MsgAction other) {
+    public void MergeFrom(MessageEncryptedPayload other) {
       if (other == null) {
         return;
       }
-      if (other.header_ != null) {
-        if (header_ == null) {
-          Header = new global::Tapgate.MsgHeader();
-        }
-        Header.MergeFrom(other.Header);
+      if (other.HasClientNonce) {
+        ClientNonce = other.ClientNonce;
       }
-      if (other.Payload.Length != 0) {
+      if (other.HasMsgCode) {
+        MsgCode = other.MsgCode;
+      }
+      if (other.HasPayload) {
         Payload = other.Payload;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
@@ -556,15 +1331,16 @@ namespace Tapgate {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
-          case 10: {
-            if (header_ == null) {
-              Header = new global::Tapgate.MsgHeader();
-            }
-            input.ReadMessage(Header);
+          case 8: {
+            ClientNonce = input.ReadUInt32();
             break;
           }
-          case 18: {
-            Payload = input.ReadString();
+          case 16: {
+            MsgCode = input.ReadUInt32();
+            break;
+          }
+          case 26: {
+            Payload = input.ReadBytes();
             break;
           }
         }
@@ -586,15 +1362,16 @@ namespace Tapgate {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
-          case 10: {
-            if (header_ == null) {
-              Header = new global::Tapgate.MsgHeader();
-            }
-            input.ReadMessage(Header);
+          case 8: {
+            ClientNonce = input.ReadUInt32();
             break;
           }
-          case 18: {
-            Payload = input.ReadString();
+          case 16: {
+            MsgCode = input.ReadUInt32();
+            break;
+          }
+          case 26: {
+            Payload = input.ReadBytes();
             break;
           }
         }
@@ -604,22 +1381,25 @@ namespace Tapgate {
 
   }
 
+  /// <summary>
+  /// Do action client message
+  /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class MsgStatus : pb::IMessage<MsgStatus>
+  public sealed partial class MessageDoAction : pb::IMessage<MessageDoAction>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<MsgStatus> _parser = new pb::MessageParser<MsgStatus>(() => new MsgStatus());
+    private static readonly pb::MessageParser<MessageDoAction> _parser = new pb::MessageParser<MessageDoAction>(() => new MessageDoAction());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<MsgStatus> Parser { get { return _parser; } }
+    public static pb::MessageParser<MessageDoAction> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Tapgate.MessagesReflection.Descriptor.MessageTypes[2]; }
+      get { return global::Tapgate.MessagesReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -630,7 +1410,7 @@ namespace Tapgate {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public MsgStatus() {
+    public MessageDoAction() {
       OnConstruction();
     }
 
@@ -638,59 +1418,31 @@ namespace Tapgate {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public MsgStatus(MsgStatus other) : this() {
-      header_ = other.header_ != null ? other.header_.Clone() : null;
-      ok_ = other.ok_;
+    public MessageDoAction(MessageDoAction other) : this() {
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public MsgStatus Clone() {
-      return new MsgStatus(this);
-    }
-
-    /// <summary>Field number for the "header" field.</summary>
-    public const int HeaderFieldNumber = 1;
-    private global::Tapgate.MsgHeader header_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Tapgate.MsgHeader Header {
-      get { return header_; }
-      set {
-        header_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "ok" field.</summary>
-    public const int OkFieldNumber = 2;
-    private bool ok_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Ok {
-      get { return ok_; }
-      set {
-        ok_ = value;
-      }
+    public MessageDoAction Clone() {
+      return new MessageDoAction(this);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as MsgStatus);
+      return Equals(other as MessageDoAction);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(MsgStatus other) {
+    public bool Equals(MessageDoAction other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (!object.Equals(Header, other.Header)) return false;
-      if (Ok != other.Ok) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -698,8 +1450,6 @@ namespace Tapgate {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (header_ != null) hash ^= Header.GetHashCode();
-      if (Ok != false) hash ^= Ok.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -718,14 +1468,6 @@ namespace Tapgate {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (header_ != null) {
-        output.WriteRawTag(10);
-        output.WriteMessage(Header);
-      }
-      if (Ok != false) {
-        output.WriteRawTag(16);
-        output.WriteBool(Ok);
-      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -736,14 +1478,6 @@ namespace Tapgate {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (header_ != null) {
-        output.WriteRawTag(10);
-        output.WriteMessage(Header);
-      }
-      if (Ok != false) {
-        output.WriteRawTag(16);
-        output.WriteBool(Ok);
-      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -754,12 +1488,6 @@ namespace Tapgate {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (header_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Header);
-      }
-      if (Ok != false) {
-        size += 1 + 1;
-      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -768,18 +1496,9 @@ namespace Tapgate {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(MsgStatus other) {
+    public void MergeFrom(MessageDoAction other) {
       if (other == null) {
         return;
-      }
-      if (other.header_ != null) {
-        if (header_ == null) {
-          Header = new global::Tapgate.MsgHeader();
-        }
-        Header.MergeFrom(other.Header);
-      }
-      if (other.Ok != false) {
-        Ok = other.Ok;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -800,17 +1519,6 @@ namespace Tapgate {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
-          case 10: {
-            if (header_ == null) {
-              Header = new global::Tapgate.MsgHeader();
-            }
-            input.ReadMessage(Header);
-            break;
-          }
-          case 16: {
-            Ok = input.ReadBool();
-            break;
-          }
         }
       }
     #endif
@@ -830,17 +1538,6 @@ namespace Tapgate {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
-          case 10: {
-            if (header_ == null) {
-              Header = new global::Tapgate.MsgHeader();
-            }
-            input.ReadMessage(Header);
-            break;
-          }
-          case 16: {
-            Ok = input.ReadBool();
-            break;
-          }
         }
       }
     }
