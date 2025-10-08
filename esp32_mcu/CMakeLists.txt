@@ -1,8 +1,14 @@
 # Unified entry point for both ESP-IDF firmware build and host-side tests.
 cmake_minimum_required(VERSION 3.20)
 
-# Disable specific GCC warnings project-wide (C & C++)
-add_compile_options(-Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable)
+# Disable specific warnings project-wide (C & C++)
+if(MSVC)
+    # MSVC warning flags
+    add_compile_options(/wd4101 /wd4189 /wd4996)  # Disable unused variable warnings and deprecation warnings
+else()
+    # GCC/Clang warning flags
+    add_compile_options(-Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable)
+endif()
 
 set(PROJECT_NAME esp32-tapgate)
 set(PROJECT_VER "1.0.0")
