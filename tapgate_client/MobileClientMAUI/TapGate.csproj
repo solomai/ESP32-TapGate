@@ -74,20 +74,11 @@
 		</PackageReference>
 	</ItemGroup>
 
-	<ItemGroup>
-		<Protobuf Include="$(ProtoRoot)\messages.proto" 
-		          GrpcServices="None" 
-		          OutputDir="$(MSBuildProjectDirectory)\$(ProtobufOutputPath)" 
-		          CompileOutputs="false">
-			<Access>Public</Access>
-		</Protobuf>
-	</ItemGroup>
-
 	<!-- Custom protobuf generation to Core/Messages -->
 	<Target Name="GenerateProtobufToSourceFolder" BeforeTargets="BeforeBuild">
 		<PropertyGroup>
 			<ProtoSourceFile>$(ProtoRoot)\messages.proto</ProtoSourceFile>
-			<ProtobufOutputFile>$(ProtobufOutputPath)\Messages.pb.cs</ProtobufOutputFile>
+			<ProtobufOutputFile>$(ProtobufOutputPath)\Messages.cs</ProtobufOutputFile>
 			<!-- Cross-platform protoc path detection -->
 			<ProtocToolPath Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(USERPROFILE)\.nuget\packages\grpc.tools\2.67.0\tools\windows_x64\protoc.exe</ProtocToolPath>
 			<ProtocToolPath Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(HOME)/.nuget/packages/grpc.tools/2.67.0/tools/linux_x64/protoc</ProtocToolPath>
@@ -132,11 +123,6 @@
 		<Exec Command="&quot;$(ProtocToolPath)&quot; --proto_path=&quot;$(ProtoRoot)&quot; --csharp_out=&quot;$(ProtobufOutputPath)&quot; --csharp_opt=file_extension=.pb.cs &quot;$(ProtoSourceFile)&quot;" />
 		<Message Text="Protobuf regeneration completed" Importance="high" />
 	</Target>
-
-	<!-- Include generated files in compilation -->
-	<ItemGroup>
-		<Compile Include="$(ProtobufOutputPath)\*.cs" Condition="Exists('$(ProtobufOutputPath)')" />
-	</ItemGroup>
 
 	<!-- Clean generated protobuf files during clean -->
 	<Target Name="CleanProtobufFiles" BeforeTargets="Clean">
