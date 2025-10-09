@@ -100,7 +100,6 @@ static inline void hwm_update(int idx, unsigned bytes) {
 static bool log_all_tasks_stack_to_buf(void)
 {
     bool any_existing_delta  = false;
-    bool printed_any_task_ln = false;   // track whether we emitted any task line
     bool printed_header      = false;   // lazy header
 
     UBaseType_t task_count = uxTaskGetNumberOfTasks();
@@ -177,7 +176,6 @@ static bool log_all_tasks_stack_to_buf(void)
                 diag_appendf(INDENT "Task=%-20.20s HWM=%6u bytes [%s]\n",
                              nm, bytes, status);
             }
-            printed_any_task_ln = true;
         }
 #else
         // Full mode: always print and update the table so next switch to short mode works immediately
@@ -199,7 +197,6 @@ static bool log_all_tasks_stack_to_buf(void)
             diag_appendf(INDENT "Task=%-20.20s HWM=%6u bytes [%s]\n",
                          nm, bytes, status);	
         }
-        printed_any_task_ln = true;
 #endif
     }
 
@@ -251,6 +248,12 @@ void diagnostic_task(void *pvParameter)
             s_prev_heap_valid = true;
         }
         s_prev_heap_bytes = cur_heap;
+        multi_heap_info_t info;
+        heap_caps_get_info(&info, MALLOC_CAP_8BIT);        
+        float frag = 1.0f - ((float)info.largest_free_block / info.total_free_bytes);
+        diag_appendf(INDENT "Largest free block: %u, Free blocks: %u\n",
+            info.largest_free_block, info.free_blocks);
+        diag_appendf(INDENT "Memory fragmentation: %f\n", frag);        
 
         // NOTE: We no longer print the HWM header here.
         // The HWM header is printed lazily inside log_all_tasks_stack_to_buf()
