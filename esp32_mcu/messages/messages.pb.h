@@ -10,26 +10,46 @@
 #endif
 
 /* Struct definitions */
-typedef PB_BYTES_ARRAY_T(32) tapgate_MsgHeader_eph_pub_t;
-typedef PB_BYTES_ARRAY_T(12) tapgate_MsgHeader_nonce_t;
-typedef struct _tapgate_MsgHeader {
-    char client_id[15]; /* fixed 15 bytes, use nanopb max_size:15 */
-    tapgate_MsgHeader_eph_pub_t eph_pub; /* fixed 32 bytes, use nanopb max_size:32 */
-    tapgate_MsgHeader_nonce_t nonce; /* fixed 12 bytes, use nanopb max_size:12 */
-    uint32_t msg_id;
-} tapgate_MsgHeader;
+typedef PB_BYTES_ARRAY_T(32) tapgate_EnrollMessage_pub_key_t;
+/* Enroll new client message */
+typedef struct _tapgate_EnrollMessage {
+    char secret_code[15]; /* temporary Secret code, use nanopb max_size:15 chars */
+    tapgate_EnrollMessage_pub_key_t pub_key; /* Public key, use nanopb max_size:32 bytes */
+    uint32_t ep_crc32; /* raw message CRC 32 */
+} tapgate_EnrollMessage;
 
-typedef struct _tapgate_MsgAction {
-    bool has_header;
-    tapgate_MsgHeader header;
-    char payload[256];
-} tapgate_MsgAction;
+typedef PB_BYTES_ARRAY_T(32) tapgate_RegularMessage_eph_pub_t;
+typedef PB_BYTES_ARRAY_T(12) tapgate_RegularMessage_nonce_t;
+typedef PB_BYTES_ARRAY_T(440) tapgate_RegularMessage_encrypted_payload_t;
+/* Regular message packed on-wire */
+typedef struct _tapgate_RegularMessage {
+    char client_id[15]; /* use nanopb max_size:15 bytes */
+    tapgate_RegularMessage_eph_pub_t eph_pub; /* use nanopb max_size:32 bytes */
+    tapgate_RegularMessage_nonce_t nonce; /* use nanopb max_size:12 bytes */
+    tapgate_RegularMessage_encrypted_payload_t encrypted_payload; /* use nanopb max size:440 bytes */
+    uint32_t ep_crc32; /* encrypted payload CRC 32 */
+} tapgate_RegularMessage;
 
-typedef struct _tapgate_MsgStatus {
-    bool has_header;
-    tapgate_MsgHeader header;
-    bool ok;
-} tapgate_MsgStatus;
+typedef struct _tapgate_MessageOnWire {
+    pb_size_t which_msg;
+    union {
+        tapgate_EnrollMessage enroll;
+        tapgate_RegularMessage opt;
+    } msg;
+} tapgate_MessageOnWire;
+
+typedef PB_BYTES_ARRAY_T(425) tapgate_MessageEncryptedPayload_payload_t;
+/* Encrypted payload is part of on-wire message */
+typedef struct _tapgate_MessageEncryptedPayload {
+    uint32_t client_nonce; /* anti-replay */
+    uint32_t msg_code; /* message opt code */
+    tapgate_MessageEncryptedPayload_payload_t payload; /* logic messages described in protocol */
+} tapgate_MessageEncryptedPayload;
+
+/* Do action client message */
+typedef struct _tapgate_MessageDoAction {
+    char dummy_field;
+} tapgate_MessageDoAction;
 
 
 #ifdef __cplusplus
@@ -37,60 +57,89 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define tapgate_MsgHeader_init_default           {"", {0, {0}}, {0, {0}}, 0}
-#define tapgate_MsgAction_init_default           {false, tapgate_MsgHeader_init_default, ""}
-#define tapgate_MsgStatus_init_default           {false, tapgate_MsgHeader_init_default, 0}
-#define tapgate_MsgHeader_init_zero              {"", {0, {0}}, {0, {0}}, 0}
-#define tapgate_MsgAction_init_zero              {false, tapgate_MsgHeader_init_zero, ""}
-#define tapgate_MsgStatus_init_zero              {false, tapgate_MsgHeader_init_zero, 0}
+#define tapgate_MessageOnWire_init_default       {0, {tapgate_EnrollMessage_init_default}}
+#define tapgate_EnrollMessage_init_default       {"", {0, {0}}, 0}
+#define tapgate_RegularMessage_init_default      {"", {0, {0}}, {0, {0}}, {0, {0}}, 0}
+#define tapgate_MessageEncryptedPayload_init_default {0, 0, {0, {0}}}
+#define tapgate_MessageDoAction_init_default     {0}
+#define tapgate_MessageOnWire_init_zero          {0, {tapgate_EnrollMessage_init_zero}}
+#define tapgate_EnrollMessage_init_zero          {"", {0, {0}}, 0}
+#define tapgate_RegularMessage_init_zero         {"", {0, {0}}, {0, {0}}, {0, {0}}, 0}
+#define tapgate_MessageEncryptedPayload_init_zero {0, 0, {0, {0}}}
+#define tapgate_MessageDoAction_init_zero        {0}
 
 /* Field tags (for use in manual encoding/decoding) */
-#define tapgate_MsgHeader_client_id_tag          1
-#define tapgate_MsgHeader_eph_pub_tag            2
-#define tapgate_MsgHeader_nonce_tag              3
-#define tapgate_MsgHeader_msg_id_tag             4
-#define tapgate_MsgAction_header_tag             1
-#define tapgate_MsgAction_payload_tag            2
-#define tapgate_MsgStatus_header_tag             1
-#define tapgate_MsgStatus_ok_tag                 2
+#define tapgate_EnrollMessage_secret_code_tag    1
+#define tapgate_EnrollMessage_pub_key_tag        2
+#define tapgate_EnrollMessage_ep_crc32_tag       3
+#define tapgate_RegularMessage_client_id_tag     1
+#define tapgate_RegularMessage_eph_pub_tag       2
+#define tapgate_RegularMessage_nonce_tag         3
+#define tapgate_RegularMessage_encrypted_payload_tag 4
+#define tapgate_RegularMessage_ep_crc32_tag      5
+#define tapgate_MessageOnWire_enroll_tag         1
+#define tapgate_MessageOnWire_opt_tag            2
+#define tapgate_MessageEncryptedPayload_client_nonce_tag 1
+#define tapgate_MessageEncryptedPayload_msg_code_tag 2
+#define tapgate_MessageEncryptedPayload_payload_tag 3
 
 /* Struct field encoding specification for nanopb */
-#define tapgate_MsgHeader_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, STRING,   client_id,         1) \
-X(a, STATIC,   SINGULAR, BYTES,    eph_pub,           2) \
-X(a, STATIC,   SINGULAR, BYTES,    nonce,             3) \
-X(a, STATIC,   SINGULAR, UINT32,   msg_id,            4)
-#define tapgate_MsgHeader_CALLBACK NULL
-#define tapgate_MsgHeader_DEFAULT NULL
+#define tapgate_MessageOnWire_FIELDLIST(X, a) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (msg,enroll,msg.enroll),   1) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (msg,opt,msg.opt),   2)
+#define tapgate_MessageOnWire_CALLBACK NULL
+#define tapgate_MessageOnWire_DEFAULT NULL
+#define tapgate_MessageOnWire_msg_enroll_MSGTYPE tapgate_EnrollMessage
+#define tapgate_MessageOnWire_msg_opt_MSGTYPE tapgate_RegularMessage
 
-#define tapgate_MsgAction_FIELDLIST(X, a) \
-X(a, STATIC,   OPTIONAL, MESSAGE,  header,            1) \
-X(a, STATIC,   SINGULAR, STRING,   payload,           2)
-#define tapgate_MsgAction_CALLBACK NULL
-#define tapgate_MsgAction_DEFAULT NULL
-#define tapgate_MsgAction_header_MSGTYPE tapgate_MsgHeader
+#define tapgate_EnrollMessage_FIELDLIST(X, a) \
+X(a, STATIC,   REQUIRED, STRING,   secret_code,       1) \
+X(a, STATIC,   REQUIRED, BYTES,    pub_key,           2) \
+X(a, STATIC,   REQUIRED, UINT32,   ep_crc32,          3)
+#define tapgate_EnrollMessage_CALLBACK NULL
+#define tapgate_EnrollMessage_DEFAULT NULL
 
-#define tapgate_MsgStatus_FIELDLIST(X, a) \
-X(a, STATIC,   OPTIONAL, MESSAGE,  header,            1) \
-X(a, STATIC,   SINGULAR, BOOL,     ok,                2)
-#define tapgate_MsgStatus_CALLBACK NULL
-#define tapgate_MsgStatus_DEFAULT NULL
-#define tapgate_MsgStatus_header_MSGTYPE tapgate_MsgHeader
+#define tapgate_RegularMessage_FIELDLIST(X, a) \
+X(a, STATIC,   REQUIRED, STRING,   client_id,         1) \
+X(a, STATIC,   REQUIRED, BYTES,    eph_pub,           2) \
+X(a, STATIC,   REQUIRED, BYTES,    nonce,             3) \
+X(a, STATIC,   REQUIRED, BYTES,    encrypted_payload,   4) \
+X(a, STATIC,   REQUIRED, UINT32,   ep_crc32,          5)
+#define tapgate_RegularMessage_CALLBACK NULL
+#define tapgate_RegularMessage_DEFAULT NULL
 
-extern const pb_msgdesc_t tapgate_MsgHeader_msg;
-extern const pb_msgdesc_t tapgate_MsgAction_msg;
-extern const pb_msgdesc_t tapgate_MsgStatus_msg;
+#define tapgate_MessageEncryptedPayload_FIELDLIST(X, a) \
+X(a, STATIC,   REQUIRED, UINT32,   client_nonce,      1) \
+X(a, STATIC,   REQUIRED, UINT32,   msg_code,          2) \
+X(a, STATIC,   REQUIRED, BYTES,    payload,           3)
+#define tapgate_MessageEncryptedPayload_CALLBACK NULL
+#define tapgate_MessageEncryptedPayload_DEFAULT NULL
+
+#define tapgate_MessageDoAction_FIELDLIST(X, a) \
+
+#define tapgate_MessageDoAction_CALLBACK NULL
+#define tapgate_MessageDoAction_DEFAULT NULL
+
+extern const pb_msgdesc_t tapgate_MessageOnWire_msg;
+extern const pb_msgdesc_t tapgate_EnrollMessage_msg;
+extern const pb_msgdesc_t tapgate_RegularMessage_msg;
+extern const pb_msgdesc_t tapgate_MessageEncryptedPayload_msg;
+extern const pb_msgdesc_t tapgate_MessageDoAction_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
-#define tapgate_MsgHeader_fields &tapgate_MsgHeader_msg
-#define tapgate_MsgAction_fields &tapgate_MsgAction_msg
-#define tapgate_MsgStatus_fields &tapgate_MsgStatus_msg
+#define tapgate_MessageOnWire_fields &tapgate_MessageOnWire_msg
+#define tapgate_EnrollMessage_fields &tapgate_EnrollMessage_msg
+#define tapgate_RegularMessage_fields &tapgate_RegularMessage_msg
+#define tapgate_MessageEncryptedPayload_fields &tapgate_MessageEncryptedPayload_msg
+#define tapgate_MessageDoAction_fields &tapgate_MessageDoAction_msg
 
 /* Maximum encoded size of messages (where known) */
-#define TAPGATE_MESSAGES_PB_H_MAX_SIZE           tapgate_MsgAction_size
-#define tapgate_MsgAction_size                   330
-#define tapgate_MsgHeader_size                   70
-#define tapgate_MsgStatus_size                   74
+#define TAPGATE_MESSAGES_PB_H_MAX_SIZE           tapgate_MessageOnWire_size
+#define tapgate_EnrollMessage_size               56
+#define tapgate_MessageDoAction_size             0
+#define tapgate_MessageEncryptedPayload_size     440
+#define tapgate_MessageOnWire_size               516
+#define tapgate_RegularMessage_size              513
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -24,46 +24,6 @@
 // log tag
 static const char *TAG_MAIN = "APP MAIN";
 
-void test_protobuf_messages(void)
-{
-    LOGN(TAG_MAIN, "Testing protobuf message serialization");
-
-    // Create and populate a message
-    tapgate_MsgAction action = tapgate_MsgAction_init_zero;
-    action.has_header = true;
-    action.header.uid = 12345;
-    action.header.msg_id = 1;
-    strcpy(action.payload, "Hello, ESP32 TapGate!");
-
-    // Encode the message
-    uint8_t buffer[256];
-    pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
-    
-    bool encode_status = pb_encode(&stream, tapgate_MsgAction_fields, &action);
-    
-    if (!encode_status) {
-        LOGE(TAG_MAIN, "Failed to encode protobuf message: %s", PB_GET_ERROR(&stream));
-        return;
-    }
-
-    size_t message_length = stream.bytes_written;
-    LOGN(TAG_MAIN, "Encoded message length: %d bytes", message_length);
-
-    // Decode the message
-    tapgate_MsgAction decoded_action = tapgate_MsgAction_init_zero;
-    pb_istream_t input_stream = pb_istream_from_buffer(buffer, message_length);
-    
-    bool decode_status = pb_decode(&input_stream, tapgate_MsgAction_fields, &decoded_action);
-    
-    if (!decode_status) {
-        LOGE(TAG_MAIN, "Failed to decode protobuf message: %s", PB_GET_ERROR(&input_stream));
-        return;
-    }
-
-    LOGN(TAG_MAIN, "Decoded message - UID: %u, MSG_ID: %u, Payload: %s", 
-         decoded_action.header.uid, decoded_action.header.msg_id, decoded_action.payload);
-}
-
 void cb_ap_start(void *pvParameter)
 {
     esp_err_t err = (esp_err_t)pvParameter;
@@ -90,9 +50,6 @@ void app_main(void)
     LOGN(TAG_MAIN, "Application bootup");
     blue_led_init();
 
-    // Test protobuf functionality
-    test_protobuf_messages();
-
     // Init NVS partitions
     esp_err_t err = nvm_init();
     if (err != ESP_OK)
@@ -103,7 +60,6 @@ void app_main(void)
             esp_system_abort("Check NVM Partition naming 'nvm_partition.h' and 'partitions.csv'");
         #endif
     }
-
 
     // Main loop
     while (1) {

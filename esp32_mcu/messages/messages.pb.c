@@ -6,13 +6,19 @@
 #error Regenerate this file with the current version of nanopb generator.
 #endif
 
-PB_BIND(tapgate_MsgHeader, tapgate_MsgHeader, AUTO)
+PB_BIND(tapgate_MessageOnWire, tapgate_MessageOnWire, 2)
 
 
-PB_BIND(tapgate_MsgAction, tapgate_MsgAction, 2)
+PB_BIND(tapgate_EnrollMessage, tapgate_EnrollMessage, AUTO)
 
 
-PB_BIND(tapgate_MsgStatus, tapgate_MsgStatus, AUTO)
+PB_BIND(tapgate_RegularMessage, tapgate_RegularMessage, 2)
+
+
+PB_BIND(tapgate_MessageEncryptedPayload, tapgate_MessageEncryptedPayload, 2)
+
+
+PB_BIND(tapgate_MessageDoAction, tapgate_MessageDoAction, AUTO)
 
 
 

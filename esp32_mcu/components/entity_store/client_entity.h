@@ -10,5 +10,5 @@ typedef struct
     nonce_t       client_nonce;
     uid_t         client_id;
     name_t        name;
-    public_key_t  pub_pem;
+    public_key_t  pub_key;
 } client_entity_t;
