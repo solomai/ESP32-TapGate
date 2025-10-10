@@ -90,12 +90,17 @@ Scenario 5: Request diag info
     device --> client: MessageDiag ( last frame with diag info )
 
 
-### Client ↔ Device Communication: 3. Request device status by client
+### Client ↔ Device Communication: 3. Request device status and config
 
-Scenario 1: Could be used like ping device
+Scenario 1: Device status: Could be used like ping device
 
     client --> device: MessageRequestStatus
     device --> client: MessageStatus
+
+Scenario 2: Sync mqtt Comunitation config ( send mqtt connection data )
+
+    client --> device: MessageRequestMqttConfig
+    device --> client: MessageMqttConfig
 
 
 ### Client ↔ Device Communication: 4. Request doAction by client
@@ -107,6 +112,11 @@ Scenario 1: Request DoAction opt
     client --> device: MessageDoAction ( check nonce and change, all dublacate will be skipped )
     device --> client: ACK - OK/NOK answer to confirm opt
 
+
+### Client ↔ Device Communication: scenario where a correct message is received but the command is unsupported
+
+    client --> device: some message
+    device --> client: ACK - NOK answer
 ---
 
 [← Back to ESP32 MCU Documentation](../../esp32_mcu/README.md)  
