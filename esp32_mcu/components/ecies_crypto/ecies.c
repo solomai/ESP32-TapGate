@@ -4,6 +4,7 @@
  */
 
  #include "ecies.h"
+ #include "mbedtls_compat.h"
  #include <string.h>
  #include "esp_random.h"
  #include "esp_log.h"

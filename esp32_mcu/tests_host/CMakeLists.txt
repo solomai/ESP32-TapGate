@@ -42,6 +42,7 @@ target_include_directories(tapgate_idf_mocks
 # Mock implementations
 add_library(tapgate_mocks STATIC
     ${CMAKE_CURRENT_LIST_DIR}/mocks/nvs_mock.c
+    ${CMAKE_CURRENT_LIST_DIR}/mocks/esp_random_mock.c
 )
 
 target_link_libraries(tapgate_mocks
@@ -69,11 +70,13 @@ target_include_directories(tapgate_production
         ${CMAKE_CURRENT_LIST_DIR}/../components/common
         ${CMAKE_CURRENT_LIST_DIR}/../components/logs
         ${CMAKE_CURRENT_LIST_DIR}/../components/common/nvm
+        ${CMAKE_CURRENT_LIST_DIR}/../components/ecies_crypto
 )
 
 set(_tapgate_component_sources
     ${CMAKE_CURRENT_LIST_DIR}/../components/logs/logs.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/common/nvm/nvm.c
+    ${CMAKE_CURRENT_LIST_DIR}/../components/ecies_crypto/ecies.c
 )
 
 file(GLOB _tapgate_common_sources
@@ -155,4 +158,8 @@ endfunction()
 # Individual test binaries
 tapgate_add_unity_test(test_types ${CMAKE_CURRENT_LIST_DIR}/test_types.c)
 tapgate_add_unity_test(test_logs ${CMAKE_CURRENT_LIST_DIR}/test_logs.c)
+tapgate_add_unity_test(test_ecies ${CMAKE_CURRENT_LIST_DIR}/test_ecies.c)
+
+# ECIES test requires mbedtls library
+target_link_libraries(test_ecies PRIVATE mbedtls mbedx509 mbedcrypto)
 
