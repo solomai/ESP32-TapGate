@@ -89,6 +89,10 @@ Scenario 5: Request diag info
     ...
     device --> client: MessageDiag ( last frame with diag info )
 
+Scenario 6: Sync mqtt Comunitation config ( send mqtt connection data )
+
+    client --> device: MessageRequestMqttConfig
+    device --> client: MessageMqttConfig
 
 ### Client ↔ Device Communication: 3. Request device status and config
 
@@ -96,11 +100,6 @@ Scenario 1: Device status: Could be used like ping device
 
     client --> device: MessageRequestStatus
     device --> client: MessageStatus
-
-Scenario 2: Sync mqtt Comunitation config ( send mqtt connection data )
-
-    client --> device: MessageRequestMqttConfig
-    device --> client: MessageMqttConfig
 
 
 ### Client ↔ Device Communication: 4. Request doAction by client
