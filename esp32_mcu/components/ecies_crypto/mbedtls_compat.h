@@ -13,9 +13,9 @@
 
 /* Check mbedTLS version */
 #if MBEDTLS_VERSION_MAJOR >= 3
-    /* mbedTLS 3.x - MBEDTLS_PRIVATE macro already defined */
+    /* mbedTLS 3.x - Define MBEDTLS_PRIVATE macro if not already defined */
     #ifndef MBEDTLS_PRIVATE
-        #error "mbedTLS 3.x should define MBEDTLS_PRIVATE macro"
+        #define MBEDTLS_PRIVATE(member) member
     #endif
 #else
     /* mbedTLS 2.x - Define MBEDTLS_PRIVATE as direct access */
