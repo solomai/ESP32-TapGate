@@ -2,8 +2,8 @@ idf_component_register(
     SRCS "main.c"
     INCLUDE_DIRS "."
     REQUIRES
-        logs
         common
+        event_journal
         entity_store
         ecies_crypto
         diagnostic

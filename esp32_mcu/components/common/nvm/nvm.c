@@ -1,7 +1,7 @@
 #include "nvm.h"
 #include "nvm_partition.h"
 
-#include "logs.h"
+#include "esp_log.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 
@@ -18,13 +18,13 @@ static esp_err_t ensure_partition_ready(const char *partition_label)
 
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
-        LOGW(TAG_NVM, "Erasing Partition \"%s\" due to previous error: %s", partition_label,
+        ESP_LOGW(TAG_NVM, "Erasing Partition \"%s\" due to previous error: %s", partition_label,
                  esp_err_to_name(err));
 
         err = nvs_flash_erase_partition(partition_label);
         if (err != ESP_OK)
         {
-            LOGE(TAG_NVM, "Failed to erase Partition \"%s\": %s", partition_label,
+            ESP_LOGE(TAG_NVM, "Failed to erase Partition \"%s\": %s", partition_label,
                      esp_err_to_name(err));
             return err;
         }
@@ -34,12 +34,12 @@ static esp_err_t ensure_partition_ready(const char *partition_label)
 
     if (err != ESP_OK)
     {
-        LOGE(TAG_NVM, "Failed to initialize Partition \"%s\": %s", partition_label,
+        ESP_LOGE(TAG_NVM, "Failed to initialize Partition \"%s\": %s", partition_label,
                  esp_err_to_name(err));
         return err;
     }
 
-    LOGI(TAG_NVM, "Partition \"%s\" is ready", partition_label);
+    ESP_LOGI(TAG_NVM, "Partition \"%s\" is ready", partition_label);
     return ESP_OK;
 }
 
@@ -51,7 +51,7 @@ esp_err_t nvm_init(void)
         NVM_PARTITION_NONCE,
     };
 
-    LOGI(TAG_NVM, "Initializing %d partition(s)", sizeof(partitions) / sizeof(partitions[0]));
+    ESP_LOGI(TAG_NVM, "Initializing %d partition(s)", sizeof(partitions) / sizeof(partitions[0]));
     for (size_t i = 0; i < sizeof(partitions) / sizeof(partitions[0]); ++i)
     {
         esp_err_t err = ensure_partition_ready(partitions[i]);

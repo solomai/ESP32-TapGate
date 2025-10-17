@@ -7,8 +7,8 @@
 
 // include components
 #include "nvm/nvm.h"
-#include "logs.h"
 #include "constants.h"
+#include "event_journal.h"
 
 #include "led.h"
 
@@ -22,22 +22,7 @@
 #endif
 
 // log tag
-static const char *TAG_MAIN = "APP MAIN";
-
-void cb_ap_start(void *pvParameter)
-{
-    esp_err_t err = (esp_err_t)pvParameter;
-    if (err==ESP_OK){
-        LOGN(TAG_MAIN, "WiFi Access Point started");
-        turn_on_blue_led();
-    }
-}
-
-void cb_ap_stop(void *pvParameter)
-{
-    LOGN(TAG_MAIN, "WiFi Access Point stopped");
-    turn_off_blue_led();
-}
+static const char *TAG_MAIN = "MAIN";
 
 // MAIN FUNCTION
 void app_main(void)
@@ -47,7 +32,9 @@ void app_main(void)
 	xTaskCreatePinnedToCore(&diagnostic_task, "debug_mon_task", 2560, NULL, 1, NULL, 1); 
 #endif
 
-    LOGN(TAG_MAIN, "Application bootup");
+    EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
+                      TAG_MAIN,
+                      "TapGate bootup");
     blue_led_init();
 
     // Init NVS partitions
@@ -55,10 +42,10 @@ void app_main(void)
     if (err != ESP_OK)
     {
         // Critical error
-        LOGC(TAG_MAIN, "Error accessing internal memory, device cannot start properly");
-        #ifdef DIAGNOSTIC_VERSION
-            esp_system_abort("Check NVM Partition naming 'nvm_partition.h' and 'partitions.csv'");
-        #endif
+        EVENT_JOURNAL_ADD(EVENT_JOURNAL_ERROR,
+                          TAG_MAIN,
+                          "Error accessing internal memory \"%s\"", esp_err_to_name(err));
+        esp_system_abort("Check NVM Partition naming 'nvm_partition.h' and 'partitions.csv'");
     }
 
     // Main loop
