@@ -19,6 +19,21 @@ endif()
 
 enable_testing()
 
+# For host tests, we need to provide mbedtls ourselves since ESP-IDF components
+# expect it to be available. We use mbedtls as a git submodule.
+if(NOT TARGET mbedcrypto)
+    # Check if mbedtls submodule is initialized
+    if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/external/mbedtls/CMakeLists.txt")
+        message(FATAL_ERROR "mbedtls submodule not initialized. Run 'git submodule update --init --recursive'")
+    endif()
+
+    # Build minimal mbedtls
+    set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbedtls programs")
+    set(ENABLE_TESTING OFF CACHE BOOL "Build mbedtls tests") 
+    set(USE_SHARED_MBEDTLS_LIBRARY OFF CACHE BOOL "Use shared mbedtls library")
+    add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/external/mbedtls" EXCLUDE_FROM_ALL)
+endif()
+
 # Unity test framework (minimal implementation for host tests)
 add_library(unity STATIC
     ${CMAKE_CURRENT_LIST_DIR}/unity/unity.c
@@ -57,6 +72,7 @@ target_link_libraries(tapgate_production
     PUBLIC
         tapgate_idf_mocks
         tapgate_mocks
+        mbedcrypto
 )
 
 target_compile_features(tapgate_production

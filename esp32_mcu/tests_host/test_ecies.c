@@ -10,6 +10,7 @@
 #include "ecies_crypto/ecies.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 void setUp(void) 
 {
@@ -93,7 +94,8 @@ void test_ecies_encrypt_decrypt_binary_data(void)
     
     /* Client prepares binary buffer (512 bytes) */
     const size_t buffer_size = 512;
-    uint8_t plainbuffer[buffer_size];
+    uint8_t *plainbuffer = malloc(buffer_size);
+    TEST_ASSERT_NOT_NULL(plainbuffer);
     
     /* Fill buffer with test pattern */
     for (size_t i = 0; i < buffer_size; i++) {
@@ -101,7 +103,8 @@ void test_ecies_encrypt_decrypt_binary_data(void)
     }
     
     /* Client encrypts binary data with host's public key */
-    uint8_t ciphertext[buffer_size + ECIES_ENCRYPTION_OVERHEAD];
+    uint8_t *ciphertext = malloc(buffer_size + ECIES_ENCRYPTION_OVERHEAD);
+    TEST_ASSERT_NOT_NULL(ciphertext);
     size_t ciphertext_len = 0;
     
     result = ecies_encrypt(plainbuffer, buffer_size, host_public_key,
@@ -110,7 +113,8 @@ void test_ecies_encrypt_decrypt_binary_data(void)
     TEST_ASSERT_EQUAL_INT(buffer_size + ECIES_ENCRYPTION_OVERHEAD, ciphertext_len);
     
     /* Host decrypts ciphertext with its private key */
-    uint8_t decrypted_plainbuffer[buffer_size];
+    uint8_t *decrypted_plainbuffer = malloc(buffer_size);
+    TEST_ASSERT_NOT_NULL(decrypted_plainbuffer);
     size_t decrypted_len = 0;
     
     result = ecies_decrypt(ciphertext, ciphertext_len, host_private_key,
@@ -147,6 +151,11 @@ void test_ecies_encrypt_decrypt_binary_data(void)
         printf("%02X ", decrypted_plainbuffer[i]);
     }
     printf("\n");
+    
+    /* Clean up allocated memory */
+    free(plainbuffer);
+    free(ciphertext);
+    free(decrypted_plainbuffer);
 }
 
 /**
