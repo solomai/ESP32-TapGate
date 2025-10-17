@@ -17,6 +17,34 @@
                 ],
                 "limitSymbolsToIncludedHeaders": true
             }
+        },
+        {
+            "name": "Host Tests",
+            "compilerPath": "cl.exe",
+            "compileCommands": "${workspaceFolder}/build-host-tests/compile_commands.json",
+            "includePath": [
+                "${workspaceFolder}/components/**",
+                "${workspaceFolder}/tests_host/**",
+                "${workspaceFolder}/tests_host/external/mbedtls/include",
+                "${workspaceFolder}/tests_host/unity"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/components",
+                    "${workspaceFolder}/tests_host",
+                    "${workspaceFolder}/tests_host/external/mbedtls/include"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.26100.0",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64"
         }
     ],
     "version": 4

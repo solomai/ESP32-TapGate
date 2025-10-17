@@ -2,13 +2,24 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Debug test_ecies (Host)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-host-tests/tests_host/Debug/test_ecies.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal"
+    },
+    {
       "type": "gdbtarget",
       "request": "attach",
       "name": "Eclipse CDT GDB Adapter"
     },
     {
       "type": "espidf",
-      "name": "Launch",
+      "name": "Launch ESP32",
       "request": "launch"
     }
   ]

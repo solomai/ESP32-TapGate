@@ -254,6 +254,60 @@
           }
         }
       }
+    },
+    {
+      "label": "Build test_ecies",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "host-tests", "--target", "test_ecies"],
+      "group": {
+        "kind": "build"
+      },
+      "problemMatcher": [
+        {
+          "owner": "cpp",
+          "fileLocation": [
+            "autoDetect",
+            "${workspaceFolder}"
+          ],
+          "pattern": {
+            "regexp": "^(.*?)\\((\\d+),(\\d+)\\):\\s+(warning|error)\\s+([^:]+):\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "code": 5,
+            "message": 6
+          }
+        }
+      ]
+    },
+    {
+      "label": "Build all host tests",
+      "type": "shell", 
+      "command": "cmake",
+      "args": ["--build", "--preset", "host-tests"],
+      "group": {
+        "kind": "build"
+      },
+      "problemMatcher": [
+        {
+          "owner": "cpp",
+          "fileLocation": [
+            "autoDetect",
+            "${workspaceFolder}"
+          ],
+          "pattern": {
+            "regexp": "^(.*?)\\((\\d+),(\\d+)\\):\\s+(warning|error)\\s+([^:]+):\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "code": 5,
+            "message": 6
+          }
+        }
+      ]
     }
   ]
 }
