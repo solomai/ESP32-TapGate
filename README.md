@@ -50,6 +50,23 @@ see [Mobile Client Documentation](mobile_client_MAUI/README.md).
 
 ### Development Environment Setup
 
+**Step 1: Install Visual Studio Code and Extensions**
+
+1. Download and install Visual Studio Code from [code.visualstudio.com](https://code.visualstudio.com)
+2. Open your project in VS Code
+3. Open the Extensions tab (Ctrl+Shift+X) and install the following extensions:
+   - `espressif.esp-idf-extension`
+   - `ms-vscode.cpptools`
+   - `ms-vscode.cmake-tools`
+4. Run "ESP-IDF: Configure ESP-IDF extension" (Ctrl+Shift+P) and follow the setup wizard
+
+**Note for Corporate Networks:**
+If marketplace access is blocked by corporate proxy:
+- Download `.vsix` files for each extension from [marketplace.visualstudio.com](https://marketplace.visualstudio.com) in your browser
+- Install them in VS Code via "Extensions: Install from VSIX..."
+
+**Step 2: Project Dependencies**
+
 To set up the development environment for building this project:
 
 **Windows:**
