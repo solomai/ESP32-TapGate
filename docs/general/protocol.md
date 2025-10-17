@@ -26,6 +26,30 @@ If a message cannot be decoded for any reason, it is marked as invalid. For any 
 - **Standard users**  
   Non-admin clients are limited to the capabilities explicitly enabled by an administrator. Within the MAUI app, the UI exposes only the functional modules granted to that user, ordered by the same priority categories defined by the administrator.
 
+### Message Structure:
+The message can be presented as one of the following:
+1. EnrollMessage
+
+```text
+secret_code : max size 15 bytes
+pub_key     : 32 bytes
+ep_crc32    : CRC 32
+```
+
+2. RegularMessage
+
+```text
+Host/Client ID       : UID
+Ephemeral Public Key : 32 bytes
+IV/Nonce             : 12 bytes
+Payload              : n bytes
+Auth Tag             : 16 bytes
+ep_crc32             : CRC 32
+```
+Minimum message size: UID + empty payload + 60 bytes for ECIES + CRC 32<BR>
+where:<BR>
+ECIES Encryption overhead = 60 bytes included: [Ephemeral Public Key (32)] [IV/Nonce (12)] [Auth Tag (16)]
+
 ### Basic communication scenarios:
 1. Enroll a new user to device
 2. Admin configured device
