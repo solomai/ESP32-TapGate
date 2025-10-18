@@ -11,7 +11,7 @@ High-level view of the software design, components, and how modules interact.
 
 Modules:
 - [Clients](../docs/device/module-clients.md) — Clients module details.
-- [X25519](../docs/device/module-ecies.md) —  module for elliptic-curve key agreement and secure message encryption (ECIES).
+- [ECIES](../docs/general/Ecies.md) —  module for elliptic-curve key agreement and secure message encryption (ECIES).
 
 ## Setup & Configuration
 Instructions for preparing the environment, building, flashing, and monitoring.

@@ -72,6 +72,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="NSec.Cryptography" Version="25.4.0" />
 	</ItemGroup>
 
 	<!-- Custom protobuf generation to Core/Messages -->
@@ -96,14 +97,11 @@
 		<MakeDir Directories="$(ProtobufOutputPath)" Condition="!Exists('$(ProtobufOutputPath)')" />
 
 		<!-- Generate protobuf files if needed -->
-		<Message Text="Generating protobuf to $(ProtobufOutputPath) using $(ProtocToolPath)..." Importance="high" 
-		         Condition="'$(ProtobufNeedsRegeneration)' == 'true'" />
+		<Message Text="Generating protobuf to $(ProtobufOutputPath) using $(ProtocToolPath)..." Importance="high" Condition="'$(ProtobufNeedsRegeneration)' == 'true'" />
 		
-		<Exec Command="&quot;$(ProtocToolPath)&quot; --proto_path=&quot;$(ProtoRoot)&quot; --csharp_out=&quot;$(ProtobufOutputPath)&quot; --csharp_opt=file_extension=.pb.cs &quot;$(ProtoSourceFile)&quot;"
-		      Condition="'$(ProtobufNeedsRegeneration)' == 'true'" />
+		<Exec Command="&quot;$(ProtocToolPath)&quot; --proto_path=&quot;$(ProtoRoot)&quot; --csharp_out=&quot;$(ProtobufOutputPath)&quot; --csharp_opt=file_extension=.pb.cs &quot;$(ProtoSourceFile)&quot;" Condition="'$(ProtobufNeedsRegeneration)' == 'true'" />
 		
-		<Message Text="Protobuf files are up to date" Importance="normal" 
-		         Condition="'$(ProtobufNeedsRegeneration)' != 'true'" />
+		<Message Text="Protobuf files are up to date" Importance="normal" Condition="'$(ProtobufNeedsRegeneration)' != 'true'" />
 	</Target>
 
 	<!-- Manual regeneration target -->
