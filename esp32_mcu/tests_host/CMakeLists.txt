@@ -85,11 +85,13 @@ target_include_directories(tapgate_production
         ${CMAKE_CURRENT_LIST_DIR}/../components
         ${CMAKE_CURRENT_LIST_DIR}/../components/common
         ${CMAKE_CURRENT_LIST_DIR}/../components/common/nvm
+        ${CMAKE_CURRENT_LIST_DIR}/../components/common/crc32
         ${CMAKE_CURRENT_LIST_DIR}/../components/ecies_crypto
 )
 
 set(_tapgate_component_sources
     ${CMAKE_CURRENT_LIST_DIR}/../components/common/nvm/nvm.c
+    ${CMAKE_CURRENT_LIST_DIR}/../components/common/crc32/crc32.c
     ${CMAKE_CURRENT_LIST_DIR}/../components/ecies_crypto/ecies.c
 )
 
@@ -172,6 +174,7 @@ endfunction()
 # Individual test binaries
 tapgate_add_unity_test(test_types ${CMAKE_CURRENT_LIST_DIR}/test_types.c)
 tapgate_add_unity_test(test_ecies ${CMAKE_CURRENT_LIST_DIR}/test_ecies.c)
+tapgate_add_unity_test(test_crc32 ${CMAKE_CURRENT_LIST_DIR}/test_crc32.c)
 
 # ECIES test requires mbedtls library
 target_link_libraries(test_ecies PRIVATE mbedtls mbedx509 mbedcrypto)

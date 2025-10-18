@@ -19,9 +19,10 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
-  <!-- Include EciesCrypto.cs directly as a link for testing -->
+  <!-- Include source files directly as links for testing -->
   <ItemGroup>
-    <Compile Include="..\MobileClientMAUI\Core\Ecies\EciesCrypto.cs" Link="Core\Ecies\EciesCrypto.cs" />
+    <Compile Include="..\MobileClientMAUI\Core\EciesCrypto.cs" Link="Core\EciesCrypto.cs" />
+    <Compile Include="..\MobileClientMAUI\Core\Crc32.cs" Link="Core\Crc32.cs" />
   </ItemGroup>
 
 </Project>
