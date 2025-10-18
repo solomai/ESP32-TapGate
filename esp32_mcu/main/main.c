@@ -32,9 +32,6 @@ void app_main(void)
 	xTaskCreatePinnedToCore(&diagnostic_task, "debug_mon_task", 2560, NULL, 1, NULL, 1); 
 #endif
 
-    EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
-                      TAG_MAIN,
-                      "TapGate bootup");
     blue_led_init();
 
     // Init NVS partitions
@@ -44,10 +41,13 @@ void app_main(void)
         // Critical error
         EVENT_JOURNAL_ADD(EVENT_JOURNAL_ERROR,
                           TAG_MAIN,
-                          "Error accessing internal memory \"%s\"", esp_err_to_name(err));
-        esp_system_abort("Check NVM Partition naming 'nvm_partition.h' and 'partitions.csv'");
+                          "Internal NVM access failed '%s'", esp_err_to_name(err));
+        esp_system_abort("Verify NVM partition label in 'nvm_partition.h' and 'partitions.csv'");
     }
 
+    EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
+                      TAG_MAIN,
+                      "TapGate firmware startup complete");
     // Main loop
     while (1) {
         // Main application logic goes here
