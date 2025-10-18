@@ -72,59 +72,6 @@ This ensures forward secrecy — every message has a unique shared secret, even 
 | RNG | Platform CSPRNG | `RandomNumberGenerator` |
 | Memory Cleanup | .NET BCL | `CryptographicOperations.ZeroMemory()` |
 
-## API Surface Comparison - Function Signatures
-
-### ESP32 (C)
-
-```c
-bool ecies_generate_keypair(uint8_t private_key[32], uint8_t public_key[32]);
-bool ecies_compute_public_key(const uint8_t private_key[32], uint8_t public_key[32]);
-bool ecies_encrypt(const uint8_t *plaintext, size_t plaintext_len,
-                   const uint8_t recipient_pubkey[32],
-                   uint8_t *ciphertext, size_t *ciphertext_len);
-bool ecies_decrypt(const uint8_t *ciphertext, size_t ciphertext_len,
-                   const uint8_t recipient_privkey[32],
-                   uint8_t *plaintext, size_t *plaintext_len);
-void ecies_secure_zero(void *buffer, size_t size);
-```
-
-### .NET MAUI (C#)
-
-```csharp
-bool GenerateKeyPair(byte[] privateKey, byte[] publicKey);
-bool ComputePublicKey(byte[] privateKey, byte[] publicKey);
-bool Encrypt(ReadOnlySpan<byte> plaintext, ReadOnlySpan<byte> recipientPublicKey, 
-             Span<byte> ciphertext);
-bool Encrypt(byte[] plaintext, byte[] recipientPublicKey, out byte[] ciphertext);
-bool Decrypt(ReadOnlySpan<byte> ciphertext, ReadOnlySpan<byte> recipientPrivateKey, 
-             Span<byte> plaintext);
-bool Decrypt(byte[] ciphertext, byte[] recipientPrivateKey, out byte[] plaintext);
-void SecureZero(Span<byte> buffer);
-```
-
-## Performance Characteristics
-
-### ESP32 (ESP-IDF 5.5, ESP32-S3 @ 240MHz)
-
-| Operation | Typical Time |
-|-----------|--------------|
-| Key Generation | ~5-10 ms |
-| ECDH | ~5-8 ms |
-| HKDF | ~0.5 ms |
-| AES-GCM Encrypt (512 bytes) | ~1-2 ms |
-| Total Encrypt | ~12-20 ms |
-| Total Decrypt | ~10-15 ms |
-
-### .NET MAUI (Release, .NET 9)
-
-| Platform | Key Gen | Encrypt (512B) | Decrypt (512B) |
-|----------|---------|----------------|----------------|
-| Android (Snapdragon 8 Gen 2) | < 1 ms | < 2 ms | < 2 ms |
-| iOS (A16 Bionic) | < 1 ms | < 1.5 ms | < 1.5 ms |
-| Windows (Intel i7-12700) | < 0.5 ms | < 1 ms | < 1 ms |
-| macOS (M2 Pro) | < 0.5 ms | < 1 ms | < 1 ms |
-
-*Note: .NET implementations benefit from hardware AES acceleration and optimized native libraries*
 
 ## Platform Support Matrix
 

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using TapGate.Core.Ecies;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace TapGate.Tests
 {
@@ -11,24 +12,51 @@ namespace TapGate.Tests
     /// </summary>
     public class EciesCryptoTests
     {
+        private readonly ITestOutputHelper _output;
+
+        public EciesCryptoTests(ITestOutputHelper output)
+        {
+            _output = output;
+        }
+
+        // Keys generated with current implementation (big-endian format for ESP32)
+        // These MUST match the keys used on ESP32 for TestEcies_Decrypt_HostGeneratedMessage to work
+        private static readonly byte[] ClientPrivateKey = new byte[]
+        {
+            0xD0, 0x6F, 0xE6, 0xF9, 0x15, 0x9C, 0xD8, 0x89,
+            0xA3, 0xC2, 0x97, 0x68, 0xD8, 0x64, 0xC0, 0xC5,
+            0x02, 0xDC, 0x8D, 0x87, 0x06, 0x7B, 0xF6, 0xB3,
+            0xAC, 0x47, 0xCD, 0x0E, 0xFB, 0x27, 0x7D, 0x41
+        };
+
+        private static readonly byte[] ClientPublicKey = new byte[]
+        {
+            0xDD, 0xBD, 0x81, 0xCE, 0xEC, 0xCE, 0x0E, 0xC9,
+            0x31, 0x40, 0x27, 0xEE, 0xDE, 0x90, 0x5B, 0x5B,
+            0x30, 0x60, 0xD2, 0x7C, 0xA1, 0xFD, 0x5E, 0x1E,
+            0x1B, 0x95, 0x9F, 0x9B, 0xD7, 0x7D, 0xFC, 0x4B
+        };
+
+        private static readonly byte[] HostPublicKey = new byte[]
+        {
+            0xD6, 0x6A, 0x0A, 0xFC, 0x1A, 0x75, 0xC7, 0x64,
+            0xB1, 0x75, 0xC5, 0xEC, 0x04, 0x92, 0xA3, 0xF6,
+            0x23, 0x74, 0x39, 0xDB, 0x21, 0xC1, 0xF2, 0xC6,
+            0xCE, 0xA4, 0x34, 0xFC, 0x49, 0x3A, 0x56, 0x06
+        };
+
         /// <summary>
-        /// Test 1: Encryption–Decryption Between Two Parties
-        /// 
-        /// This test verifies that a message encrypted by the client can be 
-        /// successfully decrypted by the host. The host generates a key pair,
-        /// the client encrypts a plaintext message using the host's public key,
-        /// and the host decrypts the ciphertext using its private key.
-        /// The decrypted plaintext must match the original message.
+        /// Test 1: Encryption–Decryption based on self-generated key pair
         /// </summary>
         [Fact]
-        public void EncryptDecrypt_TextMessage_ShouldSucceed()
+        public void TestEcies_EncryptDecrypt_SelfGeneratedMessage()
         {
             // Arrange: Host generates key pair
-            byte[] hostPrivateKey = new byte[EciesCrypto.X25519_KEY_SIZE];
-            byte[] hostPublicKey = new byte[EciesCrypto.X25519_KEY_SIZE];
+            byte[] clientPrivateKey = new byte[EciesCrypto.X25519_KEY_SIZE];
+            byte[] clientPublicKey = new byte[EciesCrypto.X25519_KEY_SIZE];
             
-            bool keyGenSuccess = EciesCrypto.GenerateKeyPair(hostPrivateKey, hostPublicKey);
-            Assert.True(keyGenSuccess, "Host key pair generation should succeed");
+            bool keyGenSuccess = EciesCrypto.GenerateKeyPair(clientPrivateKey, clientPublicKey);
+            Assert.True(keyGenSuccess, "Host key pair generation failed");
             
             // Client prepares a plaintext message
             string originalMessage = "Hello, ECIES encryption!";
@@ -36,15 +64,15 @@ namespace TapGate.Tests
             
             // Act: Client encrypts the message using host's public key
             byte[] ciphertext = new byte[plaintext.Length + EciesCrypto.ENCRYPTION_OVERHEAD];
-            bool encryptSuccess = EciesCrypto.Encrypt(plaintext.AsSpan(), hostPublicKey.AsSpan(), ciphertext.AsSpan());
-            Assert.True(encryptSuccess, "Encryption should succeed");
+            bool encryptSuccess = EciesCrypto.Encrypt(plaintext.AsSpan(), clientPublicKey.AsSpan(), ciphertext.AsSpan());
+            Assert.True(encryptSuccess, "Encryption failed");
             Assert.NotNull(ciphertext);
             Assert.Equal(plaintext.Length + EciesCrypto.ENCRYPTION_OVERHEAD, ciphertext.Length);
             
             // Host decrypts the ciphertext using its private key
             byte[] decryptedPlaintext = new byte[plaintext.Length];
-            bool decryptSuccess = EciesCrypto.Decrypt(ciphertext.AsSpan(), hostPrivateKey.AsSpan(), decryptedPlaintext.AsSpan());
-            Assert.True(decryptSuccess, "Decryption should succeed");
+            bool decryptSuccess = EciesCrypto.Decrypt(ciphertext.AsSpan(), clientPrivateKey.AsSpan(), decryptedPlaintext.AsSpan());
+            Assert.True(decryptSuccess, "Decryption failed");
             Assert.NotNull(decryptedPlaintext);
             
             // Assert: Decrypted plaintext must match the original message
@@ -55,52 +83,46 @@ namespace TapGate.Tests
         }
 
         /// <summary>
-        /// Test 2: Encryption of Binary Data
-        /// 
-        /// This test verifies that binary data can be encrypted and decrypted correctly.
-        /// The host generates a key pair, the client generates a 512-byte binary buffer,
-        /// encrypts it using the host's public key, and the host decrypts it using its
-        /// private key. The decrypted buffer must match the original binary data.
-        /// </summary>
+        /// Test 2: Decrypt message encoded on host (ESP32 board) with client_public_key
+        //[Fact(Skip = "ESP32 needs to be updated with new client_public_key generated by GenerateKeysForESP32() test")]
         [Fact]
-        public void EncryptDecrypt_BinaryData_ShouldSucceed()
+        public void TestEcies_Decrypt_HostGeneratedMessage()
         {
-            // Arrange: Host generates key pair
-            byte[] hostPrivateKey = new byte[EciesCrypto.X25519_KEY_SIZE];
-            byte[] hostPublicKey = new byte[EciesCrypto.X25519_KEY_SIZE];
-            
-            bool keyGenSuccess = EciesCrypto.GenerateKeyPair(hostPrivateKey, hostPublicKey);
-            Assert.True(keyGenSuccess, "Host key pair generation should succeed");
-            
-            // Client generates a 512-byte binary buffer with pseudo-random data
-            const int bufferSize = 512;
-            byte[] originalBinaryData = new byte[bufferSize];
-            Random random = new Random(42); // Fixed seed for reproducibility
-            random.NextBytes(originalBinaryData);
-            
-            // Act: Client encrypts the binary data using host's public key
-            byte[] ciphertext = new byte[bufferSize + EciesCrypto.ENCRYPTION_OVERHEAD];
-            bool encryptSuccess = EciesCrypto.Encrypt(originalBinaryData.AsSpan(), hostPublicKey.AsSpan(), ciphertext.AsSpan());
-            Assert.True(encryptSuccess, "Encryption should succeed");
-            Assert.NotNull(ciphertext);
-            Assert.Equal(bufferSize + EciesCrypto.ENCRYPTION_OVERHEAD, ciphertext.Length);
-            
-            // Host decrypts the ciphertext using its private key
-            byte[] decryptedBinaryData = new byte[bufferSize];
-            bool decryptSuccess = EciesCrypto.Decrypt(ciphertext.AsSpan(), hostPrivateKey.AsSpan(), decryptedBinaryData.AsSpan());
-            Assert.True(decryptSuccess, "Decryption should succeed");
-            Assert.NotNull(decryptedBinaryData);
-            Assert.Equal(bufferSize, decryptedBinaryData.Length);
-            
-            // Assert: Decrypted buffer must match the original binary data
-            Assert.True(originalBinaryData.SequenceEqual(decryptedBinaryData),
-                "Decrypted binary data must match original binary data");
-            
-            // Verify all bytes match
-            for (int i = 0; i < bufferSize; i++)
+            // Generated with ESP32 ecies_encrypt using client_public_key
+            // message: "Test message encoded on ESP32"
+            byte[] HostEncryptedMessage = new byte[]
             {
-                Assert.Equal(originalBinaryData[i], decryptedBinaryData[i]);
-            }
+                0x67, 0xE3, 0x8B, 0xD1, 0x45, 0xBD, 0xF7, 0xB3,
+                0xAE, 0xAA, 0x8B, 0x83, 0x5E, 0xAC, 0xCB, 0x13,
+                0x9D, 0x27, 0xF2, 0xAF, 0x12, 0x04, 0x83, 0x2D,
+                0x05, 0x53, 0x0E, 0x67, 0xC6, 0x96, 0xAA, 0x11,
+                0x03, 0x2E, 0x4B, 0xAE, 0x68, 0xEF, 0x19, 0x2D,
+                0xD7, 0xFF, 0x33, 0xE9, 0xC3, 0x03, 0xE6, 0x42,
+                0xF8, 0x8B, 0x4E, 0xDA, 0xF8, 0x45, 0x19, 0x08,
+                0x60, 0xD5, 0x43, 0xA3, 0x95, 0x6B, 0x65, 0x0E,
+                0x06, 0x57, 0xFF, 0xE1, 0x60, 0xA7, 0x6C, 0xBB,
+                0x8E, 0xBD, 0x7B, 0x59, 0x2C, 0xE7, 0x89, 0x43,
+                0x97, 0x6C, 0x2C, 0x86, 0xE5, 0x1D, 0xBD, 0xFA,
+                0x3B
+            };
+
+            const string originalPlaintext = "Test message encoded on ESP32";
+            byte[] expectedplaintext = System.Text.Encoding.UTF8.GetBytes(originalPlaintext);
+
+            Assert.Equal(EciesCrypto.ENCRYPTION_OVERHEAD + expectedplaintext.Length, 
+                HostEncryptedMessage.Length);
+
+            // Client decrypts the ciphertext using its private key
+            byte[] decryptedPlaintext = new byte[expectedplaintext.Length];
+            bool decryptSuccess = EciesCrypto.Decrypt(HostEncryptedMessage.AsSpan(), ClientPrivateKey.AsSpan(), decryptedPlaintext.AsSpan());
+            Assert.True(decryptSuccess, "Decryption failed - check key compatibility");
+            Assert.NotNull(decryptedPlaintext);
+            
+            // Verify decrypted message matches expected plaintext
+            string decryptedMessage = System.Text.Encoding.UTF8.GetString(decryptedPlaintext);
+            Assert.Equal(originalPlaintext, decryptedMessage);
+            Assert.True(expectedplaintext.SequenceEqual(decryptedPlaintext), 
+                "Decrypted data must match original plaintext");
         }
     }
 }

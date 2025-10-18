@@ -35,12 +35,49 @@ namespace TapGate.Core.Ecies
         private static readonly KeyAgreementAlgorithm X25519Algorithm = KeyAgreementAlgorithm.X25519;
         
         /// <summary>
-        /// Generate a new X25519 key pair
-        /// Uses cryptographically secure RNG for key generation.
-        /// Thread-safe, no internal state.
+        /// Clamp X25519 private key according to RFC 7748 Section 5
+        /// 
+        /// This function modifies a 32-byte scalar (private key) to ensure it meets X25519 requirements:
+        /// 1. Clear bits 0, 1, 2 of the first byte (makes scalar divisible by 8, clears low-order bits)
+        /// 2. Clear bit 255 (ensures scalar is in the right range, less than 2^255)
+        /// 3. Set bit 254 (ensures scalar is >= 2^254, preventing small subgroup attacks)
+        /// 
+        /// This is CRITICAL for X25519 compatibility with mbedTLS and other implementations.
+        /// Without clamping, the public key derived from the private key will be invalid.
+        /// 
+        /// NOTE: ESP32 mbedTLS handles clamping internally during key generation,
+        /// but we apply it explicitly when deriving public keys from stored private keys.
         /// </summary>
-        /// <param name="privateKey">Buffer for private key (32 bytes)</param>
-        /// <param name="publicKey">Buffer for public key (32 bytes)</param>
+        /// <param name="privateKey">Private key to clamp (modified in place, little-endian)</param>
+        private static void ClampPrivateKey(Span<byte> privateKey)
+        {
+            if (privateKey.Length != X25519_KEY_SIZE)
+                return;
+            
+            // RFC 7748 Section 5:
+            // For X25519, set the three least significant bits of the first byte
+            // and the most significant bit of the last byte to zero,
+            // set the second most significant bit of the last byte to 1.
+            
+            privateKey[0] &= 0xF8;  // Clear bits 0, 1, 2 (0b11111000)
+            privateKey[31] &= 0x7F; // Clear bit 255 (0b01111111)
+            privateKey[31] |= 0x40; // Set bit 254 (0b01000000)
+        }
+        
+        /// <summary>
+        /// Generate a new X25519 key pair with proper RFC 7748 clamping
+        /// Keys are exported in little-endian format (RFC 7748 standard)
+        /// 
+        /// Uses cryptographically secure RNG for key generation.
+        /// Applies RFC 7748 clamping to the private key.
+        /// Re-derives the public key from the clamped private key to ensure consistency.
+        /// Thread-safe, no internal state.
+        /// 
+        /// COMPATIBILITY: Keys are in LE format, compatible with ESP32 ecies_generate_keypair()
+        /// which also exports LE keys after internal BE conversions for mbedTLS.
+        /// </summary>
+        /// <param name="privateKey">Buffer for private key (32 bytes, little-endian)</param>
+        /// <param name="publicKey">Buffer for public key (32 bytes, little-endian)</param>
         /// <returns>True on success, false on failure</returns>
         public static bool GenerateKeyPair(byte[] privateKey, byte[] publicKey)
         {
@@ -52,19 +89,20 @@ namespace TapGate.Core.Ecies
             
             try
             {
-                using var key = Key.Create(X25519Algorithm, new KeyCreationParameters { ExportPolicy = KeyExportPolicies.AllowPlaintextExport });
+                // Step 1: Generate random bytes for private key (little-endian)
+                RandomNumberGenerator.Fill(privateKey);
                 
-                // Export private key
-                var privKeyBytes = key.Export(KeyBlobFormat.RawPrivateKey);
-                Array.Copy(privKeyBytes, privateKey, X25519_KEY_SIZE);
+                // Step 2: Apply RFC 7748 clamping to private key
+                ClampPrivateKey(privateKey.AsSpan());
                 
-                // Export public key
+                // Step 3: Derive public key from clamped private key using NSec (little-endian)
+                using var key = Key.Import(X25519Algorithm, privateKey, KeyBlobFormat.RawPrivateKey, 
+                    new KeyCreationParameters { ExportPolicy = KeyExportPolicies.AllowPlaintextExport });
+                
                 var pubKeyBytes = key.PublicKey.Export(KeyBlobFormat.RawPublicKey);
                 Array.Copy(pubKeyBytes, publicKey, X25519_KEY_SIZE);
                 
-                // Secure cleanup
-                CryptographicOperations.ZeroMemory(privKeyBytes);
-                
+                // Keys are already in LE format (RFC 7748), no conversion needed
                 return true;
             }
             catch
@@ -75,11 +113,16 @@ namespace TapGate.Core.Ecies
         
         /// <summary>
         /// Compute X25519 public key from private key
+        /// 
+        /// Applies RFC 7748 clamping to the private key before deriving the public key.
+        /// This ensures the public key is valid for use with mbedTLS and other implementations.
         /// Useful for deriving public key from stored private key.
         /// Thread-safe, stateless.
+        /// 
+        /// COMPATIBILITY: Matches ESP32 ecies_compute_public_key() - both use LE format.
         /// </summary>
-        /// <param name="privateKey">X25519 private key (32 bytes)</param>
-        /// <param name="publicKey">X25519 public key (32 bytes)</param>
+        /// <param name="privateKey">X25519 private key (32 bytes, little-endian)</param>
+        /// <param name="publicKey">X25519 public key (32 bytes, little-endian)</param>
         /// <returns>True on success, false on failure</returns>
         public static bool ComputePublicKey(byte[] privateKey, byte[] publicKey)
         {
@@ -91,11 +134,22 @@ namespace TapGate.Core.Ecies
             
             try
             {
-                using var key = Key.Import(X25519Algorithm, privateKey, KeyBlobFormat.RawPrivateKey, 
+                // Create a copy and clamp (input is LE)
+                Span<byte> clampedPrivKey = stackalloc byte[X25519_KEY_SIZE];
+                privateKey.AsSpan().CopyTo(clampedPrivKey);
+                ClampPrivateKey(clampedPrivKey);
+                
+                // Derive public key from clamped private key (LE)
+                using var key = Key.Import(X25519Algorithm, clampedPrivKey, KeyBlobFormat.RawPrivateKey, 
                     new KeyCreationParameters { ExportPolicy = KeyExportPolicies.AllowPlaintextExport });
                 
                 var pubKeyBytes = key.PublicKey.Export(KeyBlobFormat.RawPublicKey);
                 Array.Copy(pubKeyBytes, publicKey, X25519_KEY_SIZE);
+                
+                // Public key is already in LE format (RFC 7748), no conversion needed
+                
+                // Secure cleanup
+                CryptographicOperations.ZeroMemory(clampedPrivKey);
                 
                 return true;
             }
@@ -109,16 +163,19 @@ namespace TapGate.Core.Ecies
         /// Encrypt data using ECIES
         /// 
         /// Performs:
-        /// 1. Generate ephemeral X25519 key pair
+        /// 1. Generate ephemeral X25519 key pair (with proper clamping)
         /// 2. Compute shared secret via ECDH with recipient's public key
         /// 3. Derive AES-256 key using HKDF-SHA256
         /// 4. Encrypt plaintext with AES-256-GCM
         /// 5. Output: [ephemeral_pubkey || nonce || ciphertext || tag]
         /// 
         /// Thread-safe, stateless operation. Uses secure RNG for ephemeral key and nonce.
+        /// 
+        /// COMPATIBILITY: All keys in LE format (RFC 7748). Ephemeral key is exported as-is (LE).
+        /// ESP32 ecies_encrypt() expects and produces the same format.
         /// </summary>
         /// <param name="plaintext">Input plaintext buffer</param>
-        /// <param name="recipientPublicKey">Recipient's X25519 public key (32 bytes)</param>
+        /// <param name="recipientPublicKey">Recipient's X25519 public key (32 bytes, little-endian)</param>
         /// <param name="ciphertext">Output buffer (must be >= plaintext.Length + ENCRYPTION_OVERHEAD)</param>
         /// <returns>True on success, false on failure</returns>
         public static bool Encrypt(ReadOnlySpan<byte> plaintext, ReadOnlySpan<byte> recipientPublicKey, Span<byte> ciphertext)
@@ -131,21 +188,27 @@ namespace TapGate.Core.Ecies
             
             try
             {
-                // Step 1: Generate ephemeral key pair
+                // Step 1: Generate ephemeral key pair with clamping
                 Span<byte> ephemeralPrivateKey = stackalloc byte[X25519_KEY_SIZE];
                 Span<byte> ephemeralPublicKey = stackalloc byte[X25519_KEY_SIZE];
                 
-                using var ephemeralKey = Key.Create(X25519Algorithm, new KeyCreationParameters { ExportPolicy = KeyExportPolicies.AllowPlaintextExport });
-                var ephemPrivBytes = ephemeralKey.Export(KeyBlobFormat.RawPrivateKey);
-                var ephemPubBytes = ephemeralKey.PublicKey.Export(KeyBlobFormat.RawPublicKey);
+                // Generate random private key (little-endian)
+                RandomNumberGenerator.Fill(ephemeralPrivateKey);
                 
-                ephemPrivBytes.CopyTo(ephemeralPrivateKey);
+                // Apply RFC 7748 clamping
+                ClampPrivateKey(ephemeralPrivateKey);
+                
+                // Derive public key from clamped private key (little-endian)
+                using var ephemeralKey = Key.Import(X25519Algorithm, ephemeralPrivateKey, KeyBlobFormat.RawPrivateKey);
+                var ephemPubBytes = ephemeralKey.PublicKey.Export(KeyBlobFormat.RawPublicKey);
                 ephemPubBytes.CopyTo(ephemeralPublicKey);
                 
-                // Copy ephemeral public key to output
+                // CRITICAL: Export ephemeral public key in LE format (RFC 7748)
+                // ESP32 also uses LE on API boundary, no conversion needed!
                 ephemeralPublicKey.CopyTo(ciphertext.Slice(0, X25519_KEY_SIZE));
                 
                 // Step 2 & 3: Perform ECDH and derive AES key
+                // Both keys are already in LE format
                 Span<byte> aesKey = stackalloc byte[AES_KEY_SIZE];
                 if (!PerformECDHandDeriveKey(ephemeralPrivateKey, recipientPublicKey, aesKey))
                 {
@@ -168,7 +231,6 @@ namespace TapGate.Core.Ecies
                 // Secure cleanup
                 CryptographicOperations.ZeroMemory(ephemeralPrivateKey);
                 CryptographicOperations.ZeroMemory(aesKey);
-                CryptographicOperations.ZeroMemory(ephemPrivBytes);
                 
                 return true;
             }
@@ -192,14 +254,17 @@ namespace TapGate.Core.Ecies
         /// 
         /// Performs:
         /// 1. Extract ephemeral public key from ciphertext
-        /// 2. Compute shared secret using recipient's private key
+        /// 2. Compute shared secret using recipient's private key (with clamping)
         /// 3. Derive AES-256 key using HKDF-SHA256
         /// 4. Decrypt and verify using AES-256-GCM
         /// 
         /// Thread-safe, stateless operation.
+        /// 
+        /// COMPATIBILITY: All keys in LE format (RFC 7748). Ephemeral key is read as-is (LE).
+        /// ESP32 ecies_decrypt() expects and produces the same format.
         /// </summary>
         /// <param name="ciphertext">Input ciphertext (format: [ephemeral_pubkey || nonce || encrypted || tag])</param>
-        /// <param name="recipientPrivateKey">Recipient's X25519 private key (32 bytes)</param>
+        /// <param name="recipientPrivateKey">Recipient's X25519 private key (32 bytes, little-endian)</param>
         /// <param name="plaintext">Output plaintext buffer (must be >= ciphertext.Length - ENCRYPTION_OVERHEAD)</param>
         /// <returns>True on success, false on authentication failure or error</returns>
         public static bool Decrypt(ReadOnlySpan<byte> ciphertext, ReadOnlySpan<byte> recipientPrivateKey, Span<byte> plaintext)
@@ -216,16 +281,26 @@ namespace TapGate.Core.Ecies
             
             try
             {
-                // Step 1: Parse input: [ephemeral_pubkey || nonce || ciphertext || tag]
+                // Parse input: [ephemeral_pubkey || nonce || ciphertext || tag]
                 var ephemeralPublicKey = ciphertext.Slice(0, X25519_KEY_SIZE);
                 var nonce = ciphertext.Slice(X25519_KEY_SIZE, GCM_IV_SIZE);
                 var encryptedData = ciphertext.Slice(X25519_KEY_SIZE + GCM_IV_SIZE, plaintextLength);
                 var tag = ciphertext.Slice(X25519_KEY_SIZE + GCM_IV_SIZE + plaintextLength, GCM_TAG_SIZE);
                 
+                // Clamp recipient's private key (input is LE)
+                Span<byte> clampedPrivKey = stackalloc byte[X25519_KEY_SIZE];
+                recipientPrivateKey.CopyTo(clampedPrivKey);
+                ClampPrivateKey(clampedPrivKey);
+                
+                // CRITICAL: Ephemeral key is in LE format (same as Encrypt exports)!
+                // ESP32 also exports LE keys, no conversion needed!
+                
                 // Step 2 & 3: Perform ECDH and derive AES key
+                // Both keys are in LE format
                 Span<byte> aesKey = stackalloc byte[AES_KEY_SIZE];
-                if (!PerformECDHandDeriveKey(recipientPrivateKey, ephemeralPublicKey, aesKey))
+                if (!PerformECDHandDeriveKey(clampedPrivKey, ephemeralPublicKey, aesKey))
                 {
+                    CryptographicOperations.ZeroMemory(clampedPrivKey);
                     CryptographicOperations.ZeroMemory(aesKey);
                     return false;
                 }
@@ -235,6 +310,7 @@ namespace TapGate.Core.Ecies
                 aesGcm.Decrypt(nonce, encryptedData, tag, plaintext.Slice(0, plaintextLength));
                 
                 // Secure cleanup
+                CryptographicOperations.ZeroMemory(clampedPrivKey);
                 CryptographicOperations.ZeroMemory(aesKey);
                 
                 return true;
@@ -270,6 +346,9 @@ namespace TapGate.Core.Ecies
         /// <summary>
         /// Perform X25519 ECDH and derive AES key directly from shared secret
         /// Uses NSec's built-in KDF for deriving the AES key
+        /// 
+        /// NOTE: Both keys must be in little-endian format (RFC 7748/NSec native format).
+        /// This matches ESP32 ecies_ecdh_x25519() which also uses LE on API boundary.
         /// </summary>
         private static bool PerformECDHandDeriveKey(ReadOnlySpan<byte> ourPrivateKey, ReadOnlySpan<byte> theirPublicKey, Span<byte> aesKey)
         {
@@ -300,6 +379,8 @@ namespace TapGate.Core.Ecies
         /// <summary>
         /// Securely erase sensitive data from memory
         /// Prevents compiler optimization from removing the zeroing operation.
+        /// 
+        /// COMPATIBILITY: Matches ESP32 ecies_secure_zero() functionality.
         /// </summary>
         /// <param name="buffer">Buffer to clear</param>
         public static void SecureZero(Span<byte> buffer)
