@@ -24,6 +24,31 @@ Structure:
 
 This layout adds a fixed 60-byte overhead to the plaintext size while maintaining high security and compactness, suitable for constrained devices such as the ESP32.
 
+## Communication Overview
+
+This ECIES communication process is based on the **ephemeral-static** encryption model.  
+Each message encryption generates a new ephemeral X25519 key pair on the sender side.  
+Only the **recipient's public key** is required for encryption, while the **recipient's private key** is used for decryption.  
+This ensures forward secrecy — every message has a unique shared secret, even if previous keys are compromised.
+
+---
+
+### Key Usage Table
+
+| Direction        | Operation        | Keys Used                                                                                         | Notes |
+|------------------|------------------|---------------------------------------------------------------------------------------------------|-------|
+| **Client → Host** | **Client encode** | Uses `client_ephemeral_privatekey` (generated internally) + `host_public_key` → produces `ephemeral_publickey`, `IV_Nonce`, `authtag` | The client encrypts the message for the host using the host’s static public key. The ephemeral public key is embedded in the ciphertext. |
+|                  | **Host decode**   | Uses `host_private_key` + extracted `ephemeral_publickey`                                         | The host derives the same shared secret and decrypts the message using AES-GCM (`IV_Nonce`, `authtag`). |
+| **Host → Client** | **Host encode**   | Uses `host_ephemeral_privatekey` (generated internally) + `client_public_key` → produces `ephemeral_publickey`, `IV_Nonce`, `authtag` | The host encrypts the message for the client using the client’s static public key. The ephemeral public key is included in the ciphertext. |
+|                  | **Client decode** | Uses `client_private_key` + extracted `ephemeral_publickey`                                       | The client derives the same shared secret and decrypts the ciphertext using AES-GCM (`IV_Nonce`, `authtag`). |
+
+---
+
+**Summary:**  
+- `Encrypt()` → uses only **recipient’s public key** and a new **ephemeral keypair**.  
+- `Decrypt()` → uses **recipient’s private key** and the **ephemeral public key** from the message.  
+- No sender static keys are required unless sender authentication is added later (e.g., digital signature).
+
 
 ## Implementation Comparison: ESP32 ( IDF 5.5) vs .NET MAUI (.NET 9)
 
