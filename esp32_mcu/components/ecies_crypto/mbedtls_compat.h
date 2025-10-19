@@ -11,15 +11,11 @@
 
 #include <mbedtls/version.h>
 
-/* Check mbedTLS version */
-#if MBEDTLS_VERSION_MAJOR >= 3
-    /* mbedTLS 3.x - Define MBEDTLS_PRIVATE macro if not already defined */
-    #ifndef MBEDTLS_PRIVATE
-        #define MBEDTLS_PRIVATE(member) member
-    #endif
-#else
-    /* mbedTLS 2.x - Define MBEDTLS_PRIVATE as direct access */
-    #ifndef MBEDTLS_PRIVATE
-        #define MBEDTLS_PRIVATE(member) member
-    #endif
+/* 
+ * Only define MBEDTLS_PRIVATE if not already defined by mbedtls headers.
+ * In mbedTLS 3.x, private_access.h defines this macro.
+ * In mbedTLS 2.x, we need to define it for compatibility.
+ */
+#ifndef MBEDTLS_PRIVATE
+    #define MBEDTLS_PRIVATE(member) member
 #endif
