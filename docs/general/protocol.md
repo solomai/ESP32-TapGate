@@ -1,11 +1,11 @@
 ### Security policy
-All device communication is encrypted and authenticated using ESP-IDF native cryptography: ephemeral X25519 + HKDF-SHA256 + AES-GCM, with long-term private keys protected by ESP flash encryption and secure boot.
+All device communication is encrypted and authenticated using ESP-IDF native cryptography: ephemeral X25519 + HKDF-SHA256 + AES-GCM, with long-term private keys protected by ESP flash encryption and secure boot. An explicit exception is made for EnrollMessage, as the client's cryptographic parameters are not available during user enrollment.
 
 ### Cryptography
-The device relies on elliptic-curve public-key encryption combined with authenticated symmetric encryption, fully implemented using ESP-IDF 5.5 native cryptography (mbedTLS). For each message, an ephemeral X25519 ECDH key exchange (RFC 7748) is performed with the device’s long-term static key to derive a shared secret. This secret is expanded into a symmetric session key using HKDF with SHA-256 (RFC 5869). Payloads are then encrypted and authenticated using AES-GCM (NIST SP 800-38D, AEAD usage per RFC 5116). This ECIES-style construction (EC key agreement + HKDF + AEAD) ensures confidentiality, integrity, and forward secrecy at the message level, since every packet includes a fresh ephemeral public key. Long-term private keys are stored in encrypted flash partitions with ESP-IDF flash encryption and secure boot enabled, while random values (ephemeral keys and nonces) are generated using the platform CSPRNG seeded from hardware entropy (esp_random).
+The device relies on elliptic-curve public-key encryption combined with authenticated symmetric encryption, fully implemented using ESP-IDF 5.5 native cryptography (mbedTLS). Details in [ECIES document](Ecies.md)
 
 ### Privacy Strategy
-If a message cannot be decoded for any reason, it is marked as invalid. For any invalid requests, the device provides no response and does not store any data. The cause of the silence is irrelevant from the client's perspective. Diagnostics, if required, can be conducted directly through the device logs. A missing ACK indicates that the message has failed.
+If a message cannot be decoded for any reason, it is marked as invalid. For any invalid requests, the device provides no response and does not store any data. The cause of the silence is irrelevant from the client's perspective. Diagnostics, if required, can be conducted directly through the device logs.
 
 ### Device Security States and Enrollment Flow
 
@@ -23,7 +23,7 @@ If a message cannot be decoded for any reason, it is marked as invalid. For any 
     2. Client management (invites, removals, role adjustments).
     3. Event and security logging.
 
-- **Standard users**  
+- **Users**  
   Non-admin clients are limited to the capabilities explicitly enabled by an administrator. Within the MAUI app, the UI exposes only the functional modules granted to that user, ordered by the same priority categories defined by the administrator.
 
 ### Message Structure on-wire:
@@ -56,90 +56,259 @@ ECIES Encryption overhead = 60 bytes included: [Ephemeral Public Key (32)] [IV/N
 3. Request device status by client
 4. Request doAction by client
 
+### Client ↔ Device Communication
+
+Messages that cannot be properly decoded are not considered valid requests and must be ignored.
+
+The message lifecycle is always defined as:
+Client Request → Device Response.
+The client initiates a request to the device, which generates a response for the client.
+After the response is sent, the operation is considered completed, and all resources allocated for processing the request must be released on the device.
+
 ### Client ↔ Device Communication: 1. Enroll a new user to device
 
-Scenario 1: enrollment first user
+**Scenario 1:** enrollment first user
     
     device precondition: no users have been enrolled on the device (new device or after hard reset).
     The device automatically enters the "enrollment of first user" state.
     available channels: BLE and SoftAP (STA WiFi is disabled).
 
-    client --> device: MessageClientEnrollment ( EMPTY SECRET CODE, CLIENT PUB KEY )
-    device --> client: MessageClientEnrollmentGranted ( ASSIGNED UNIQUE CLIENT ID, DEVICE PUB KEY )
-    client --> device: ACK - after this message device store a new client
+    client --> device: MsgReqClientEnrollment ( EMPTY SECRET CODE, CLIENT PUB KEY )
+    device --> client: MsgRspClientEnrollmentGranted ( ASSIGNED UNIQUE CLIENT ID, DEVICE PUB KEY )
 
-Scenario 2: enrollment user
+    note: device store a new client after response sent
+
+**Scenario 2:** enrollment other users
 
     device precondition: first user enrolled ( admin role ).
     The administrator has enabled the mode that allows adding new users. A SECRET CODE is required.
     All available channels are enabled (BLE, SoftAP, STA).
 
-    client --> device: MessageClientEnrollment ( SECRET CODE, CLIENT PUB KEY )
-    device --> client: MessageClientEnrollmentGranted ( ASSIGNED UNIQUE CLIENT ID, DEVICE PUB KEY )
-    client --> device: ACK - after this message device store a new client
+    client --> device: MsgReqClientEnrollment ( SECRET CODE, CLIENT PUB KEY )
+    device --> client: MsgRspClientEnrollmentGranted ( ASSIGNED UNIQUE CLIENT ID, DEVICE PUB KEY )
 
+    note: device store a new client after response sent
+
+Fields of the MsgReqClientEnrollment:
+```text
+{
+    DateTime      : Client DateTime
+    Secret code   : SECRETE CODE TYPE
+    Client PubKey : PUBLIC KEY TYPE
+}
+```
+
+Fields of the MsgRspClientEnrollmentGranted:
+```text
+{
+    DateTime          : Device DateTime
+    Assigned ClientId : CLIENT ID TYPE
+    Device PubKey     : PUBLIC KEY TYPE
+}
+```
+More info: [datetime document](../device/datetime.md)
 
 ### Client ↔ Device Communication: 2. Admin configured device
 
-Scenario 1: setup STA, get current configuration and available AP list
+**Scenario 1:** setup STA, get current configuration and available AP list
 
-    client --> device: MessageRequestSTASetup
-    device --> client: MessageSTACurrentConfig
-    device --> client: MessageAvailableAP ( first frame with list of available AP )
-    ...
-    device --> client: MessageAvailableAP ( last frame with list of available AP )
+    client --> device: MsgReqStaSetup
+    device --> client: MsgRspStaCurrentConfig // Include STA config and list of available AP
 
-Scenario 2: setup STA, connect to WiFi with password
+The request MsgReqStaSetup does not require extra fields.
 
-    client --> device: MessageRequestStaConnection
-    device --> client: ACK - confirm that configuration applied
+Fields of the MsgRspStaCurrentConfig:
+```text
+{
+    Current STA // Name last active STA
+    ARRAY OF
+    {
+        SSID // STA name ( size 32 symbols )
+        RSSI // Signal strength
+        Channel
+        Auth
+    } MAX 15 Elements
+}
+```
 
-Scenario 3: Client configuration, request user list with settings
+**Scenario 2:** setup STA, connect to WiFi with password
 
-    client --> device: MessageRequestUsers
-    device --> client: MessageUser ( first frame with added user )
-    ...
-    device --> client: MessageUser ( last frame with added user )
+    client --> device: MsgReqStaConnection
+    device --> client: MsgRspResult // Response OK/NOK STA connection
 
-Scenario 4: Client configuration, configure user
+Fields of the MsgReqStaConnection:
+```text
+{
+    SSID // STA name ( size 32 symbols )
+    PSW  // password
+}
+```
 
-   client --> device: MessageConfigUser
-   device --> client: ACK - confirm that configuration applied
+**Scenario 3:** Client configuration, request user list with settings
 
-Scenario 5: Request diag info
+    client --> device: MsgReqUsers
+    device --> client: MsgRspUsers // List enrolled users with policy
 
-    client --> device: MessageRequestDiag
-    device --> client: MessageDiag ( first frame with diag info )
-    ...
-    device --> client: MessageDiag ( last frame with diag info )
+The request MsgReqUsers does not require extra fields.
 
-Scenario 6: Sync mqtt Comunitation config ( send mqtt connection data )
+Fields of the MsgRspUsers:
+```text
+{
+    ARRAY OF
+    {
+        Client Name
+        Client Id
+        Allow Flags
+        Enroll Datetime   // Datetime when was enrolled
+        Activity Datetime // Datetime of last activities
+    } MAX defined by CLIENTS_DB_MAX_RECORDS
+}
+```
 
-    client --> device: MessageRequestMqttConfig
-    device --> client: MessageMqttConfig
+**Scenario 4:** Client configuration, configure user
 
-### Client ↔ Device Communication: 3. Request device status and config
+   client --> device: MsgReqConfigUser
+   device --> client: MsgRspResult // Response OK/NOK configuration applied
 
-Scenario 1: Device status: Could be used like ping device
+Fields of the MsgReqConfigUser:
+```text
+{
+    Client Id   // used like key
+    Client Name // updated client name
+    Allow Flags // updated allows flags
+}
+```
 
-    client --> device: MessageRequestStatus
-    device --> client: MessageStatus
+**Scenario 5:** Client configuration, remove user
 
+   client --> device: MsgReqRemoveUser
+   device --> client: MsgRspResult // Response OK/NOK configuration applied
+
+Fields of the MsgReqRemoveUser:
+```text
+{
+    Client Id // used like key
+}
+```
+
+**Scenario 6:** Edit mqtt Comunitation config
+
+    client --> device: MsgReqMqttConfig
+    device --> client: MsgRspMqttConfig
+
+    // TO BE DEFINED
+
+**Scenario 7:** Sync mqtt Comunitation config with Client ( send mqtt connection data )
+
+    client --> device: MsgReqMqttConfig
+    device --> client: MsgRspMqttConfig
+
+The request MsgReqMqttConfig does not require extra fields.
+
+Fields of the MsgRspMqttConfig:
+```text
+{
+    // TO BE DEFINED
+}
+```
+
+**Scenario 8:** Request Activity logs
+
+    client --> device: MsgReqActivityLogs
+    device --> client: MsgRspActivityLogs
+
+The request MsgReqActivityLogs does not require extra fields.
+
+Fields of the MsgRspActivityLogs:
+```text
+{
+    ARRAY OF
+    {
+        Datetime
+        Client Id
+        Client Name
+        Activity Id // like connected, did action, abnormal activities, ect
+    } MAX defined by log system
+}
+```
+
+**Scenario 9:** Request Device logs
+
+    client --> device: MsgReqDeviceLogs
+    device --> client: MsgRspDeviceLogs
+
+The request MsgReqDeviceLogs does not require extra fields.
+
+Fields of the MsgRspDeviceLogs:
+```text
+{
+    ARRAY OF
+    {
+        Datetime
+        Log level // Warnings and Errors
+        Message   // max size 128 symbols
+    } MAX defined by log system
+}
+```
+
+
+### Client ↔ Device Communication: 3. Request device status
+
+**Scenario 1:** Device status: Could be used like ping device
+
+    client --> device: MsgReqStatus
+    device --> client: MsgRspResult
+
+Fields of the MsgReqStatus:
+```text
+{
+     DateTime : Client DateTime
+}
+```
+More info: [datetime document](../device/datetime.md)
 
 ### Client ↔ Device Communication: 4. Request doAction by client
 
-Scenario 1: Request DoAction opt
+**Scenario 1:** Request DoAction opt
 
-    client --> device: MessageWillDoAction ( to take command nonce )
-    device --> client: MessageDoActionNonce ( current nonce )
-    client --> device: MessageDoAction ( check nonce and change, all dublacate will be skipped )
-    device --> client: ACK - OK/NOK answer to confirm opt
+    client --> device: MsgReqWillDoAction ( to take command nonce )
+    device --> client: MsgRspDoActionNonce ( current nonce )
 
+    client --> device: MsgReqDoAction ( check nonce and change, all dublacate will be skipped )
+    device --> client: MsgRspResult // OK/NOK answer to confirm opt
+
+The request MsgReqWillDoAction does not require extra fields.
+
+Fields of the MsgMsgRspDoActionNonceRspStatus:
+```text
+{
+    Device None // Next device nonce value
+}
+```
+
+Fields of the MsgReqDoAction:
+```text
+{
+    Device None // device nonce received on MsgMsgRspDoActionNonceRspStatus
+    DoAction Id
+}
+```
 
 ### Client ↔ Device Communication: scenario where a correct message is received but the command is unsupported
 
-    client --> device: some message
-    device --> client: ACK - NOK answer
+This is used even when the response includes nothing but the result of execution.
+
+    client --> device: some request message
+    device --> client: MsgRspResult // OK/NOK answer with explanation
+
+Fields of the MsgRspResult:
+```text
+{
+    Error code // 0 - no errors
+    Message    // string max size 128
+}
+```
+
 ---
 
 [← Back to ESP32 MCU Documentation](../../esp32_mcu/README.md)  

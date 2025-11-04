@@ -13,7 +13,7 @@ Clients {
     name : string;     // displayed client name
     client_id : UID;   // client identify
     nonce : number;    // command counter, also message id ( see protocol.md )
-    pub_pem : string;  // public RSA received from client
+    pub_key : string;  // public key received from client
     allow_flags : bits // specify the enabled features
   }
 }
@@ -26,7 +26,7 @@ where:
 
 **nonce** - Used to filter out duplicates and for Anti-replay guard ( see protocol.md )
 
-**pub_pem** - The stored client RSA public key obtained during registration. Used to decode messages from the client. ( see protocol.md )
+**pub_key** - The stored client public key obtained during registration. Used to decode messages from the client. ( see [protocol.md](../general/protocol.md) )
 
 **allow_flags** - Byte value used to specify the enabled features
 ```text
@@ -35,6 +35,16 @@ allow_flags : bits
     Bit 1       : Allow usage of public MQTT module
     Bit 2..7    : Reserved for future use
 ```
+
+Personal device usage statistics must be kept for each client:
+
+```text
+ClientStatistic {
+  enroll_datetime       // Stores the date and time when enrollment occurred
+  last_request_datetime // Logs the date and time of the client's last request to the device
+}
+```
+
 
 ---
 
