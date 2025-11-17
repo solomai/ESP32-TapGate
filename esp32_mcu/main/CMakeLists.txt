@@ -1,6 +1,5 @@
 idf_component_register(
-    SRCS "main.c"
-    INCLUDE_DIRS "."
+    SRCS "main.c" "device_context.c" ${CONNECTOR_SRCS}
     REQUIRES
         common
         event_journal
@@ -10,4 +9,5 @@ idf_component_register(
         messages
         esp_common
         driver
+        esp_timer
 )
