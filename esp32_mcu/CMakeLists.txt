@@ -67,10 +67,6 @@ if(NOT DEFINED ENV{IDF_PATH} OR NOT EXISTS "$ENV{IDF_PATH}/tools/cmake/project.c
         "configure only the host unit tests.")
 endif()
 
-# The following boilerplate must remain in this order for ESP-IDF projects.
-# Add your components BEFORE calling project()
-set(EXTRA_COMPONENT_DIRS components messages)
-
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(${PROJECT_NAME})
 

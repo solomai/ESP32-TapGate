@@ -13,11 +13,6 @@
 #include "led.h"
 #include "device_context.h"
 
-// include protobuf messages
-#include "messages.pb.h"
-#include "pb_encode.h"
-#include "pb_decode.h"
-
 #ifdef DIAGNOSTIC_VERSION
     #include "diagnostic.h"
 #endif
