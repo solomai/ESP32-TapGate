@@ -1,0 +1,9 @@
+{
+    "idf.flashType": "UART",
+    "idf.portWin": "COM6",
+    "C_Cpp.errorSquiggles": "enabled",
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
+    "idf.espIdfPath": "C:\\Espressif\\frameworks\\esp-idf-v5.5",
+    "idf.toolsPath": "C:\\Espressif\\tools",
+    "idf.pythonInstallPath": "C:\\Espressif\\tools\\idf-python\\3.11.2\\python.exe"    
+}

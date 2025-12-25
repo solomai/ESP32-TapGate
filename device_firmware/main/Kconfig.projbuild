@@ -1,0 +1,45 @@
+menu "TapGate Settings"
+
+    menu "Device Configuration"
+        config TAPGATE_MAX_CLIENTS_DB
+            int "Capacity enrolled clients"
+            range 1 100
+            default 50
+            help
+                Specifies the device capacity for client enrollment.
+    endmenu
+
+    menuconfig TAPGATE_DEBUG_MODE
+        bool "Debug Mode"
+        default n
+        select FREERTOS_USE_TRACE_FACILITY
+        select FREERTOS_GENERATE_RUN_TIME_STATS
+        help
+            Provides enhanced logging and diagnostic capabilities.
+            Enabling this will also force FreeRTOS to collect runtime statistics.
+
+    if TAPGATE_DEBUG_MODE
+        config TAPGATE_DIAG_INITIAL_PAUSE
+            int "Initial pause before first Diagnostic report (seconds)"
+            range 0 3600
+            default 3
+            help
+                How many seconds to wait before the very first diagnostic output 
+                after the system starts.
+
+        config TAPGATE_DIAG_INTERVAL
+            int "Console diagnostic reporting interval (seconds)"
+            range 1 86400
+            default 60
+            help
+                The timeout between subsequent diagnostic information logs.
+
+        config TAPGATE_DIAG_FULL
+            bool "Full console diagnostic output"
+            default y
+            help
+                SHORT mode: heap, fragmentation, and critical/delta tasks only.
+                FULL mode: full diagnostic information for all tasks.
+    endif
+
+endmenu

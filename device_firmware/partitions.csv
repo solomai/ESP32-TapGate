@@ -1,0 +1,7 @@
+# Name,        Type, SubType,   Offset,    Size,    Flags
+nvs,           data, nvs,       0x009000,  12K,     encrypted
+nvs_entity,    data, nvs,       0x00C000,  24K,     encrypted
+nvs_nonce,     data, nvs,       0x012000,  52K
+phy_init,      data, phy,       0x01F000,  4K
+factory,       app,  factory,   0x020000,  2M
+littlefs,      data, littlefs,  0x220000,  1920K
