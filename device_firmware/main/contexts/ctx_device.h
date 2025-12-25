@@ -17,8 +17,6 @@ public:
     CtxDevice(CtxDevice&&) = delete;
     CtxDevice& operator=(CtxDevice&&) = delete;
 
-public:    
-
 protected:
     void LoadCtxDeviceFromNVS();
     void StoreCtxDeviceToNVS();

@@ -1,0 +1,40 @@
+/**
+ * BLR channel implementation.
+ */
+
+#pragma once
+
+#include <string_view>
+
+#include "../channels.h"
+#include "ble_config.h"
+
+namespace channels 
+{
+class BLE; // Forward declaration to have template specialization before class definition
+// Map ChannelType::BLEChannel to BLE class. Used to automatically instantiate channels in ChannelRouter.
+template<> struct MapType<ChannelType::BLEChannel> { 
+    using type = BLE; 
+    static constexpr std::string_view name = "BLE";
+};
+class BLE : public IChannel 
+{
+    public:
+        BLE();
+        ~BLE() override;
+
+    public:
+        // lifecycle methods
+        bool Start() override;
+
+        void Stop() override;
+
+        // data sending method
+        bool Send(std::span<const std::uint8_t> data) override;
+
+    protected:
+        // Triggered when configuration is set by SetConfig
+        void OnSetConfig(IChannelConfig* config) override;
+};
+
+} // namespace channels

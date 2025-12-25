@@ -22,9 +22,11 @@ CtxDevice::CtxDevice()
 void CtxDevice::LoadCtxDeviceFromNVS()
 {
     // TODO:
+    ESP_LOGW(TAG,"Load CtxDevice is not implemented");
 }
 
 void CtxDevice::StoreCtxDeviceToNVS()
 {
     // TODO:
+    ESP_LOGW(TAG,"Store CtxDevice is not implemented");
 }
