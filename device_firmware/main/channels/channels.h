@@ -9,6 +9,7 @@
 #include <functional>
 #include <cstdint>
 
+#include "esp_err.h"
 #include "status.h"
 
 namespace channels {
@@ -31,6 +32,8 @@ class IChannelConfig
 {
     public:
         virtual ~IChannelConfig() = default;
+
+        virtual esp_err_t LoadFromNVS() = 0;
 };
 
 // Channel interface
@@ -75,18 +78,7 @@ class IChannel
             return status_;
         }
 
-        // config getter
-        IChannelConfig* GetConfig() const {
-            return config_;
-        }
-
-        // config setter
-        void SetConfig(IChannelConfig* config) {
-            config_ = config;
-            OnSetConfig(config_);
-        }
-
-    public:
+      public:
         // lifecycle methods
         virtual bool Start() = 0;
 
@@ -95,9 +87,10 @@ class IChannel
         // data sending method
         virtual bool Send(std::span<const std::uint8_t> data) = 0;
 
-    protected:
-        // Triggered when configuration is set by SetConfig
-        virtual void OnSetConfig(IChannelConfig* config) = 0;
+        // configuration methods
+        virtual const IChannelConfig& GetConfig() const = 0;
+        virtual void SetConfig(const IChannelConfig& config) = 0;
+        virtual esp_err_t RestoreConfig() = 0;
 
     protected:
         // callbacks
@@ -128,6 +121,33 @@ class IChannel
     private:
         ChannelType type_;
         Status status_ = Status::Uninitialized;
-        IChannelConfig* config_ = nullptr;
+}; // class IChannel
+
+// Base class template for channels with specific configuration types
+template<typename TConfig>
+class ChannelBase : public IChannel
+{
+    public:
+        ChannelBase(ChannelType type)
+            : IChannel(type) {
+        }
+
+        const IChannelConfig& GetConfig() const override { 
+            return config_;
+        }
+        
+        void SetConfig(const IChannelConfig& config) override {
+            OnSetConfig(static_cast<const TConfig&>(config));
+        }
+
+        esp_err_t RestoreConfig() override {
+            Stop();
+            return config_.LoadFromNVS();
+        }
+
+    protected:
+        virtual void OnSetConfig(const TConfig& config) = 0;
+        TConfig config_{};
 };
+
 } // namespace channels

@@ -65,6 +65,9 @@ public:
         return all_channels.size();
     }
 
+    // Restore all channel configurations from NVS
+    void RestoreConfigs();
+
 private:
     // Instantiate static channels
     template<typename T>

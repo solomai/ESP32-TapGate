@@ -28,6 +28,7 @@ extern "C" void app_main(void)
     // Get singleton instance (automatically initializes on first call)
     auto& ctxDevice = CtxDevice::getInstance();
 
+    
     auto& channelRouter = channels::ChannelRouter::getInstance();
 
 #ifdef CONFIG_TAPGATE_DEBUG_MODE
@@ -39,6 +40,7 @@ extern "C" void app_main(void)
             channels::toString(channel.GetStatus()).data());
     }
 #endif
+    channelRouter.RestoreConfigs();
 
     EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
         TAG_MAIN,

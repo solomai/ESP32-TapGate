@@ -17,7 +17,7 @@ template<> struct MapType<ChannelType::BLEChannel> {
     using type = BLE; 
     static constexpr std::string_view name = "BLE";
 };
-class BLE : public IChannel 
+class BLE : public ChannelBase<BLEConfig>
 {
     public:
         BLE();
@@ -34,7 +34,7 @@ class BLE : public IChannel
 
     protected:
         // Triggered when configuration is set by SetConfig
-        void OnSetConfig(IChannelConfig* config) override;
+        void OnSetConfig(const BLEConfig& config) override;
 };
 
 } // namespace channels

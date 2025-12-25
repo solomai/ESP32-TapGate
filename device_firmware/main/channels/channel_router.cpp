@@ -12,4 +12,21 @@ ChannelRouter& ChannelRouter::getInstance() noexcept
     return instance;
 }
 
+void ChannelRouter::RestoreConfigs()
+{
+    ESP_LOGI(TAG, "Restoring channel configurations from NVS");
+    for (size_t i = 0; i < all_channels.size(); ++i) {
+        auto& channel = all_channels[i];
+        const auto res = channel->RestoreConfig();
+        if (res != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to restore config for channel %s, error: %s (0x%x)",
+                toString(channel->GetType()).data(), esp_err_to_name(res), res);
+        }
+        else {
+            ESP_LOGI(TAG, "Restored config for channel %s",
+                toString(channel->GetType()).data());
+        }
+    }
+}
+
 } // namespace channels
