@@ -1,51 +1,51 @@
-#include "ble.h"
-// Enable or Disable BLE channel implementation based on configuration
-#ifdef CONFIG_TAPGATE_CHANNEL_BLE
+#include "dummy.h"
+// Enable or Disable DUMMY channel implementation based on configuration
+#ifdef CONFIG_TAPGATE_CHANNEL_DUMMY
 
 #include "esp_log.h"
 
 namespace channels {
 
-static const char* TAG = "Ch::BLE";
+static const char* TAG = "Ch::DUMMY";
 
-BLE::BLE()
-    : ChannelBase(ChannelType::BLEChannel)
+DUMMY::DUMMY()
+    : ChannelBase(ChannelType::DUMMYChannel)
 {
     ESP_LOGI(TAG, "Constructor called");
 }
-BLE::~BLE()
+DUMMY::~DUMMY()
 {
     ESP_LOGI(TAG, "Destructor called");
     // Destructor implementation
 }
 
-bool BLE::Start()
+bool DUMMY::Start()
 {
     ESP_LOGI(TAG, "Start called");
     // Start BLE channel implementation
     return false;
 }
 
-void BLE::Stop()
+void DUMMY::Stop()
 {
     ESP_LOGI(TAG, "Stop called");
     // Stop BLE channel implementation
 }
 
-bool BLE::Send(std::span<const std::uint8_t> data)
+bool DUMMY::Send(std::span<const std::uint8_t> data)
 {
     ESP_LOGI(TAG, "Send called with data size: %zu", data.size());
     // Send data over BLE channel implementation
     return false;
 }
 
-void BLE::OnSetConfig(const BLEConfig& config)
+void DUMMY::OnSetConfig(const DUMMYConfig& config)
 {
     ESP_LOGI(TAG, "OnSetConfig called");
-    // Handle BLE-specific configuration here
+    // Handle DUMMY-specific configuration here
     config_ = config;
 }
 
 } // namespace channels
 
-#endif // CONFIG_TAPGATE_CHANNEL_BLE
+#endif // CONFIG_TAPGATE_CHANNEL_DUMMY

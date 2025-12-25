@@ -16,8 +16,15 @@ namespace channels {
 
 // Channel types enumeration. Used to initialize and access channels.
 enum ChannelType {
-    BLEChannel = 0,
+#ifdef CONFIG_TAPGATE_CHANNEL_BLE
+    BLEChannel,
+#endif
+    // add new channel types here
+    // ...
 
+#ifdef CONFIG_TAPGATE_CHANNEL_DUMMY
+    DUMMYChannel,
+#endif    
     // Must be last
     _Count
 };

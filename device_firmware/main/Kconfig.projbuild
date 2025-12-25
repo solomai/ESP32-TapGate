@@ -9,6 +9,20 @@ menu "TapGate Settings"
                 Specifies the device capacity for client enrollment.
     endmenu
 
+    menu "Available Channels"
+        config TAPGATE_CHANNEL_BLE
+            bool "BLE Channel"
+            default y
+            help
+                Enable Bluetooth Low Energy communication channel.
+
+        config TAPGATE_CHANNEL_DUMMY
+            bool "Dummy Channel"
+            default n
+            help
+                Enable a fake/test channel for diagnostic purposes.
+    endmenu
+    
     menuconfig TAPGATE_DEBUG_MODE
         bool "Debug Mode"
         default n

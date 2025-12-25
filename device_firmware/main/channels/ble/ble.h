@@ -1,8 +1,11 @@
 /**
- * BLR channel implementation.
+ * BLE channel implementation.
  */
 
 #pragma once
+#include "sdkconfig.h"
+// Enable or Disable BLE channel implementation based on configuration
+#ifdef CONFIG_TAPGATE_CHANNEL_BLE
 
 #include <string_view>
 
@@ -38,3 +41,5 @@ class BLE : public ChannelBase<BLEConfig>
 };
 
 } // namespace channels
+
+#endif // CONFIG_TAPGATE_CHANNEL_BLE

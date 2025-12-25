@@ -14,11 +14,14 @@
 #endif
 
 static const char *TAG_MAIN = "MAIN";
+#ifdef CONFIG_TAPGATE_DEBUG_MODE
+    static const char* TAG_DEBUG = "DEBUG";
+#endif
 
 extern "C" void app_main(void)
 {
 #ifdef CONFIG_TAPGATE_DEBUG_MODE
-    ESP_LOGI(TAG_MAIN, "Available Heap %d bytes", esp_get_free_heap_size() );
+    ESP_LOGI(TAG_DEBUG, "Available Heap %d bytes", esp_get_free_heap_size() );
     EVENT_JOURNAL_ADD(EVENT_JOURNAL_WARNING,
         TAG_MAIN,
         "Debug Mode enabled");
@@ -28,14 +31,13 @@ extern "C" void app_main(void)
     // Get singleton instance (automatically initializes on first call)
     auto& ctxDevice = CtxDevice::getInstance();
 
-    
+    // Initialize Channel Router and restore channel configurations
     auto& channelRouter = channels::ChannelRouter::getInstance();
-
 #ifdef CONFIG_TAPGATE_DEBUG_MODE
-    ESP_LOGI(TAG_MAIN, "Channel count: %zu", channelRouter.getChannelCount());
+    ESP_LOGI(TAG_DEBUG, "Channel count: %zu", channelRouter.getChannelCount());
     for (size_t i = 0; i < channelRouter.getChannelCount(); ++i) {
         auto& channel = channelRouter.get(static_cast<channels::ChannelType>(i));
-        ESP_LOGI(TAG_MAIN, "%zu - Channel %s Status: %s", i+1,
+        ESP_LOGI(TAG_DEBUG, "Channel %zu: \"%s\" Status: %s", i+1,
             channels::toString(channel.GetType()).data(),
             channels::toString(channel.GetStatus()).data());
     }

@@ -7,7 +7,12 @@
 // Channel interfaces
 #include "channels.h"
 // Channels
-#include "ble/ble.h"
+#ifdef CONFIG_TAPGATE_CHANNEL_BLE
+    #include "ble/ble.h"
+#endif
+#ifdef CONFIG_TAPGATE_CHANNEL_DUMMY
+    #include "dummy/dummy.h"
+#endif
 
 namespace channels {
 

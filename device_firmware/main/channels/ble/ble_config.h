@@ -1,4 +1,7 @@
 #pragma once
+#include "sdkconfig.h"
+// Enable or Disable BLE channel implementation based on configuration
+#ifdef CONFIG_TAPGATE_CHANNEL_BLE
 
 #include "../channels.h"
 
@@ -18,3 +21,5 @@ class BLEConfig : public IChannelConfig
 };
 
 } // namespace channels
+
+#endif // CONFIG_TAPGATE_CHANNEL_BLE
