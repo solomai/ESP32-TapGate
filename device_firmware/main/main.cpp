@@ -6,6 +6,7 @@
 #include "constants.h"
 #include "common/event_journal/event_journal.h"
 #include "contexts/ctx_device.h"
+#include "common/nvm/nvm.h"
 
 #include "channels/channel_router.h"
 
@@ -18,8 +19,10 @@ static const char *TAG_MAIN = "MAIN";
     static const char* TAG_DEBUG = "DEBUG";
 #endif
 
+// Application entry point
 extern "C" void app_main(void)
 {
+    // Initialize Diagnostic module if in debug mode
 #ifdef CONFIG_TAPGATE_DEBUG_MODE
     ESP_LOGI(TAG_DEBUG, "Available Heap %d bytes", esp_get_free_heap_size() );
     EVENT_JOURNAL_ADD(EVENT_JOURNAL_WARNING,
@@ -28,8 +31,26 @@ extern "C" void app_main(void)
     debug::Diagnostic::start();
 #endif
 
-    // Get singleton instance (automatically initializes on first call)
+    // Initialize NVS partitions.
+    // Critical for application operation. Will be before any NVM access.
+    esp_err_t err = NVM::getInstance().Init();
+    if (err != ESP_OK)
+    {
+        // Critical error
+        EVENT_JOURNAL_ADD(EVENT_JOURNAL_ERROR,
+                          TAG_MAIN,
+                          "Internal NVM access failed '%s'", esp_err_to_name(err));
+        esp_system_abort("Verify NVM partition label in 'nvm_partition.h' and 'partitions.csv'");
+    }
+
+    // Initialize device context singleton with restore from NVS
     auto& ctxDevice = CtxDevice::getInstance();
+    err = ctxDevice.Init();
+    if (err != ESP_OK) {
+        EVENT_JOURNAL_ADD(EVENT_JOURNAL_WARNING,
+            TAG_MAIN,
+            "CtxDevice initialization failed: '%s'", esp_err_to_name(err));
+    }
 
     // Initialize Channel Router and restore channel configurations
     auto& channelRouter = channels::ChannelRouter::getInstance();

@@ -3,7 +3,7 @@
  * 
  */
 #pragma once
-
+#include "esp_err.h"
 class CtxDevice
 {
 public:
@@ -17,11 +17,14 @@ public:
     CtxDevice(CtxDevice&&) = delete;
     CtxDevice& operator=(CtxDevice&&) = delete;
 
+public:
+    esp_err_t Init() noexcept;
+
 protected:
-    void LoadCtxDeviceFromNVS();
-    void StoreCtxDeviceToNVS();
+    esp_err_t LoadCtxDeviceFromNVS() noexcept;
+    esp_err_t StoreCtxDeviceToNVS() noexcept;
 
 private:
-    CtxDevice();
+    CtxDevice() = default;
     ~CtxDevice() = default;
 };

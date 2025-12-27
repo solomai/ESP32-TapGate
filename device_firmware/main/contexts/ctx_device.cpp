@@ -9,24 +9,22 @@ CtxDevice& CtxDevice::getInstance() noexcept
     return instance;
 }
 
-CtxDevice::CtxDevice()
+esp_err_t CtxDevice::Init() noexcept
 {
-    ESP_LOGI(TAG, "Initializing device context...");
-
-    LoadCtxDeviceFromNVS();
-    // TODO: Add actual initialization code here
-    
-    ESP_LOGI(TAG, "Device context initialized successfully");
+    ESP_LOGI(TAG, "CtxDevice Initialize");
+    return LoadCtxDeviceFromNVS();
 }
 
-void CtxDevice::LoadCtxDeviceFromNVS()
+esp_err_t CtxDevice::LoadCtxDeviceFromNVS() noexcept
 {
     // TODO:
     ESP_LOGW(TAG,"Load CtxDevice is not implemented");
+    return ESP_ERR_NOT_SUPPORTED;
 }
 
-void CtxDevice::StoreCtxDeviceToNVS()
+esp_err_t CtxDevice::StoreCtxDeviceToNVS() noexcept
 {
     // TODO:
     ESP_LOGW(TAG,"Store CtxDevice is not implemented");
+    return ESP_ERR_NOT_SUPPORTED;
 }
