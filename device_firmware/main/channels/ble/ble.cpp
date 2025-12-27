@@ -40,14 +40,17 @@ bool BLE::Send(std::span<const std::uint8_t> data)
     return false;
 }
 
+bool BLE::OnConfigValidate(const BLEConfig& config)
+{
+    ESP_LOG_NOTIMPLEMENTED(TAG);
+    // Validate BLE-specific configuration here
+    return true;
+}
+
 void BLE::OnSetConfig(const BLEConfig& config)
 {
     ESP_LOG_NOTIMPLEMENTED(TAG);
-
-    // Store the config if configuration is valid
-    config_ = config;
-
-    // Aply configuration changes
+    // Handle BLE-specific configuration here
 }
 
 } // namespace channels

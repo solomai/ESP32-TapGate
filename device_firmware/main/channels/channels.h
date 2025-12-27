@@ -144,7 +144,13 @@ class ChannelBase : public IChannel
         }
         
         void SetConfig(const IChannelConfig& config) override {
-            OnSetConfig(static_cast<const TConfig&>(config));
+            const TConfig& cfg = static_cast<const TConfig&>(config);
+            // Validate configuration before applying
+            if (OnConfigValidate(cfg)) {
+                config_ = cfg;
+                // Notify a new configuration has been set
+                OnSetConfig(cfg);
+            }
         }
 
         esp_err_t RestoreConfig() override {
@@ -153,6 +159,7 @@ class ChannelBase : public IChannel
         }
 
     protected:
+        virtual bool OnConfigValidate(const TConfig& config) = 0;
         virtual void OnSetConfig(const TConfig& config) = 0;
         TConfig config_{};
 };

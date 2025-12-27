@@ -36,7 +36,9 @@ class BLE : public ChannelBase<BLEConfig>
         bool Send(std::span<const std::uint8_t> data) override;
 
     protected:
-        // Triggered when configuration is set by SetConfig
+        // Validation before applying configuration. Return true if valid.
+        bool OnConfigValidate(const BLEConfig& config) override;
+        // Triggered when configuration is set by SetConfig and Validation passed
         void OnSetConfig(const BLEConfig& config) override;
 };
 

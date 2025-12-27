@@ -40,15 +40,17 @@ bool DUMMY::Send(std::span<const std::uint8_t> data)
     return false;
 }
 
+bool DUMMY::OnConfigValidate(const DUMMYConfig& config)
+{
+    ESP_LOG_NOTIMPLEMENTED(TAG);
+    // Validate DUMMY-specific configuration here
+    return true;
+}
+
 void DUMMY::OnSetConfig(const DUMMYConfig& config)
 {
     ESP_LOG_NOTIMPLEMENTED(TAG);
     // Handle DUMMY-specific configuration here
-
-    // Store the config if configuration is valid
-    config_ = config;
-
-    // Aply configuration changes
 }
 
 } // namespace channels
