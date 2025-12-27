@@ -5,10 +5,54 @@ build_*/
 
 # Generated Python cache
 __pycache__/
+*.py[cod]
 
 # Temporary files
 *.tmp
 *.log
+*.swp
+*~
+*.bak
 
 # ESP-IDF specific
 sdkconfig.old
+
+# Ninja build files
+*.ninja_log
+*.ninja_deps
+
+# CMake build files
+CMakeFiles/
+CMakeCache.txt
+
+# Build artifacts
+*.elf
+*.bin
+*.map
+*.hex
+*.signed.bin
+
+# IDE / Editor
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Virtualenvs
+.venv/
+env/
+venv/
+
+# Test / coverage
+coverage/
+htmlcov/
+.pytest_cache/
+
+# Misc
+*.db
+*.sqlite
+*.lock
