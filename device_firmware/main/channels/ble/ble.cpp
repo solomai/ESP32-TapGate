@@ -11,12 +11,8 @@ static const char* TAG = "Ch::BLE";
 BLE::BLE()
     : ChannelBase(ChannelType::BLEChannel)
 {
-    ESP_LOGI(TAG, "Constructor called");
-}
-BLE::~BLE()
-{
-    ESP_LOGI(TAG, "Destructor called");
-    // Destructor implementation
+    // Channel Objects will be constructed before main app_main starts.
+    // Constructor will not perform any heavy operations and access to NVS and hardware
 }
 
 bool BLE::Start()
@@ -28,6 +24,11 @@ bool BLE::Start()
 
 void BLE::Stop()
 {
+    if (GetStatus() < Status::Connecting) {
+        // If not connected or connecting, no need to stop
+        return;
+    }
+
     ESP_LOGI(TAG, "Stop called");
     // Stop BLE channel implementation
 }

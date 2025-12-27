@@ -65,6 +65,7 @@ extern "C" void app_main(void)
 #endif
     channelRouter.RestoreConfigs();
 
+    // Initialization complete. Main application loop
     EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
         TAG_MAIN,
         "TapGate firmware startup complete");

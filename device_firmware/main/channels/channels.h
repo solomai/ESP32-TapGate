@@ -76,12 +76,12 @@ class IChannel
         }
 
         // type getter
-        ChannelType GetType() const {
+        inline ChannelType GetType() const {
             return type_;
         }
 
         // status getter
-        Status GetStatus() const {
+        inline Status GetStatus() const {
             return status_;
         }
 

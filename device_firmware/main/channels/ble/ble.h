@@ -24,7 +24,7 @@ class BLE : public ChannelBase<BLEConfig>
 {
     public:
         BLE();
-        ~BLE() override;
+        ~BLE() = default;
 
     public:
         // lifecycle methods

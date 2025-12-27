@@ -19,7 +19,7 @@ void ChannelRouter::RestoreConfigs()
         auto& channel = all_channels[i];
         const auto res = channel->RestoreConfig();
         if (res != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to restore config for channel %s, error: %s (0x%x)",
+            ESP_LOGW(TAG, "Failed to restore config for channel %s, error: %s (0x%x). Default config will be used.",
                 toString(channel->GetType()).data(), esp_err_to_name(res), res);
         }
         else {

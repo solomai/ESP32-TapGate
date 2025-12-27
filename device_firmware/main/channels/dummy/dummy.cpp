@@ -11,12 +11,8 @@ static const char* TAG = "Ch::DUMMY";
 DUMMY::DUMMY()
     : ChannelBase(ChannelType::DUMMYChannel)
 {
-    ESP_LOGI(TAG, "Constructor called");
-}
-DUMMY::~DUMMY()
-{
-    ESP_LOGI(TAG, "Destructor called");
-    // Destructor implementation
+    // Channel Objects will be constructed before main app_main starts.
+    // Constructor will not perform any heavy operations and access to NVS and hardware
 }
 
 bool DUMMY::Start()
@@ -28,6 +24,11 @@ bool DUMMY::Start()
 
 void DUMMY::Stop()
 {
+    if (GetStatus() < Status::Connecting) {
+        // If not connected or connecting, no need to stop
+        return;
+    }
+
     ESP_LOGI(TAG, "Stop called");
     // Stop BLE channel implementation
 }

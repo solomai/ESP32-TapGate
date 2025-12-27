@@ -24,7 +24,8 @@ class DUMMY : public ChannelBase<DUMMYConfig>
 {
     public:
         DUMMY();
-        ~DUMMY() override;
+        ~DUMMY() = default;
+    
     public:
         // lifecycle methods
         bool Start() override;
