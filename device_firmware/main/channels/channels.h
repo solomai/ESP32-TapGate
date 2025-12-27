@@ -9,7 +9,7 @@
 #include <functional>
 #include <cstdint>
 
-#include "esp_err.h"
+#include "device_err.h"
 #include "status.h"
 
 namespace channels {

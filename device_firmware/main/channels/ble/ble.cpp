@@ -17,7 +17,7 @@ BLE::BLE()
 
 bool BLE::Start()
 {
-    ESP_LOGI(TAG, "Start called");
+    ESP_LOG_NOTIMPLEMENTED(TAG);
     // Start BLE channel implementation
     return false;
 }
@@ -29,22 +29,25 @@ void BLE::Stop()
         return;
     }
 
-    ESP_LOGI(TAG, "Stop called");
+    ESP_LOG_NOTIMPLEMENTED(TAG);
     // Stop BLE channel implementation
 }
 
 bool BLE::Send(std::span<const std::uint8_t> data)
 {
-    ESP_LOGI(TAG, "Send called with data size: %zu", data.size());
+    ESP_LOG_NOTIMPLEMENTED(TAG);
     // Send data over BLE channel implementation
     return false;
 }
 
 void BLE::OnSetConfig(const BLEConfig& config)
 {
-    ESP_LOGI(TAG, "OnSetConfig called");
-    // Handle BLE-specific configuration here
+    ESP_LOG_NOTIMPLEMENTED(TAG);
+
+    // Store the config if configuration is valid
     config_ = config;
+
+    // Aply configuration changes
 }
 
 } // namespace channels

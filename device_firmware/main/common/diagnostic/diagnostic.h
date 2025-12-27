@@ -2,6 +2,9 @@
  * Diagnostic module
 */
 #pragma once
+#include "sdkconfig.h"
+// Enable or Disable DEBUG_MODE implementation based on configuration
+#ifdef CONFIG_TAPGATE_DEBUG_MODE
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -48,3 +51,5 @@ class Diagnostic
 };
 
 } // namespace debug
+
+#endif // CONFIG_TAPGATE_DEBUG_MODE

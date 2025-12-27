@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "esp_err.h"
+#include "device_err.h"
 #include "esp_log.h"
 
 #ifdef __cplusplus

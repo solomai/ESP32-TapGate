@@ -3,7 +3,7 @@
  * 
  */
 #pragma once
-#include "esp_err.h"
+#include "device_err.h"
 
 class NVM
 {

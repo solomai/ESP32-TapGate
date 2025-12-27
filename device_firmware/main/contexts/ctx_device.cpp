@@ -11,20 +11,20 @@ CtxDevice& CtxDevice::getInstance() noexcept
 
 esp_err_t CtxDevice::Init() noexcept
 {
-    ESP_LOGI(TAG, "CtxDevice Initialize");
+    ESP_LOGI(TAG, "CtxDevice Initializing");
     return LoadCtxDeviceFromNVS();
 }
 
 esp_err_t CtxDevice::LoadCtxDeviceFromNVS() noexcept
 {
     // TODO:
-    ESP_LOGW(TAG,"Load CtxDevice is not implemented");
-    return ESP_ERR_NOT_SUPPORTED;
+    ESP_LOG_NOTIMPLEMENTED(TAG);
+    return ESP_ERR_DEV_NOT_IMPLEMENTED;
 }
 
 esp_err_t CtxDevice::StoreCtxDeviceToNVS() noexcept
 {
     // TODO:
-    ESP_LOGW(TAG,"Store CtxDevice is not implemented");
-    return ESP_ERR_NOT_SUPPORTED;
+    ESP_LOG_NOTIMPLEMENTED(TAG);
+    return ESP_ERR_DEV_NOT_IMPLEMENTED;
 }

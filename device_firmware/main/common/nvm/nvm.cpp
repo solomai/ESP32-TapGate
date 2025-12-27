@@ -36,14 +36,14 @@ esp_err_t NVM::EnsurePartitionReady(const char *partition_label)
 
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
-        ESP_LOGW(TAG, "Erasing Partition \"%s\" due to previous error: %s", partition_label,
-                 esp_err_to_name(err));
+        ESP_LOGW(TAG, "Erasing Partition \"%s\" due to previous error: " ERR_FORMAT, partition_label,
+                 esp_err_to_str(err), err);
 
         err = nvs_flash_erase_partition(partition_label);
         if (err != ESP_OK)
         {
-            ESP_LOGE(TAG, "Failed to erase Partition \"%s\": %s", partition_label,
-                     esp_err_to_name(err));
+            ESP_LOGE(TAG, "Failed to erase Partition \"%s\": " ERR_FORMAT, partition_label,
+                     esp_err_to_str(err), err);
             return err;
         }
 
@@ -52,8 +52,8 @@ esp_err_t NVM::EnsurePartitionReady(const char *partition_label)
 
     if (err != ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to initialize Partition \"%s\": %s", partition_label,
-                 esp_err_to_name(err));
+        ESP_LOGE(TAG, "Failed to initialize Partition \"%s\": " ERR_FORMAT, partition_label,
+                 esp_err_to_str(err), err);
         return err;
     }
 

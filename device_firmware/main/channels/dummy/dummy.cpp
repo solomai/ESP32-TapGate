@@ -17,7 +17,7 @@ DUMMY::DUMMY()
 
 bool DUMMY::Start()
 {
-    ESP_LOGI(TAG, "Start called");
+    ESP_LOG_NOTIMPLEMENTED(TAG);
     // Start BLE channel implementation
     return false;
 }
@@ -29,22 +29,26 @@ void DUMMY::Stop()
         return;
     }
 
-    ESP_LOGI(TAG, "Stop called");
+    ESP_LOG_NOTIMPLEMENTED(TAG);
     // Stop BLE channel implementation
 }
 
 bool DUMMY::Send(std::span<const std::uint8_t> data)
 {
-    ESP_LOGI(TAG, "Send called with data size: %zu", data.size());
+    ESP_LOG_NOTIMPLEMENTED(TAG);
     // Send data over BLE channel implementation
     return false;
 }
 
 void DUMMY::OnSetConfig(const DUMMYConfig& config)
 {
-    ESP_LOGI(TAG, "OnSetConfig called");
+    ESP_LOG_NOTIMPLEMENTED(TAG);
     // Handle DUMMY-specific configuration here
+
+    // Store the config if configuration is valid
     config_ = config;
+
+    // Aply configuration changes
 }
 
 } // namespace channels

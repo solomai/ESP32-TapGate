@@ -39,7 +39,7 @@ extern "C" void app_main(void)
         // Critical error
         EVENT_JOURNAL_ADD(EVENT_JOURNAL_ERROR,
                           TAG_MAIN,
-                          "Internal NVM access failed '%s'", esp_err_to_name(err));
+                          "Internal NVM access failed: " ERR_FORMAT, esp_err_to_str(err), err);
         esp_system_abort("Verify NVM partition label in 'nvm_partition.h' and 'partitions.csv'");
     }
 
@@ -49,7 +49,7 @@ extern "C" void app_main(void)
     if (err != ESP_OK) {
         EVENT_JOURNAL_ADD(EVENT_JOURNAL_WARNING,
             TAG_MAIN,
-            "CtxDevice initialization failed: '%s'", esp_err_to_name(err));
+            "CtxDevice initialization failed: " ERR_FORMAT, esp_err_to_str(err), err);
     }
 
     // Initialize Channel Router and restore channel configurations

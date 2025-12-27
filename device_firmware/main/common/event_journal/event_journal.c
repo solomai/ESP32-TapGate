@@ -1,5 +1,8 @@
 #include "event_journal.h"
+#include "device_err.h"
 #include <stdarg.h>
+
+static const char* TAG = "EventJournal";
 
 /**
  * @brief Internal function to handle persistent storage of journal events
@@ -16,4 +19,5 @@ void _event_journal_store(enum event_journal_type type, const char *tag, const c
     (void)type;
     (void)tag;
     (void)fmt;
+    ESP_LOG_NOTIMPLEMENTED(TAG);
 }

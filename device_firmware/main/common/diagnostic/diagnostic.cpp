@@ -1,5 +1,7 @@
 #include "diagnostic.h"
 
+#ifdef CONFIG_TAPGATE_DEBUG_MODE
+
 // FreeRTOS
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -263,3 +265,5 @@ void Diagnostic::run()
 }
 
 } // namespace debug
+
+#endif // CONFIG_TAPGATE_DEBUG_MODE
