@@ -24,7 +24,6 @@ bool DUMMY::Start()
     ResetLastError();
 
     ESP_LOG_NOTIMPLEMENTED(TAG);
-    // Start BLE channel implementation
     return false;
 }
 
@@ -36,13 +35,11 @@ void DUMMY::Stop()
     }
 
     ESP_LOG_NOTIMPLEMENTED(TAG);
-    // Stop BLE channel implementation
 }
 
 bool DUMMY::Send(std::span<const std::uint8_t> data)
 {
     ESP_LOG_NOTIMPLEMENTED(TAG);
-    // Send data over BLE channel implementation
     return false;
 }
 
