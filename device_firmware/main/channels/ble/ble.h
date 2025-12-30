@@ -8,6 +8,7 @@
 #ifdef CONFIG_TAPGATE_CHANNEL_BLE
 
 #include <string_view>
+#include <chrono>
 
 #include "../channels.h"
 #include "ble_config.h"
@@ -52,18 +53,22 @@ class BLE : public ChannelBase<BLEConfig>
         int  HandleGAPEvent(struct ble_gap_event* event);
         bool StartAdvertising();
         void StopAdvertising();
+        std::vector<uint8_t> CreateChunkHeader(uint16_t sequence, uint16_t totalChunks);
+        uint16_t GetEffectiveChunkSize() const;
+        bool ReassembleData(uint16_t sequence, uint16_t totalChunks, 
+                          std::span<const uint8_t> chunkData);
+        void CleanupStaleReassemblyBuffers();
 
         // Connection Management
         void HandleConnect(uint16_t conn_handle);
         void HandleDisconnect();
         void HandleMTUUpdate(uint16_t mtu);
-
+        int  HandleGATTAccess(uint16_t conn_handle, uint16_t attr_handle,
+                        struct ble_gatt_access_ctxt* ctxt);
     private:
         // Static callbacks for NimBLE (C-style)
         static int GATTAccessCallback(uint16_t conn_handle, uint16_t attr_handle,
                         struct ble_gatt_access_ctxt* ctxt, void* arg);
-        static int HandleGATTAccess(uint16_t conn_handle, uint16_t attr_handle,
-                        struct ble_gatt_access_ctxt* ctxt);
         static int GAPEventCallback(struct ble_gap_event* event, void* arg);
 
         // NimBLE Callbacks
@@ -75,9 +80,13 @@ class BLE : public ChannelBase<BLEConfig>
         // Static instance pointer for callbacks
         static BLE* instance_;
 
+        // Timing
+        std::chrono::steady_clock::time_point last_cleanup_;        
+
         // State management
         bool advertising_;
         uint16_t conn_handle_;
+        uint16_t negotiated_mtu_;
         uint16_t tx_val_handle_;
         uint16_t rx_val_handle_;        
 

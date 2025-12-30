@@ -22,8 +22,6 @@ class BLEConfig : public IChannelConfig
         static constexpr auto rxCharUUID  = helper_uuid::parseUUID(CONFIG_TAPGATE_BLE_RX_UUID);
         static constexpr auto txCharUUID  = helper_uuid::parseUUID(CONFIG_TAPGATE_BLE_TX_UUID);
 
-        uint16_t preferredMTU = CONFIG_TAPGATE_BLE_PREFERRED_MTU;
-        
         // Advertising Parameters (in milliseconds)
         uint16_t advIntervalMin = 100;      ///< Min advertising interval (ms)
         uint16_t advIntervalMax = 150;      ///< Max advertising interval (ms)

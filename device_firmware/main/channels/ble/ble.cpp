@@ -26,10 +26,18 @@ namespace channels {
 static const char* TAG = "Ch::BLE";
 BLE* BLE::instance_ = nullptr;
 
+constexpr uint16_t chunkHeaderSize = 4; // Size of chunk header (sequence + total)
+
 BLE::BLE()
     : ChannelBase(ChannelType::BLEChannel)
+    , last_cleanup_(std::chrono::steady_clock::now())
     , advertising_(false)
     , conn_handle_(0)
+#ifdef CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU
+    , negotiated_mtu_(CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU) // Default MTU size before negotiation
+#else
+    , negotiated_mtu_(23) // Default MTU size before negotiation
+#endif
     , tx_val_handle_(0)
     , rx_val_handle_(0)
 {
@@ -124,7 +132,7 @@ esp_err_t BLE::InitializeNimBLE()
     ble_hs_cfg.reset_cb = OnResetCallback;
 
     // Set preferred MTU
-    int rc = ble_att_set_preferred_mtu(config_.preferredMTU);
+    int rc = ble_att_set_preferred_mtu(negotiated_mtu_);
     if (rc != 0) {
         ESP_LOGW(TAG, "Failed to set preferred MTU: %d", rc);
     }
@@ -303,7 +311,35 @@ int BLE::GATTAccessCallback(uint16_t conn_handle, uint16_t attr_handle,
 int BLE::HandleGATTAccess(uint16_t conn_handle, uint16_t attr_handle,
                            struct ble_gatt_access_ctxt* ctxt)
 {
-    ESP_LOG_NOTIMPLEMENTED(TAG);
+    if (attr_handle == rx_val_handle_) {
+        // RX characteristic - receiving data from client
+        if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
+            // Extract chunk header
+            if (ctxt->om->om_len < chunkHeaderSize) {
+                ESP_LOGE(TAG, "Invalid chunk (too small)");
+                return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+            }
+
+            uint16_t sequence = ctxt->om->om_data[0] | (ctxt->om->om_data[1] << 8);
+            uint16_t totalChunks = ctxt->om->om_data[2] | (ctxt->om->om_data[3] << 8);
+
+            // Extract data
+            std::span<const uint8_t> data(
+                ctxt->om->om_data + chunkHeaderSize,
+                ctxt->om->om_len - chunkHeaderSize
+            );
+
+            ReassembleData(sequence, totalChunks, data);
+
+            // Periodic cleanup
+            auto now = std::chrono::steady_clock::now();
+            if (std::chrono::duration_cast<std::chrono::seconds>(now - last_cleanup_).count() > 10) {
+                CleanupStaleReassemblyBuffers();
+                last_cleanup_ = now;
+            }
+            return 0;
+        }
+    }
     return BLE_ATT_ERR_UNLIKELY;
 }
 
@@ -359,10 +395,58 @@ void BLE::HandleConnect(uint16_t conn_handle)
 
 void BLE::HandleDisconnect()
 {
+    conn_handle_ = BLE_HS_CONN_HANDLE_NONE;
+
+#ifdef CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU
+    negotiated_mtu_ = CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU; // Default MTU size before negotiation
+#else
+    negotiated_mtu_ = 23; // Default MTU size before negotiation
+#endif
+
     ESP_LOG_NOTIMPLEMENTED(TAG);
 }
 
 void BLE::HandleMTUUpdate(uint16_t mtu)
+{
+    negotiated_mtu_ = mtu;
+    ESP_LOGI(TAG, "MTU updated: %d (effective chunk: %d bytes)", 
+             mtu, GetEffectiveChunkSize());
+}
+
+std::vector<uint8_t> BLE::CreateChunkHeader(uint16_t sequence, uint16_t totalChunks)
+{
+    static_assert(chunkHeaderSize == 4, "Chunk header size must be 4 bytes");
+    std::vector<uint8_t> header(chunkHeaderSize);
+    
+    // Simple header format: [sequence(2)][totalChunks(2)]
+    header[0] = sequence & 0xFF;
+    header[1] = (sequence >> 8) & 0xFF;
+    header[2] = totalChunks & 0xFF;
+    header[3] = (totalChunks >> 8) & 0xFF;
+    
+    return header;
+}
+
+uint16_t BLE::GetEffectiveChunkSize() const
+{
+    // MTU - 3 (ATT header) - chunk header size
+    const uint16_t att_overhead = 3;
+    
+    if (negotiated_mtu_ <= (att_overhead + chunkHeaderSize)) {
+        return 0;
+    }
+    
+    return negotiated_mtu_ - att_overhead - chunkHeaderSize;
+}
+
+bool BLE::ReassembleData(uint16_t sequence, uint16_t totalChunks, 
+                          std::span<const uint8_t> chunkData)
+{
+    ESP_LOG_NOTIMPLEMENTED(TAG);
+    return false;
+}
+
+void BLE::CleanupStaleReassemblyBuffers()
 {
     ESP_LOG_NOTIMPLEMENTED(TAG);
 }
