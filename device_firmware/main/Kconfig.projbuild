@@ -7,6 +7,13 @@ menu "TapGate Settings"
             default 50
             help
                 Specifies the device capacity for client enrollment.
+
+        config TAPGATE_DEVICE_DEFAULT_NAME
+            string "Default Device Name"
+            default "TapGate v1"
+            help
+                Default device name to use if not configured otherwise.
+                Maximum length **31 characters** (exceeding this may be truncated at build time).
     endmenu
 
     menu "Available Channels"
@@ -16,6 +23,35 @@ menu "TapGate Settings"
             help
                 Enable Bluetooth Low Energy communication channel.
 
+            if TAPGATE_CHANNEL_BLE
+                menu "BLE UUID Settings"
+                    config TAPGATE_BLE_SERVICE_UUID
+                        string "Service UUID"
+                        default "A9CA DC24-0EE5-A9E0-93F3-A3B501004061"
+                        help
+                            128-bit UUID for the main service.
+
+                    config TAPGATE_BLE_RX_UUID
+                        string "RX Characteristic UUID"
+                        default "B9CA DC24-0EE5-A9E0-93F3-A3B502004062"
+                        help
+                            128-bit UUID for the RX characteristic.
+
+                    config TAPGATE_BLE_TX_UUID
+                        string "TX Characteristic UUID"
+                        default "C9CA DC24-0EE5-A9E0-93F3-A3B503004063"
+                        help
+                            128-bit UUID for the TX characteristic.
+
+                    config TAPGATE_BLE_PREFERRED_MTU
+                        int "Preferred MTU Size"
+                        range 23 517
+                        default 256
+                        help
+                            Preferred Maximum Transmission Unit size for BLE connections.
+                endmenu
+            endif
+                
         config TAPGATE_CHANNEL_DUMMY
             bool "Dummy Channel"
             default n

@@ -2,7 +2,7 @@
 // Enable or Disable DUMMY channel implementation based on configuration
 #ifdef CONFIG_TAPGATE_CHANNEL_DUMMY
 
-#include "esp_log.h"
+#include "common/event_journal/event_journal.h"
 
 namespace channels {
 
@@ -17,6 +17,12 @@ DUMMY::DUMMY()
 
 bool DUMMY::Start()
 {
+    if (GetStatus() >= Status::Connecting) {
+        return false;
+    }
+    // Reset last esp error code on new Start attempt
+    ResetLastError();
+
     ESP_LOG_NOTIMPLEMENTED(TAG);
     // Start BLE channel implementation
     return false;

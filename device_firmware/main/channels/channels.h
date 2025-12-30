@@ -85,6 +85,21 @@ class IChannel
             return status_;
         }
 
+        // set last error code
+        inline void SetLastError(esp_err_t err) {
+            lastError_ = err;
+        }
+
+        // reset last error code
+        inline void ResetLastError() {
+            lastError_ = ESP_OK;
+        }
+
+        // get last error code
+        inline esp_err_t GetLastError() const {
+            return lastError_;
+        }
+
       public:
         // lifecycle methods
         virtual bool Start() = 0;
@@ -126,6 +141,7 @@ class IChannel
         }
 
     private:
+        esp_err_t lastError_ = ESP_OK;
         ChannelType type_;
         Status status_ = Status::Uninitialized;
 }; // class IChannel
