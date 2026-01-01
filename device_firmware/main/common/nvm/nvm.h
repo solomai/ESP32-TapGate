@@ -21,30 +21,34 @@ public:
 public:
     esp_err_t Init() noexcept;
 
-    esp_err_t Read_String(const char *partition,
+    esp_err_t ReadString(const char *partition,
                          const char *namespace_name,
                          const char *key,
                          char *buffer,
                          size_t size);
-    esp_err_t Write_String(const char *partition,
+    esp_err_t WriteString(const char *partition,
                           const char *namespace_name,
                           const char *key,
                           const char *value);
+    esp_err_t StringSize(const char *partition,
+                         const char *namespace_name,
+                         const char *key,
+                         size_t &size);
 
-    esp_err_t Read_u32(const char *partition,
+    esp_err_t ReadU32(const char *partition,
                        const char *namespace_name,
                        const char *key,
                        uint32_t *value);
-    esp_err_t Write_u32(const char *partition,
+    esp_err_t WriteU32(const char *partition,
                         const char *namespace_name,
                         const char *key,
                         uint32_t value);
 
-    esp_err_t Read_u8(const char *partition,
+    esp_err_t ReadU8(const char *partition,
                       const char *namespace_name,
                       const char *key,
                       uint8_t *value);
-    esp_err_t Write_u8(const char *partition,
+    esp_err_t WriteU8(const char *partition,
                        const char *namespace_name,
                        const char *key,
                        uint8_t value);
