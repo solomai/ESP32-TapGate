@@ -5,5 +5,7 @@
     "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
     "idf.espIdfPath": "C:\\Espressif\\frameworks\\esp-idf-v5.5",
     "idf.toolsPath": "C:\\Espressif\\tools",
-    "idf.pythonInstallPath": "C:\\Espressif\\tools\\idf-python\\3.11.2\\python.exe"    
+    "idf.pythonInstallPath": "C:\\Espressif\\tools\\idf-python\\3.11.2\\python.exe",
+    "idf.espIdfPathWin": "C:/Espressif/frameworks/esp-idf-v5.5.2/",
+    "idf.toolsPathWin": "C:\\Espressif"
 }
