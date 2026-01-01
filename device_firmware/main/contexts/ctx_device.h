@@ -7,7 +7,7 @@
 #include "types.h"
 #include "device_err.h"
 #include <cstddef>
-#include <span>
+#include <string_view>
 class CtxDevice
 {
 public:
@@ -24,8 +24,8 @@ public:
 public:
     esp_err_t Init() noexcept;
 
-    std::span<const char> getDeviceName() const noexcept;
-    void setDeviceName(std::span<const char> name) noexcept;
+    std::string_view getDeviceName() const noexcept;
+    void setDeviceName(const std::string_view& value) noexcept;
 
 protected:
     esp_err_t LoadCtxDeviceFromNVS() noexcept;
@@ -36,11 +36,11 @@ private:
     ~CtxDevice() = default;
 
 private:
-    // Device name field
+    // Field: device name
     // Internal buffer for device name initialized at compile time from Kconfig if available
 #ifdef CONFIG_TAPGATE_DEVICE_DEFAULT_NAME
 static_assert(sizeof(CONFIG_TAPGATE_DEVICE_DEFAULT_NAME) <= DEVICE_NAME_CAPACITY,
-              "CONFIG_TAPGATE_DEVICE_DEFAULT_NAME must be at most 31 characters");
+              "CONFIG_TAPGATE_DEVICE_DEFAULT_NAME must be <= " STR(DEVICE_NAME_CAPACITY) " bytes including NUL");
 #endif
     // Initialize with default name if defined, else empty
 #ifdef CONFIG_TAPGATE_DEVICE_DEFAULT_NAME
