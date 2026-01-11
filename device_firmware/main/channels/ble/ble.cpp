@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <ranges>
 #include <cstring>
+#include <array>
 
 // Project includes
 #include "common/event_journal/event_journal.h"
@@ -143,7 +144,9 @@ esp_err_t BLE::InitializeNimBLE()
 
     // Set device name
     CtxDevice& ctx_device = CtxDevice::getInstance();
-    ret = ble_svc_gap_device_name_set(ctx_device.getDeviceName().data());
+    std::array<char, DEVICE_NAME_CAPACITY> name_buf{};
+    ctx_device.getDeviceName(std::span<char>(name_buf));
+    ret = ble_svc_gap_device_name_set(name_buf.data());
     if (ret != 0) {
         ESP_LOGW(TAG, "Failed to set device name: " ERR_FORMAT, esp_err_to_str(ret), ret);
     }
@@ -249,8 +252,12 @@ bool BLE::StartAdvertising()
     // Set advertising data
     CtxDevice& ctx_device = CtxDevice::getInstance();
     fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
-    fields.name = reinterpret_cast<uint8_t*>(const_cast<char*>(ctx_device.getDeviceName().data()));
-    fields.name_len = static_cast<int>(ctx_device.getDeviceName().size());
+    {
+        std::array<char, DEVICE_NAME_CAPACITY> name_buf{};
+        const size_t name_len = ctx_device.getDeviceName(std::span<char>(name_buf));
+        fields.name = reinterpret_cast<uint8_t*>(name_buf.data());
+        fields.name_len = static_cast<int>(name_len);
+    }
     fields.name_is_complete = 1;
     
     int rc = ble_gap_adv_set_fields(&fields);

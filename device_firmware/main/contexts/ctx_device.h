@@ -1,13 +1,18 @@
 /**
- * Device context singleton
- * 
+ * Device context.
+ * Unit that provides state storage for the Device,
+ * manages its configuration, and implements service functions for controlling the Device.
+ * The module is a singleton to ensure state coherence and is thread-safe in use.
  */
 #pragma once
 #include "sdkconfig.h"
 #include "types.h"
 #include "device_err.h"
 #include <cstddef>
+#include <span>
 #include <string_view>
+#include <mutex>
+
 class CtxDevice
 {
 public:
@@ -24,7 +29,7 @@ public:
 public:
     esp_err_t Init() noexcept;
 
-    std::string_view getDeviceName() const noexcept;
+    size_t getDeviceName(std::span<char> out) const noexcept;
     void setDeviceName(const std::string_view& value) noexcept;
 
 protected:
@@ -48,4 +53,7 @@ static_assert(sizeof(CONFIG_TAPGATE_DEVICE_DEFAULT_NAME) <= DEVICE_NAME_CAPACITY
 #else
     mutable char device_name_buffer_[DEVICE_NAME_CAPACITY]{};
 #endif
+
+private:
+    mutable std::mutex device_mutex_;
 };
