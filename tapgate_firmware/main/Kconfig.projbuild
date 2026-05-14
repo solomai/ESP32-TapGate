@@ -1,0 +1,45 @@
+menu "TapGate Additional Debug Settings"
+
+    config APP_DEBUG_MODE
+        bool "Enable Application Debug Mode"
+        default n
+        select ESP_PANIC_HANDLER_IRAM
+        select ESP_DEBUG_STUBS_ENABLE
+        select ESP_DEBUG_OCDAWARE        
+        help
+            Global switch for APP debug features.
+
+    config APP_WAIT_FOR_DEBUGGER
+        bool "Wait for debugger attachment"
+        depends on APP_DEBUG_MODE
+        default y
+        help
+            Forces the app to wait for a JTAG/GDB connection before proceeding.
+
+    config APP_WAIT_FOR_DEBUGGER_TIMEOUT
+        int "Debugger connection timeout (seconds)"
+        depends on APP_WAIT_FOR_DEBUGGER
+        default 15
+        range 0 3600
+        help
+            Time in seconds to wait for a debugger. 
+            If 0, the application will wait indefinitely.
+
+endmenu
+
+menu "TapGate Settings"
+
+        config TAPGATE_DEVICE_DEFAULT_NAME
+            string "Default Device Name"
+            default "TapGate v1"
+            help
+                Default device name to use if not configured otherwise.
+                Maximum length **31 characters** (exceeding this may be truncated at build time).    
+
+        config TAPGATE_MAX_CLIENTS_DB
+            int "Capacity enrolled clients"
+            range 1 100
+            default 50
+            help
+                Specifies the device capacity for client enrollment.
+endmenu

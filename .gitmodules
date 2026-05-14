@@ -1,3 +1,0 @@
-[submodule "esp32_mcu/tests_host/external/mbedtls"]
-	path = esp32_mcu/tests_host/external/mbedtls
-	url = https://github.com/Mbed-TLS/mbedtls.git

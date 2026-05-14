@@ -1,35 +1,13 @@
 {
   "C_Cpp.intelliSenseEngine": "default",
   "idf.adapterTargetName": "esp32",
-  "files.associations": {
-    "task.h": "c",
-    "esp_partition.h": "c",
-    "clients.h": "c",
-    "types.h": "c",
-    "esp_log.h": "c",
-    "esp_heap_caps.h": "c",
-    "nvs_flash.h": "c",
-    "diagnostic.h": "c",
-    "esp_event.h": "c",
-    "nvm.h": "c",
-    "text_encoding": "c",
-    "typeinfo": "c",
-    "http_server.h": "c",
-    "esp_system.h": "c",
-    "esp_wifi_types.h": "c",
-    "string_view": "c",
-    "regex": "c",
-    "esp_netif.h": "c",
-    "nvm_partition.h": "c",
-    "format": "c",
-    "stdio.h": "c"
-  },
   "idf.portWin": "COM6",
   "idf.flashType": "UART",
   "C_Cpp.errorSquiggles": "disabled",
   "idf.espIdfPath": "C:\\Espressif\\frameworks\\esp-idf-v5.5",
   "idf.toolsPath": "C:\\Espressif\\tools",
-  "idf.pythonInstallPath": "C:\\Espressif\\tools\\idf-python\\3.11.2\\python.exe"
+  "idf.pythonInstallPath": "C:\\Espressif\\tools\\idf-python\\3.11.2\\python.exe",
+  "idf.currentSetup": "C:\\Espressif\\.espressif\\v6.0.1\\esp-idf"
 }
 
 
