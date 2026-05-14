@@ -9,13 +9,16 @@
 
 static const char* TAG = "NVM";
 
-NVM& NVM::getInstance() noexcept
+NVMWrapper& NVMWrapper::getInstance() noexcept
 {
-    static NVM instance;
+    static NVMWrapper instance;
     return instance;
 }
 
-esp_err_t NVM::Init() noexcept
+// NVMWrapper method implementations
+NVMWrapper& NVM = NVMWrapper::getInstance();
+
+esp_err_t NVMWrapper::Init() noexcept
 {
     ESP_LOGI(TAG, "Initializing %d partition(s)", sizeof(NVM_PARTITION_LABELS) / sizeof(NVM_PARTITION_LABELS[0]));
     for (size_t idx = 0; idx < sizeof(NVM_PARTITION_LABELS) / sizeof(NVM_PARTITION_LABELS[0]); ++idx)
@@ -28,7 +31,7 @@ esp_err_t NVM::Init() noexcept
     return ESP_OK;
 }
 
-esp_err_t NVM::EnsurePartitionReady(const char *partition_label)
+esp_err_t NVMWrapper::EnsurePartitionReady(const char *partition_label)
 {
     if (!partition_label)
         return ESP_ERR_INVALID_ARG;
@@ -62,7 +65,7 @@ esp_err_t NVM::EnsurePartitionReady(const char *partition_label)
     return ESP_OK;
 }
 
-esp_err_t NVM::ReadString(const char *partition,
+esp_err_t NVMWrapper::ReadString(const char *partition,
                           const char *namespace_name,
                           const char *key,
                           char *buffer,
@@ -92,7 +95,7 @@ esp_err_t NVM::ReadString(const char *partition,
     return err;
 }
 
-esp_err_t NVM::WriteString(const char *partition,
+esp_err_t NVMWrapper::WriteString(const char *partition,
                            const char *namespace_name,
                            const char *key,
                            const char *value)
@@ -133,7 +136,7 @@ esp_err_t NVM::WriteString(const char *partition,
     return err;
 }
 
-esp_err_t NVM::StringSize(const char *partition,
+esp_err_t NVMWrapper::StringSize(const char *partition,
                           const char *namespace_name,
                           const char *key,
                           size_t &size)
@@ -152,7 +155,7 @@ esp_err_t NVM::StringSize(const char *partition,
     return err;
 }
 
-esp_err_t NVM::ReadU32(const char *partition,
+esp_err_t NVMWrapper::ReadU32(const char *partition,
                        const char *namespace_name,
                        const char *key,
                        uint32_t *value)
@@ -170,7 +173,7 @@ esp_err_t NVM::ReadU32(const char *partition,
     return err;
 }
 
-esp_err_t NVM::WriteU32(const char *partition,
+esp_err_t NVMWrapper::WriteU32(const char *partition,
                         const char *namespace_name,
                         const char *key,
                         uint32_t value)
@@ -201,7 +204,7 @@ esp_err_t NVM::WriteU32(const char *partition,
     return err;
 }
 
-esp_err_t NVM::ReadU8(const char *partition,
+esp_err_t NVMWrapper::ReadU8(const char *partition,
                       const char *namespace_name,
                       const char *key,
                       uint8_t *value)
@@ -219,7 +222,7 @@ esp_err_t NVM::ReadU8(const char *partition,
     return err;
 }
 
-esp_err_t NVM::WriteU8(const char *partition,
+esp_err_t NVMWrapper::WriteU8(const char *partition,
                        const char *namespace_name,
                        const char *key,
                        uint8_t value)

@@ -4,12 +4,13 @@
 
 #include "common/constants.h"
 
-/**
- * @brief Converts esp_reset_reason_t to a human-readable string.
- * 
- * @param reason The reset reason code.
- * @return const char* String representation of the reset reason.
- */
+// Converts esp_reset_reason_t to a human-readable string.
+//
+// Usage example:
+//    const esp_reset_reason_t reason = esp_reset_reason();
+//    ESP_LOGI(TAG_MAIN, "Last reset reason: \"%s\"", get_reset_reason_text(reason));
+//
+
 static inline const char* get_reset_reason_text(esp_reset_reason_t reason)
 {
     switch (reason) {
@@ -26,10 +27,4 @@ static inline const char* get_reset_reason_text(esp_reset_reason_t reason)
         case ESP_RST_SDIO:      return "SDIO Reset";
         default:                return "Undefined";
     }
-}
-
-static void LogLastResetReason(void)
-{
-    const esp_reset_reason_t reason = esp_reset_reason();
-    ESP_LOGI(TAG_MAIN, "Last reset reason: \"%s\"", get_reset_reason_text(reason));
 }

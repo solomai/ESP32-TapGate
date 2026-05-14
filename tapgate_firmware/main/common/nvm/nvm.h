@@ -1,22 +1,22 @@
-/**
- * NVM (Non-Volatile Memory) context singleton
- * 
- */
+//
+// NVMWrapper (Non-Volatile Memory) wrapper
+// 
+
 #pragma once
 #include "device_err.h"
 #include "nvm_partition.h"
 
-class NVM
+class NVMWrapper
 {
 public:
-    static NVM& getInstance() noexcept;
+    static NVMWrapper& getInstance() noexcept;
 
     // Delete copy constructor and assignment operator
-    NVM(const NVM&) = delete;
-    NVM& operator=(const NVM&) = delete;
+    NVMWrapper(const NVMWrapper&) = delete;
+    NVMWrapper& operator=(const NVMWrapper&) = delete;
     // Delete move constructor and assignment operator
-    NVM(NVM&&) = delete;
-    NVM& operator=(NVM&&) = delete;
+    NVMWrapper(NVMWrapper&&) = delete;
+    NVMWrapper& operator=(NVMWrapper&&) = delete;
 
 public:
     esp_err_t Init() noexcept;
@@ -57,6 +57,10 @@ protected:
     esp_err_t EnsurePartitionReady(const char *partition_label);
 
 private:
-    NVM() = default;
-    ~NVM() = default;
-};
+    NVMWrapper() = default;
+    ~NVMWrapper() = default;
+
+}; // class NVMWrapper
+
+// Global instance of NVMWrapper
+extern NVMWrapper& NVM;
