@@ -1,0 +1,78 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(idf.py:*)",
+      "Bash(cmake:*)",
+      "Bash(ninja:*)",
+      "Bash(ctest:*)",
+      "Bash(make:*)",
+      "Bash(clang-tidy:*)",
+      "Bash(clang-format:*)",
+      "Bash(clang-format -i:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(pytest:*)",
+      "Bash(esptool.py:*)",
+      "Bash(esptool:*)",
+      "Bash(openocd:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(powershell:*)",
+      "Bash(xtensa-esp32-elf-addr2line:*)",
+      "Bash(xtensa-esp32s3-elf-addr2line:*)",
+      "Bash(riscv32-esp-elf-addr2line:*)",
+      "Bash(xtensa-esp32-elf-size:*)",
+      "Bash(xtensa-esp32-elf-objdump:*)",
+      "Bash(xtensa-esp32-elf-nm:*)",
+      "Bash(git:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(unset:*)",
+      "Bash(mkdir:*)",
+      "Bash(sleep:*)",
+      "Bash(echo:*)",
+      "Bash(./.scripts/idf_build.ps1:*)",
+      "Bash(./.scripts/run_device_tests.ps1:*)",
+      "Bash(./.scripts/_idf_env.ps1:*)",
+      "Bash(./.scripts/build.sh:*)",
+      "Bash(./.scripts/flash.sh:*)",
+      "Bash(./.scripts/monitor.sh:*)",
+      "Bash(./.scripts/flash_monitor.sh:*)",
+      "Bash(./.scripts/test_host.sh:*)",
+      "Bash(./.scripts/test_hw.sh:*)",
+      "Bash(./.scripts/clean.sh:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf /home:*)",
+      "Bash(sudo rm:*)",
+      "Bash(sudo:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'f=\"$CLAUDE_TOOL_INPUT_PATH\"; [[ \"$f\" =~ \\.(cpp|hpp|h|cxx|cc)$ ]] && clang-format -i \"$f\" 2>/dev/null || true'"
+          }
+        ]
+      }
+    ]
+  },
+  "model": "claude-sonnet-4-6",
+  "env": {
+    "BUILD_DIR": "build",
+    "ESPPORT": "COM8",
+    "IDF_PATH": "C:\\Espressif\\.espressif\\v6.0.1\\esp-idf",
+    "IDF_PYTHON_ENV_PATH": "C:\\Espressif\\tools\\python\\v6.0.1\\venv",
+    "IDF_TOOLS_PATH": "C:\\Espressif\\tools",
+    "ESP_IDF_VERSION": "6.0"
+  }
+}

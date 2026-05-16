@@ -57,3 +57,7 @@ htmlcov/
 *.db
 *.sqlite
 *.lock
+
+# Claude Code specific
+.claude/worktrees/
+.claude/settings.local.json

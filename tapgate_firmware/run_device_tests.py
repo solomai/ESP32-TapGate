@@ -246,7 +246,7 @@ def print_summary(results: List[TestResult]) -> None:
         total_failed  += r.failed
         total_ignored += r.ignored
 
-    print(f"{'─'*60}")
+    print(f"{'-'*60}")
     print(f"  TOTAL  passed={total_passed}  failed={total_failed}  ignored={total_ignored}")
     print(f"{'='*60}\n")
 
