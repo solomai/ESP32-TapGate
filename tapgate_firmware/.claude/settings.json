@@ -44,7 +44,12 @@
       "Bash(./.scripts/flash_monitor.sh:*)",
       "Bash(./.scripts/test_host.sh:*)",
       "Bash(./.scripts/test_hw.sh:*)",
-      "Bash(./.scripts/clean.sh:*)"
+      "Bash(./.scripts/clean.sh:*)",
+      "Bash(python run_host_tests.py*)",
+      "Bash(python run_device_tests.py*)",
+      "Bash(cd * && python run_host_tests.py*)",
+      "Bash(cd * && python run_device_tests.py*)",
+      "Bash(cd * && powershell*)"
     ],
     "deny": [
       "Bash(rm -rf /*)",
