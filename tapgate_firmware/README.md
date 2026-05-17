@@ -7,6 +7,7 @@
 ## Contents
 - [Hardware](#hardware)
 - [Architecture](#architecture)
+- [Setup development environment](#setup-development-environment)
 
 ---
 
@@ -24,7 +25,10 @@ High-level view of the software design, components, and how modules interact.
 - [Partitioning and Partition Sizing Rationale](docs/partitions.md) — describes the flash partition layout, purpose, and sizing choices for persistent nonce counters.
 
 
-## Setup dev environment
-- [Build and Run firmware](docs/dev-env.md)
+## Setup development environment
+- [Development Environment](docs/dev-env.md) — toolchain installation, IDE setup
+- [Build, Flash and Tests](docs/dev-proc.md) — build commands, host/device tests, connection methods
+- [ESP-PROG Setup](docs/esp-prog.md) — JTAG wiring, OpenOCD, hardware debugging
+- [Embedded Guidelines](docs/embedded-guidelines.md) — C++ constraints and coding rules
 
 ---
