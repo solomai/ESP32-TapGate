@@ -12,6 +12,15 @@ description: Testing conventions for ESP-IDF projects (host, on-target, HW-in-th
 | On-target unit tests | Unity (ESP-IDF) | `tests/` | Yes | PR / release |
 | HW-in-the-loop | pytest-embedded | `pytest_tests/` | Yes | Release gate |
 
+## Test / Production Boundary — HARD RULES
+
+**Production code must not know about tests.**
+
+- Never add `#ifdef UNIT_TEST`, `#ifdef TEST`, or any test-only branch to production source files (`main/`, `components/`). The only permitted exception is `#ifdef UNIT_TEST` inside a module's own `.c`/`.cpp` to redirect a system header (e.g. `<stdio.h>`) to a mock — and only when there is no cleaner alternative.
+- Mocks, stubs, and test helpers live exclusively under `tests_host/mocks/`. They must never be included by or compiled into firmware builds.
+- A mock is activated through the CMake test target only (via `target_include_directories`, `COMPILE_DEFINITIONS`, or `set_source_files_properties`) — never through a change to the production CMakeLists.txt.
+- If production code requires a seam for testing (e.g. dependency injection, factory function), add the seam in production code as a proper API — not as a compile-time test flag.
+
 ## Tier 1 — Host Unit Tests (Unity)
 Test files: `tests_host/test_*.cpp`
 
