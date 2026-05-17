@@ -1,9 +1,9 @@
-# ![Logo](docs/logo.png) TapGate v.1 ( prototype )
+# ![Logo](docs/assets/logo.png) TapGate v.1 ( prototype )
 
 **TapGate** is a standalone extension module for gate automation systems that adds the ability to control gate via a smartphone application.
 
 ### Goal
-Develop a hardware - software system (IoT + client (mobile) app) for remote control of standard electronic gate controllers.
+Develop a software system (IoT + client (mobile) app) for remote control of standard electronic gate controllers.
 
 ### Device Interaction
 A single IoT device can be controlled by multiple instances of the client app:
@@ -40,76 +40,25 @@ At the same time, the system preserves the ability to control the device locally
 
 ## ESP32 MCU Documentation  
 For detailed information about the microcontroller firmware, architecture, and implementation notes,<br>
-see [ESP32 MCU Documentation](esp32_mcu/README.md).  
+see [ESP32 MCU Documentation](tapgate_firmware/readme.md).  
 
 ## Mobile Client Documentation  
 For details about the mobile application, communication flow, and integration with the ESP32 device,<br>
-see [Mobile Client Documentation](mobile_client_MAUI/README.md).  
+see [Mobile Client Documentation](tapgate_client/readme.md).  
 
-## 🚀 Quick Start
-
-### Development Environment Setup
-
-**Step 1: Install Visual Studio Code and Extensions**
-
-1. Download and install Visual Studio Code from [code.visualstudio.com](https://code.visualstudio.com)
-2. Open your project in VS Code
-3. Open the Extensions tab (Ctrl+Shift+X) and install the following extensions:
-   - `espressif.esp-idf-extension`
-   - `ms-vscode.cpptools`
-   - `ms-vscode.cmake-tools`
-4. Run "ESP-IDF: Configure ESP-IDF extension" (Ctrl+Shift+P) and follow the setup wizard
-
-**Note for Corporate Networks:**
-If marketplace access is blocked by corporate proxy:
-- Download `.vsix` files for each extension from [marketplace.visualstudio.com](https://marketplace.visualstudio.com) in your browser
-- Install them in VS Code via "Extensions: Install from VSIX..."
-
-**Step 2: Project Dependencies**
-
-To set up the development environment for building this project:
-
-**Windows:**
-```cmd
-setup-dev-env.bat
-```
-
-**Unix/Linux/macOS:**
-```bash
-./setup-dev-env.sh
-```
-
-This will automatically:
-- Check system requirements (Python 3, Git, CMake)
-- Install protobuf dependencies
-- Verify nanopb generator functionality
-- Test project build capability
-- Provide next steps for ESP-IDF and MAUI setup
-
-### Building Components
-
-**ESP32 Firmware:**
-```bash
-cd esp32_mcu
-idf.py build
-```
-
-**Host Tests:**
-```bash
-cd esp32_mcu
-TAPGATE_BUILD_MODE=host cmake -S . -B build_host
-cmake --build build_host
-```
-
-**MAUI Client:**
-Open `tapgate_client/TapGateClient.sln` in Visual Studio.  
-
+---
 
 ## 📜 License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
+---
+
 ## 📜 Disclaimer
 This component is provided "as is", without warranty of any kind. The authors are not liable for any damages arising from the use of this component. Use it at your own risk.
 
+---
+
 ## ✍️ Author
 Andrii Solomai
+
+---

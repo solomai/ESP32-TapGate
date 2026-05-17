@@ -1,13 +1,13 @@
-## How to Build
+## Setup dev environment
 
-To build this project you need **ESP-IDF 5.5 (or higher)**.  
+To build this project you need **ESP-IDF 6 (or higher)**.  
 
 ### Install ESP-IDF
 1. Follow the official installation guide: [ESP-IDF Installation](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/index.html) ( [github.com/espressif](https://github.com/espressif/esp-idf) )
 2. Recommended: use the **ESP-IDF Tools Installer** for Windows, which sets up Python, CMake, Ninja, Git, and environment variables automatically.  
 
 ### Build Instructions
-- Open **ESP-IDF 5.5 PowerShell** (installed with ESP-IDF).  
+- Open **ESP-IDF PowerShell** (installed with ESP-IDF).  
   This ensures all required environment variables are configured.  
 - From there, you can also start your favorite IDE (e.g., VS Code, CLion).  
 
@@ -26,5 +26,7 @@ idf.py build flash monitor
 
 ---
 
-[← Back to ESP32 MCU Documentation](../../esp32_mcu/README.md)  
+---
+
+[← Back to ESP32 MCU Documentation](../readme.md)  
 [← Back to main README](../../README.md)

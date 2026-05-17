@@ -1,5 +1,6 @@
+# Partitioning and Partition Sizing Rationale
 
-### `nvs_nonce` Partition — Sizing Rationale
+## `nvs_nonce` Partition — Sizing Rationale
 This section justifies the size of the dedicated nvs_nonce partition used to persist frequently-updated counters (one nonce per client). NVS is log-structured: each flash sector (page) is 4096 bytes and holds 126 entries of 32 bytes (the rest is page header and entry state bitmap). Each update of an integer key (e.g., u32 nonce) consumes one 32-byte entry. When a page fills, NVS migrates live entries to a fresh page and erases the old one, distributing wear across all pages. Typical NOR SPI flash endurance is ~100,000 erase cycles per sector (50k–100k common).
 
 **Workload modeled:** 50 clients with one nonce each (M = 50). Update scenarios: 500/day, 50/day, and 10/day total. With M = 50, the useful entries per page between garbage collections is 126 − M = 76. Thus, every ~76 updates trigger one erase distributed across the partition pages.
@@ -26,8 +27,7 @@ Notes: Values assume uniform wear leveling across all pages. For a pessimistic 5
 
 **References:** [ESP-IDF NVS documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/nvs_flash.html) — page/entry structure, wear leveling. [ESP-IDF Flash wear considerations](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/flash_psram.html) — NOR flash endurance (~100k cycles/sector).
 
-
 ---
 
-[← Back to ESP32 MCU Documentation](../../esp32_mcu/README.md)  
+[← Back to ESP32 MCU Documentation](../readme.md)  
 [← Back to main README](../../README.md)
