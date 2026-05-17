@@ -40,11 +40,11 @@ At the same time, the system preserves the ability to control the device locally
 
 ## ESP32 MCU Documentation  
 For detailed information about the microcontroller firmware, architecture, and implementation notes,<br>
-see [ESP32 MCU Documentation](tapgate_firmware/readme.md).  
+see [ESP32 MCU Documentation](tapgate_firmware/README.md).  
 
 ## Mobile Client Documentation  
 For details about the mobile application, communication flow, and integration with the ESP32 device,<br>
-see [Mobile Client Documentation](tapgate_client/readme.md).  
+see [Mobile Client Documentation](tapgate_client/README.md).  
 
 ---
 

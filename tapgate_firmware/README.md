@@ -32,3 +32,5 @@ High-level view of the software design, components, and how modules interact.
 - [Embedded Guidelines](docs/embedded-guidelines.md) — C++ constraints and coding rules
 
 ---
+
+[← Back to main README](../../README.md)
