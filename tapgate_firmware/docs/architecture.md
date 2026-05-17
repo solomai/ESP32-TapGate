@@ -16,7 +16,7 @@ Every event is classified by severity (`INFO`, `WARNING`, `ERROR`, `ALERT`) and 
 
 **Storage.** The journal is built on the existing LittleFS partition (1920 KB) using plain POSIX file I/O over `esp_littlefs` — no additional libraries. All events flow into a pair of rolling segment files (`main_0.log` / `main_1.log`), preserving global event order without requiring timestamps or sequence counters. Rotation is implemented as delete-then-create rather than truncate, because LittleFS is a copy-on-write filesystem and truncation triggers a full internal file copy.
 
-**Severity-specific retention.** `ERROR` and `ALERT` events are additionally mirrored into dedicated files (`error.log` / `alert.log`) with larger, independent quotas. This decouples their retention lifetime from the main segment rotation and ensures high-severity records survive regardless of general event volume. Because these levels are infrequent by nature, the storage overhead of duplication is negligible.
+**Severity-specific retention.** `ERROR` and `ALERT` events are additionally mirrored into dedicated files (`error_0.log` / `error_1.log` and `alert_0.log` / `alert_1.log`) with larger, independent quotas. This decouples their retention lifetime from the main segment rotation and ensures high-severity records survive regardless of general event volume. Because these levels are infrequent by nature, the storage overhead of duplication is negligible.
 
 **Quota isolation.** Each file carries a fixed byte quota. Files do not compete for space, so a burst of `INFO`/`WARNING` activity cannot displace `ERROR`/`ALERT` records and vice versa.
 
