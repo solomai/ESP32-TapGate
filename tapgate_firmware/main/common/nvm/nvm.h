@@ -54,6 +54,17 @@ public:
                        const char *key,
                        uint8_t value);
 
+    esp_err_t ReadBlob(const char *partition,
+                       const char *namespace_name,
+                       const char *key,
+                       void *buffer,
+                       size_t size);
+    esp_err_t WriteBlob(const char *partition,
+                        const char *namespace_name,
+                        const char *key,
+                        const void *value,
+                        size_t size);
+
 protected:
     esp_err_t EnsurePartitionReady(const char *partition_label);
 

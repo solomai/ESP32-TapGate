@@ -252,3 +252,68 @@ esp_err_t NVMWrapper::WriteU8(const char *partition,
     nvs_close(handle);
     return err;
 }
+
+esp_err_t NVMWrapper::ReadBlob(const char *partition,
+                               const char *namespace_name,
+                               const char *key,
+                               void *buffer,
+                               size_t size)
+{
+    if (!buffer || size == 0)
+        return ESP_ERR_INVALID_ARG;
+
+    if (!partition || !namespace_name || !key)
+        return ESP_ERR_INVALID_ARG;
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open_from_partition(partition, namespace_name, NVS_READONLY, &handle);
+    if (err != ESP_OK)
+        return err;
+
+    size_t length = size;
+    err = nvs_get_blob(handle, key, buffer, &length);
+    nvs_close(handle);
+    return err;
+}
+
+esp_err_t NVMWrapper::WriteBlob(const char *partition,
+                                const char *namespace_name,
+                                const char *key,
+                                const void *value,
+                                size_t size)
+{
+    if (!partition || !namespace_name || !key || !value || size == 0)
+        return ESP_ERR_INVALID_ARG;
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open_from_partition(partition, namespace_name, NVS_READWRITE, &handle);
+    if (err != ESP_OK)
+        return err;
+
+    // To reduce memory cell degradation, data is rewritten only when changes have occurred
+    size_t existing_len = 0;
+    err = nvs_get_blob(handle, key, nullptr, &existing_len);
+    if (err == ESP_OK && existing_len == size) {
+        // Heap: blob size only known at runtime, needed for equality check before write
+        std::vector<uint8_t> existing(existing_len);
+        err = nvs_get_blob(handle, key, existing.data(), &existing_len);
+        if (err == ESP_OK && std::memcmp(existing.data(), value, size) == 0) {
+            nvs_close(handle);
+            ESP_LOGD(TAG, "%s blob already set for part: %s space: %s key %s", __FUNCTION__, partition, namespace_name, key);
+            return ESP_OK; // No change needed
+        }
+    } else if (err == ESP_ERR_NVS_NOT_FOUND) {
+        // Key not present, proceed to set
+    } else if (err != ESP_OK) {
+        nvs_close(handle);
+        return err;
+    }
+
+    err = nvs_set_blob(handle, key, value, size);
+    if (err == ESP_OK) {
+        ESP_LOGD(TAG, "%s Store blob (%zu bytes) to part: %s space: %s key %s", __FUNCTION__, size, partition, namespace_name, key);
+        err = nvs_commit(handle);
+    }
+    nvs_close(handle);
+    return err;
+}
