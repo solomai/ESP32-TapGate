@@ -48,3 +48,43 @@ target_compile_definitions(host_tests_device_ctx PRIVATE
 target_link_libraries(host_tests_device_ctx PRIVATE Threads::Threads)
 
 add_test(NAME host-tests.device_ctx COMMAND host_tests_device_ctx)
+
+# ---------------------------------------------------------------------------
+# host_tests_event_journal — EventJournal macro unit tests
+# ---------------------------------------------------------------------------
+
+add_executable(host_tests_event_journal
+    test_event_journal.cpp
+    unity/unity.c
+)
+
+target_compile_features(host_tests_event_journal PRIVATE cxx_std_23)
+
+target_include_directories(host_tests_event_journal PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/unity
+    ${CMAKE_CURRENT_SOURCE_DIR}/mocks
+    ${CMAKE_CURRENT_SOURCE_DIR}/../main/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/../main/common/event_journal
+)
+
+add_test(NAME host-tests.event_journal COMMAND host_tests_event_journal)
+
+# ---------------------------------------------------------------------------
+# host_tests_event_journal_debug — EventJournal debug-mode (counter) tests
+# ---------------------------------------------------------------------------
+
+add_executable(host_tests_event_journal_debug
+    test_event_journal_debug.cpp
+    unity/unity.c
+)
+
+target_compile_features(host_tests_event_journal_debug PRIVATE cxx_std_23)
+
+target_include_directories(host_tests_event_journal_debug PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/unity
+    ${CMAKE_CURRENT_SOURCE_DIR}/mocks
+    ${CMAKE_CURRENT_SOURCE_DIR}/../main/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/../main/common/event_journal
+)
+
+add_test(NAME host-tests.event_journal_debug COMMAND host_tests_event_journal_debug)

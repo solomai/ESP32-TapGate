@@ -46,15 +46,6 @@ extern "C" void app_main(void)
                           TAG_MAIN,
                           "DateTime initialization failed: " ERR_FORMAT, esp_err_to_str(err), err);
     }
-    EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
-                    TAG_MAIN,
-                    "DateTime: %s", DateTime.FormatFixed<32>(DT_FMT_HUMAN_FULL).data()); 
-
-    // Report last reset reason
-    const esp_reset_reason_t reason = esp_reset_reason();
-    EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
-                      TAG_MAIN,
-                      "Last reset reason: \"%s\"", get_reset_reason_text(reason));
 
     // Initialize DeviceContext — loads persisted configuration from NVS.
     err = DeviceCtx.Init();
@@ -75,22 +66,29 @@ extern "C" void app_main(void)
         "Debug Mode enabled");
 #endif
 
-    // Initialization complete.
-    // Log app info
-    const esp_app_desc_t *app_desc = esp_app_get_description();
-    char device_name_buf[DEVICE_NAME_CAPACITY]{};
-    if (DeviceCtx.get_device_name({device_name_buf, sizeof(device_name_buf)}) != ESP_OK)
     {
-        ESP_LOGW(TAG_MAIN, "Failed to get device name");
+        // Initialization complete.
+        // Log app info
+        char device_name_buf[DEVICE_NAME_CAPACITY]{};
+        err = DeviceCtx.get_device_name({device_name_buf, sizeof(device_name_buf)});
+        if (err != ESP_OK){
+            ESP_LOGW(TAG_MAIN, "Failed to get device name: " ERR_FORMAT, esp_err_to_str(err), err);
+        }
+        const esp_reset_reason_t reason = esp_reset_reason();
+        const esp_app_desc_t *app_desc = esp_app_get_description();
+        EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
+            TAG_MAIN, "Boot Info:"
+            "\nDevice name: \"%s\""
+            "\nFirmware Ver: \"%s\""
+            "\nIDF Version: %s,"
+            "\nLast reset reason: \"%s\""
+            "\nDateTime: %s",
+            device_name_buf,
+            app_desc->version,
+            app_desc->idf_ver,
+            get_reset_reason_text(reason),
+            DateTime.FormatFixed<32>(DT_FMT_HUMAN_FULL).data());
     }
-    EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
-        TAG_MAIN,
-        "Device name: \"%s\" Firmware Ver: \"%s\", IDF Version: %s",
-        device_name_buf, app_desc->version, app_desc->idf_ver);
-
-    EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
-        TAG_MAIN,
-        "TapGate firmware startup complete");
     
     // Main app loop
     while (true)

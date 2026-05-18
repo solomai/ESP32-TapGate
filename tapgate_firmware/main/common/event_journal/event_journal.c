@@ -1,6 +1,10 @@
 #include "event_journal.h"
 #include <stdarg.h>
 
+#if defined(APP_DEBUG_MODE) || defined(CONFIG_APP_DEBUG_MODE)
+unsigned int global_events_counter_per_session = 0;
+#endif
+
 static const char* TAG = "EventJournal";
 
 /**
@@ -26,8 +30,7 @@ void _event_journal_store(enum event_journal_type type, const char *tag, const c
     (void)type;
     (void)tag;    
     (void)buf;
-
-    
-    
+     
+    // TODO:
     ESP_LOG_NOTIMPLEMENTED(TAG);
 }

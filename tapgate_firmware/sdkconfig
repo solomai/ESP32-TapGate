@@ -697,8 +697,8 @@ CONFIG_PARTITION_TABLE_MD5=y
 #
 # TapGate Additional Debug Settings
 #
-# default:
-# CONFIG_APP_DEBUG_MODE is not set
+CONFIG_APP_DEBUG_MODE=y
+# CONFIG_APP_WAIT_FOR_DEBUGGER is not set
 # end of TapGate Additional Debug Settings
 
 #
