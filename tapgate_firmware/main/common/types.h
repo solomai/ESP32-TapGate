@@ -4,7 +4,10 @@
 #include <string_view>
 #include <cstdint>
 
-// UID type — named device_uid_t to avoid clash with POSIX uid_t (sys/types.h)
+// nonce type
+typedef uint32_t nonce_t;
+
+// UID type.
 typedef uint8_t device_uid_t[UID_CAP];
 
 // Names

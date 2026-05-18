@@ -82,15 +82,16 @@ extern "C" void app_main(void)
             DateTime.FormatFixed<32>(DT_FMT_HUMAN_FULL).data());
 
 #ifdef CONFIG_APP_DEBUG_MODE
-    // Report debug mode enabled - this is a warning since it may impact security and performance,
-    // but it's not an error since it's intentional in some cases (e.g. development builds).
-    EVENT_JOURNAL_ADD(EVENT_JOURNAL_WARNING,
-        TAG_MAIN,
-        "Debug Mode enabled");
+        // Report debug mode enabled - this is a warning since it may impact security and performance,
+        // but it's not an error since it's intentional in some cases (e.g. development builds).
+        EVENT_JOURNAL_ADD(EVENT_JOURNAL_WARNING,
+            TAG_MAIN,
+            "Debug Mode enabled");
 #endif           
     }
     
     // Main app loop
+    ESP_LOGI(TAG_MAIN, "Entering main loop");
     while (true)
     {
         // TODO:

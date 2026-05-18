@@ -27,7 +27,7 @@ set(PROD_INCLUDES
 add_executable(host_tests_device_ctx
     test_device_ctx.cpp
     mocks/common/nvm/nvm_mock.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../main/device_ctx/device_ctx.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../main/ctx_device/device_ctx.cpp
     unity/unity.c
 )
 
@@ -38,11 +38,12 @@ target_include_directories(host_tests_device_ctx PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/unity
     ${MOCK_INCLUDES}
     ${PROD_INCLUDES}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../main/device_ctx
+    ${CMAKE_CURRENT_SOURCE_DIR}/../main/ctx_device
 )
 
 target_compile_definitions(host_tests_device_ctx PRIVATE
     CONFIG_TAPGATE_DEVICE_DEFAULT_NAME="TapGate v1"
+    TAPGATE_TEST_SILENT_LOG
 )
 
 target_link_libraries(host_tests_device_ctx PRIVATE Threads::Threads)

@@ -50,6 +50,14 @@ void UnityAssertEqual(long long expected, long long actual, int line)
     }
 }
 
+void UnityAssertEqualMemory(const void* expected, const void* actual, size_t size, int line)
+{
+    if (!expected || !actual || memcmp(expected, actual, size) != 0) {
+        printf("\n\tAssertion failed at line %d: memory blocks differ (%zu bytes)", line, size);
+        unity_current_test_failed = 1;
+    }
+}
+
 void UnityAssertEqualString(const char* expected, const char* actual, int line)
 {
     if (!expected || !actual || strcmp(expected, actual) != 0) {
