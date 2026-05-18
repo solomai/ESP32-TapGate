@@ -8,6 +8,8 @@
 
 - [Device Context](#device-context) — authoritative device state: persisted configuration and ephemeral runtime data.
 
+- [Client Context](#client-context) — persistent registry of authorized clients, bounded by device capacity.
+
 ---
 
 ## Event Journal
@@ -27,6 +29,12 @@ Every event is classified by severity (`INFO`, `WARNING`, `ERROR`, `ALERT`) and 
 ## Device Context
 
 `DeviceCtx` is a singleton that holds the authoritative state of the device — persisted configuration (loaded from NVS on boot, written back on every change) and ephemeral runtime state (initialized to defaults on boot, never persisted). All components read and mutate device state exclusively through this class.
+
+---
+
+## Client Context
+
+`ClientCtx` holds all information about a single client that has been authorized on the device. Every client record is persisted in NVS and survives power cycles. The device supports a bounded number of simultaneous client records; the upper limit is set at compile time via `TAPGATE_MAX_CLIENTS_DB` in `main/Kconfig.projbuild`. Attempts to add a client when the registry is full are rejected. All components that need to identify, authenticate, or audit a client access its data exclusively through this module.
 
 ---
 
