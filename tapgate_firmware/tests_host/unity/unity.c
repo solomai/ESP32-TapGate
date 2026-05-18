@@ -3,6 +3,7 @@
 #include "unity.h"
 #include <stdio.h>
 #include <stddef.h>
+#include <string.h>
 
 #define COLOR_RED    "\033[91m"
 #define COLOR_GREEN  "\033[92m"
@@ -37,6 +38,25 @@ void UnityAssertTrue(int condition, const char* msg, int line)
 {
     if (!condition) {
         printf("\n\tAssertion failed: %s at line %d", msg, line);
+        unity_current_test_failed = 1;
+    }
+}
+
+void UnityAssertEqual(long long expected, long long actual, int line)
+{
+    if (expected != actual) {
+        printf("\n\tAssertion failed at line %d: expected %lld but was %lld", line, expected, actual);
+        unity_current_test_failed = 1;
+    }
+}
+
+void UnityAssertEqualString(const char* expected, const char* actual, int line)
+{
+    if (!expected || !actual || strcmp(expected, actual) != 0) {
+        printf("\n\tAssertion failed at line %d: expected \"%s\" but was \"%s\"",
+               line,
+               expected ? expected : "(null)",
+               actual   ? actual   : "(null)");
         unity_current_test_failed = 1;
     }
 }

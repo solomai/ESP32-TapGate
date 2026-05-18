@@ -704,8 +704,7 @@ CONFIG_PARTITION_TABLE_MD5=y
 #
 # TapGate Settings
 #
-# default:
-CONFIG_TAPGATE_DEVICE_DEFAULT_NAME="TapGate v1"
+CONFIG_TAPGATE_DEVICE_DEFAULT_NAME="TapGate Development Version"
 # default:
 CONFIG_TAPGATE_MAX_CLIENTS_DB=50
 # end of TapGate Settings

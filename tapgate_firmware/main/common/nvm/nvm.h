@@ -3,6 +3,7 @@
 // 
 
 #pragma once
+#include "nvs.h"
 #include "device_err.h"
 #include "nvm_partition.h"
 

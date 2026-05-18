@@ -9,6 +9,7 @@
 #include "event_journal.h"
 #include "nvm.h"
 #include "datetime.h"
+#include "device_ctx.h"
 
 #include "diag/reset_reason.h"
 
@@ -55,6 +56,15 @@ extern "C" void app_main(void)
                       TAG_MAIN,
                       "Last reset reason: \"%s\"", get_reset_reason_text(reason));
 
+    // Initialize DeviceContext — loads persisted configuration from NVS.
+    err = DeviceCtx.Init();
+    if (err != ESP_OK)
+    {
+        EVENT_JOURNAL_ADD(EVENT_JOURNAL_ERROR,
+                          TAG_MAIN,
+                          "DeviceCtx initialization failed: " ERR_FORMAT, esp_err_to_str(err), err);
+    }
+
     // Almost all initialization steps are complete. 
     // Report startup complete before entering main loop.
 #ifdef APP_DEBUG_MODE
@@ -68,10 +78,15 @@ extern "C" void app_main(void)
     // Initialization complete.
     // Log app info
     const esp_app_desc_t *app_desc = esp_app_get_description();
+    char device_name_buf[DEVICE_NAME_CAPACITY]{};
+    if (DeviceCtx.get_device_name({device_name_buf, sizeof(device_name_buf)}) != ESP_OK)
+    {
+        ESP_LOGW(TAG_MAIN, "Failed to get device name");
+    }
     EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
         TAG_MAIN,
-        "Firmware Version: %s, Build Time: %s, IDF Version: %s",
-        app_desc->version, app_desc->date, app_desc->idf_ver);
+        "Device name: \"%s\" Firmware Ver: \"%s\", IDF Version: %s",
+        device_name_buf, app_desc->version, app_desc->idf_ver);
 
     EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
         TAG_MAIN,
