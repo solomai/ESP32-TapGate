@@ -106,3 +106,9 @@ Allowed without restriction: `std::array`, `std::span`, `std::optional`, `std::e
 - Be aware of struct padding — use `static_assert(sizeof(T) == N)` to verify ABI-sensitive layouts
 - Use `__attribute__((packed))` only for wire-format structs; never for general use
 - Large objects (> 512 bytes) should not live on the stack — use static or heap with justification
+
+## Logging
+- Never use `std::cout` or C++ streams; use ESP-IDF logging macros (`ESP_LOGI`, `ESP_LOGE`, etc.)
+- Avoid logging in hot paths or ISRs; use flags to enable/disable verbose logging
+- Avoid logging under mutex locks to prevent deadlocks;
+- Log messages should be concise and informative; avoid large formatted strings in performance-critical code
