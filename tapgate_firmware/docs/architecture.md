@@ -8,6 +8,12 @@ This section covers the device-side architecture implementing the key features f
 
 ---
 
+## Protocol
+Description of the communication protocol between ESP32 and external clients.
+- [Communication Protocol](../../docs/protocol.md) — message format, sequences, and error handling.
+
+---
+
 ## System Components
 
 - [Event Journal](#event-journal) — persistent audit log of operationally significant events.
