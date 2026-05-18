@@ -7,6 +7,7 @@
 
 #include "constants.h"
 #include "event_journal.h"
+#include "call.h"
 #include "nvm.h"
 #include "datetime.h"
 #include "device_ctx.h"
@@ -67,20 +68,19 @@ extern "C" void app_main(void)
 #endif
 
     {
-        // Initialization complete.
-        // Log app info
+        // Initialization complete. Log app info
+
         char device_name_buf[DEVICE_NAME_CAPACITY]{};
-        err = DeviceCtx.get_device_name({device_name_buf, sizeof(device_name_buf)});
-        if (err != ESP_OK){
-            ESP_LOGW(TAG_MAIN, "Failed to get device name: " ERR_FORMAT, esp_err_to_str(err), err);
-        }
+        CALLW(TAG_MAIN, DeviceCtx.get_device_name({device_name_buf, sizeof(device_name_buf)}));
+
         const esp_reset_reason_t reason = esp_reset_reason();
         const esp_app_desc_t *app_desc = esp_app_get_description();
+
         EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
             TAG_MAIN, "Boot Info:"
             "\nDevice name: \"%s\""
             "\nFirmware Ver: \"%s\""
-            "\nIDF Version: %s,"
+            "\nIDF Version: %s"
             "\nLast reset reason: \"%s\""
             "\nDateTime: %s",
             device_name_buf,

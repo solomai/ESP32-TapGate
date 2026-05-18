@@ -44,7 +44,7 @@ esp_err_t DeviceContext::Init() noexcept
     }
 
     // Dump to log all fields of Device Context
-    ESP_LOGI(TAG, "DeviceName loaded: \"%s\"", m_device_name);
+    ESP_LOGI(TAG, "DeviceName: \"%s\"", m_device_name);
 
     return init_error;
 }
