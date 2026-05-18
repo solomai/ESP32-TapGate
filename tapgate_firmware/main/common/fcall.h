@@ -17,7 +17,7 @@
 //
 // Examples:
 //
-//   char buf[DEVICE_NAME_CAPACITY]{};
+//   char buf[buff_size]{};
 //   err = CALLW(TAG_MAIN, DeviceCtx.get_device_name({buf, sizeof(buf)}));
 //
 //   err = CALLE(TAG_MAIN, nvs_flash_init());

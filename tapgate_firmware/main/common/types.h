@@ -4,12 +4,14 @@
 #include <string_view>
 #include <cstdint>
 
-// Types
-using uuid_t = std::array<uint8_t, 16>;
+// UID type — named device_uid_t to avoid clash with POSIX uid_t (sys/types.h)
+typedef uint8_t device_uid_t[UID_CAP];
 
-// Constants
-static constexpr std::size_t DEVICE_NAME_CAPACITY = 32;
+// RSA keys types
+typedef uint8_t public_key_t[PUBKEY_CAP];
+typedef uint8_t private_key_t[PRVKEY_CAP];
 
-// Other
+// Stringifies a macro's expanded value. STR_IMPL does the actual stringification
+// after the preprocessor has expanded x; STR forces that expansion first.
 #define STR_IMPL(x) #x
 #define STR(x) STR_IMPL(x)

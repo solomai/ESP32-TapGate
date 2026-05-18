@@ -1,10 +1,12 @@
 #pragma once
 
+#include <cstdint>
+
 // Log tag for main app
 #ifdef CONFIG_APP_DEBUG_MODE
-    static const char* TAG_MAIN = "TAPGATE DEBUG";
+    static constexpr char TAG_MAIN[] = "TAPGATE DEBUG";
 #else
-    static const char* TAG_MAIN = "TAPGATE";
+    static constexpr char TAG_MAIN[] = "TAPGATE";
 #endif
 
 // Specifies the device capacity for client enrollment
@@ -16,7 +18,7 @@ constexpr size_t CLIENTS_DB_MAX_RECORDS =
 #endif
 
 // Display name capacity (bytes, includes '\0')
-constexpr size_t NAME_MAX_SIZE = 32;
+static constexpr std::size_t DEVICE_NAME_CAPACITY = 32;
 
 // Size of Id. Up to 15 characters are allowed due to NVM key size limitations.
 constexpr size_t UID_CAP = 15;

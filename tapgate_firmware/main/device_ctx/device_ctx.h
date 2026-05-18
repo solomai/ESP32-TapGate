@@ -1,6 +1,7 @@
 #pragma once
 
 #include "device_err.h"
+#include "constants.h"
 #include "types.h"
 
 #include <cstddef>
