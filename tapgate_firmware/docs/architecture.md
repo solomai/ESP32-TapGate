@@ -18,19 +18,21 @@ This section covers the device-side architecture implementing the key features f
 
 - [Client Context](#client-context) — persistent registry of authorized clients, bounded by device capacity.
 
+- [ECIES](#ecies) —  module for elliptic-curve key agreement and secure message encryption (ECIES).
+
 ---
 
 ### Event Journal
 
 Event Journal is a persistent auditing component designed to record operationally significant events — system startup, command execution, operational faults, anomalous client activity, and similar runtime occurrences. It is not a debug logger; it is a structured event record intended for post-mortem analysis and behavioral auditing of the device over its operating lifetime.
 
-Every event is classified by severity (*INFO*, *WARNING*, *ERROR*, *ALERT*) and written simultaneously to persistent storage and to the standard ESP-IDF log output, so entries remain visible in the serial monitor during normal operation.
+Every event is classified by severity (`INFO`, `WARNING`, `ERROR`, `ALERT`) and written simultaneously to persistent storage and to the standard ESP-IDF log output, so entries remain visible in the serial monitor during normal operation.
 
 ---
 
 ### DateTime
 
-`DateTimeWrapper` is a singleton that centralizes all date, time, and timezone operations for the device. It wraps the ESP-IDF POSIX time API (gettimeofday / settimeofday / strftime) and exposes a uniform interface for setting, querying, and formatting time in both UTC and local representations.
+`DateTimeWrapper` is a singleton that centralizes all date, time, and timezone operations for the device. It wraps the ESP-IDF POSIX time API (`gettimeofday` / `settimeofday` / `strftime`) and exposes a uniform interface for setting, querying, and formatting time in both UTC and local representations.
 
 ---
 
@@ -43,6 +45,17 @@ Every event is classified by severity (*INFO*, *WARNING*, *ERROR*, *ALERT*) and 
 ### Client Context
 
 `ClientCtx` holds all information about a single client that has been authorized on the device. Every client record is persisted in NVS and survives power cycles. The device supports a bounded number of simultaneous client records; the upper limit is set at compile time via `TAPGATE_MAX_CLIENTS_DB` in `main/Kconfig.projbuild`. Attempts to add a client when the registry is full are rejected. All components that need to identify, authenticate, or audit a client access its data exclusively through this module.
+
+---
+
+### ECIES
+
+ECIES is a hybrid public-key encryption scheme that combines elliptic curve cryptography for key exchange with symmetric encryption for data protection. 
+It provides confidentiality, integrity, and authenticity by generating an ephemeral key pair for each encryption operation, deriving a shared secret through Elliptic Curve Diffie–Hellman (ECDH), and then using that secret as input to a Key Derivation Function (KDF) to produce symmetric keys.  
+These keys are typically used with AES in GCM mode, ensuring both encryption and authentication of the data.  
+ECIES is widely used in constrained environments and modern security frameworks due to its compact key size, strong security guarantees, and efficiency on embedded platforms like ESP32.
+
+More details: [ECIES](../../docs/Ecies.md)
 
 ---
 
