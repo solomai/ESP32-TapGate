@@ -7,6 +7,9 @@
 // UID type — named device_uid_t to avoid clash with POSIX uid_t (sys/types.h)
 typedef uint8_t device_uid_t[UID_CAP];
 
+// Names
+typedef uint8_t name_t[NAME_MAX_SIZE];
+
 // RSA keys types
 typedef uint8_t public_key_t[PUBKEY_CAP];
 typedef uint8_t private_key_t[PRVKEY_CAP];

@@ -38,11 +38,11 @@ private:
 
     // sizeof includes the NUL terminator — checks the full C-string fits in the buffer
 #ifdef CONFIG_TAPGATE_DEVICE_DEFAULT_NAME
-    static_assert(sizeof(CONFIG_TAPGATE_DEVICE_DEFAULT_NAME) <= DEVICE_NAME_CAPACITY,
-                  "CONFIG_TAPGATE_DEVICE_DEFAULT_NAME must be <= " STR(DEVICE_NAME_CAPACITY) " bytes including NUL");
+    static_assert(sizeof(CONFIG_TAPGATE_DEVICE_DEFAULT_NAME) <= NAME_MAX_SIZE,
+                  "CONFIG_TAPGATE_DEVICE_DEFAULT_NAME must be <= " STR(NAME_MAX_SIZE) " bytes including NUL");
 #endif
     // Default value is applied by Init() via load_device_name()
-    char m_device_name[DEVICE_NAME_CAPACITY]{};
+    char m_device_name[NAME_MAX_SIZE]{};
 
 }; // class DeviceContext
 

@@ -65,7 +65,7 @@ esp_err_t DeviceContext::get_device_name(std::span<char> out) const noexcept
 
 esp_err_t DeviceContext::set_device_name(std::string_view name) noexcept
 {
-    if (name.size() >= DEVICE_NAME_CAPACITY)
+    if (name.size() >= NAME_MAX_SIZE)
         return ESP_ERR_INVALID_ARG;
     // NVS stores C-strings — embedded nulls would cause silent truncation on readback
     if (name.find('\0') != std::string_view::npos)
@@ -79,7 +79,7 @@ esp_err_t DeviceContext::set_device_name(std::string_view name) noexcept
 
 esp_err_t DeviceContext::load_device_name() noexcept
 {
-    char buf[DEVICE_NAME_CAPACITY]{};
+    char buf[NAME_MAX_SIZE]{};
     const esp_err_t err = NVM.ReadString(NVM_PARTITION_CTXDEVICE,
                                          NVS_CTXDEVICE_NAMESPACE,
                                          NVS_CTXDEVICEKEY_DEVICE_NAME,
@@ -92,8 +92,8 @@ esp_err_t DeviceContext::load_device_name() noexcept
         return err;
 
     std::lock_guard<std::mutex> lock(m_mutex);
-    std::strncpy(m_device_name, buf, DEVICE_NAME_CAPACITY - 1);
-    m_device_name[DEVICE_NAME_CAPACITY - 1] = '\0';
+    std::strncpy(m_device_name, buf, NAME_MAX_SIZE - 1);
+    m_device_name[NAME_MAX_SIZE - 1] = '\0';
     return ESP_OK;
 }
 

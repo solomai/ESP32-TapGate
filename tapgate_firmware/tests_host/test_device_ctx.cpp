@@ -29,7 +29,7 @@ void DeviceCtx_Init_NoNvsData_UsesDefaultName()
     NVM.reset();
     reset_ctx_from_nvm();
 
-    char buf[DEVICE_NAME_CAPACITY]{};
+    char buf[NAME_MAX_SIZE]{};
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.get_device_name({buf, sizeof(buf)}));
 
 #ifdef CONFIG_TAPGATE_DEVICE_DEFAULT_NAME
@@ -50,7 +50,7 @@ void DeviceCtx_Init_NvsNotFound_UsesDefaultName()
     NVM.set_not_found_err(ESP_ERR_NVS_NOT_FOUND);
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.Init()); // NOT_FOUND must not propagate as error
 
-    char buf[DEVICE_NAME_CAPACITY]{};
+    char buf[NAME_MAX_SIZE]{};
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.get_device_name({buf, sizeof(buf)}));
 #ifdef CONFIG_TAPGATE_DEVICE_DEFAULT_NAME
     TEST_ASSERT_EQUAL_STRING(CONFIG_TAPGATE_DEVICE_DEFAULT_NAME, buf);
@@ -71,7 +71,7 @@ void DeviceCtx_Init_WithNvsData_LoadsStoredName()
     NVM.WriteString("nvs_entity", "CtxDevice", "DeviceName", "MyGate");
     reset_ctx_from_nvm();
 
-    char buf[DEVICE_NAME_CAPACITY]{};
+    char buf[NAME_MAX_SIZE]{};
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.get_device_name({buf, sizeof(buf)}));
     TEST_ASSERT_EQUAL_STRING("MyGate", buf);
 }
@@ -94,7 +94,7 @@ void DeviceCtx_SetDeviceName_ValidName_Succeeds()
     NVM.reset();
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.set_device_name("TapGate Pro"));
 
-    char buf[DEVICE_NAME_CAPACITY]{};
+    char buf[NAME_MAX_SIZE]{};
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.get_device_name({buf, sizeof(buf)}));
     TEST_ASSERT_EQUAL_STRING("TapGate Pro", buf);
 }
@@ -108,11 +108,11 @@ void DeviceCtx_SetDeviceName_MaxLength_Succeeds()
     NVM.reset();
     // 31 chars — fits in 32-byte buffer (including '\0')
     const char* name31 = "1234567890123456789012345678901";
-    static_assert(sizeof("1234567890123456789012345678901") - 1 == DEVICE_NAME_CAPACITY - 1, "");
+    static_assert(sizeof("1234567890123456789012345678901") - 1 == NAME_MAX_SIZE - 1, "");
 
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.set_device_name(name31));
 
-    char buf[DEVICE_NAME_CAPACITY]{};
+    char buf[NAME_MAX_SIZE]{};
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.get_device_name({buf, sizeof(buf)}));
     TEST_ASSERT_EQUAL_STRING(name31, buf);
 }
@@ -140,7 +140,7 @@ void DeviceCtx_SetDeviceName_PersistsToNvm()
     // Simulate a reboot: re-init from NVM
     reset_ctx_from_nvm();
 
-    char buf[DEVICE_NAME_CAPACITY]{};
+    char buf[NAME_MAX_SIZE]{};
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.get_device_name({buf, sizeof(buf)}));
     TEST_ASSERT_EQUAL_STRING("Persisted", buf);
 }
@@ -162,18 +162,18 @@ void DeviceCtx_Multithreaded_ConcurrentSetGet_NoCorruption()
 
     for (int i = 0; i < NUM_THREADS; ++i) {
         threads.emplace_back([i, &corruption_detected]() {
-            char name[DEVICE_NAME_CAPACITY]{};
+            char name[NAME_MAX_SIZE]{};
             std::snprintf(name, sizeof(name), "Dev%d", i);
 
             for (int j = 0; j < ITERATIONS; ++j) {
                 (void)DeviceCtx.set_device_name(name);
 
-                char out[DEVICE_NAME_CAPACITY]{};
+                char out[NAME_MAX_SIZE]{};
                 (void)DeviceCtx.get_device_name({out, sizeof(out)});
 
                 // Value may have been overwritten by any thread, but must be
                 // a properly null-terminated string within capacity.
-                if (std::strlen(out) >= DEVICE_NAME_CAPACITY)
+                if (std::strlen(out) >= NAME_MAX_SIZE)
                     corruption_detected.store(true, std::memory_order_relaxed);
             }
         });

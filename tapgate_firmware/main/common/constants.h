@@ -18,7 +18,7 @@ constexpr size_t CLIENTS_DB_MAX_RECORDS =
 #endif
 
 // Display name capacity (bytes, includes '\0')
-static constexpr std::size_t DEVICE_NAME_CAPACITY = 32;
+static constexpr std::size_t NAME_MAX_SIZE = 32;
 
 // Size of Id. Up to 15 characters are allowed due to NVM key size limitations.
 constexpr size_t UID_CAP = 15;

@@ -62,7 +62,7 @@ extern "C" void app_main(void)
     {
         // Initialization complete. Log app info
 
-        char device_name_buf[DEVICE_NAME_CAPACITY]{};
+        char device_name_buf[NAME_MAX_SIZE]{};
         CALLW(TAG_MAIN, DeviceCtx.get_device_name({device_name_buf, sizeof(device_name_buf)}));
 
         const esp_reset_reason_t reason = esp_reset_reason();
