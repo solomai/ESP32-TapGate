@@ -1,0 +1,16 @@
+#pragma once
+
+#include "types.h"
+#include "constants.h"
+
+// structure representing complete client information
+typedef struct
+{
+    uint8_t       allow_flags;
+    nonce_t       client_nonce;
+    device_uid_t  client_id;
+    name_t        name;
+    public_key_t  pub_key;
+} client_entity_t;
+
+// device nonce value stored to nvs_nonce partition of NVM
