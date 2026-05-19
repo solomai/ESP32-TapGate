@@ -18,6 +18,7 @@ set(MOCK_INCLUDES
 set(PROD_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}/../main/common        # types.h, device_err.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../main/common/nvm    # nvm_partition.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../main/common/uuid   # uuid.h
 )
 
 # ---------------------------------------------------------------------------
@@ -27,7 +28,9 @@ set(PROD_INCLUDES
 add_executable(host_tests_device_ctx
     test_device_ctx.cpp
     mocks/common/nvm/nvm_mock.cpp
+    mocks/uuid_stub.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../main/ctx_device/device_ctx.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../main/common/uuid/uuid_str.cpp
     unity/unity.c
 )
 
@@ -89,3 +92,24 @@ target_include_directories(host_tests_event_journal_debug PRIVATE
 )
 
 add_test(NAME host-tests.event_journal_debug COMMAND host_tests_event_journal_debug)
+
+# ---------------------------------------------------------------------------
+# host_tests_uuid — uid_to_str / str_to_uid unit tests (pure, no hardware)
+# ---------------------------------------------------------------------------
+
+add_executable(host_tests_uuid
+    test_uuid.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../main/common/uuid/uuid_str.cpp
+    unity/unity.c
+)
+
+target_compile_features(host_tests_uuid PRIVATE cxx_std_23)
+
+target_include_directories(host_tests_uuid PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/unity
+    ${CMAKE_CURRENT_SOURCE_DIR}/mocks
+    ${CMAKE_CURRENT_SOURCE_DIR}/../main/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/../main/common/uuid
+)
+
+add_test(NAME host-tests.uuid COMMAND host_tests_uuid)

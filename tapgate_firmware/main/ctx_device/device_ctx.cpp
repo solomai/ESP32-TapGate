@@ -6,6 +6,7 @@
 #include "nvm.h"
 #include "nvm_partition.h"
 #include "fcall.h"
+#include "uuid.h"
 
 static constexpr char TAG[] = "DeviceCtx";
 
@@ -44,10 +45,21 @@ esp_err_t DeviceContext::Init() noexcept
     {
         const esp_err_t err = load_entity();
         if (err == ESP_ERR_NVS_NOT_FOUND) {
+            // Generate device ID outside the lock — crypto operation is expensive
+            tg_uid_t device_id = {};
+            const esp_err_t uid_err = generate_rng_uid(device_id);
+            if (uid_err != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to generate device ID: %s", esp_err_to_name(uid_err));
+                init_err = uid_err;
+            }
+
             {
                 std::lock_guard<std::mutex> lock(m_mutex);
                 std::memset(&m_entity, 0, sizeof(m_entity));
                 std::memcpy(m_entity.name, DEVICE_NAME_DEFAULT, sizeof(DEVICE_NAME_DEFAULT));
+                if (uid_err == ESP_OK) {
+                    std::memcpy(m_entity.device_id, device_id, UID_CAP);
+                }
             }
             ESP_LOGW(TAG, "Entity not in NVS, applying defaults");
         } else if (err != ESP_OK) {
@@ -70,7 +82,7 @@ esp_err_t DeviceContext::Init() noexcept
 #ifdef CONFIG_APP_DEBUG_MODE
     {
         device_entity_t entity{};
-        nonce_t         nonce{};
+        tg_nonce_t      nonce{};
         CALLW(TAG, DeviceCtx.get_device_entity(&entity));
         CALLW(TAG, DeviceCtx.get_nonce(&nonce));
 
@@ -82,11 +94,13 @@ esp_err_t DeviceContext::Init() noexcept
 
         // Extract C++ expressions before passing to ESP_LOGI —
         // IDF v6 macro chain does not tolerate cast syntax inside __VA_ARGS__
-        const char* const name_str    = reinterpret_cast<const char*>(entity.name);
-        const char* const id_str      = reinterpret_cast<const char*>(entity.device_id);
-        const char* const pubkey_str  = is_set(entity.pub_key,     PUBKEY_CAP) ? "Yes" : "No";
-        const char* const prvkey_str  = is_set(entity.private_key, PRVKEY_CAP) ? "Yes" : "No";
+        const char* const name_str   = reinterpret_cast<const char*>(entity.name);
+        const char* const pubkey_str = is_set(entity.pub_key,     PUBKEY_CAP) ? "Yes" : "No";
+        const char* const prvkey_str = is_set(entity.private_key, PRVKEY_CAP) ? "Yes" : "No";
         const unsigned long nonce_val = static_cast<unsigned long>(nonce);
+
+        char id_str[UID_STR_LEN]{};
+        uid_to_str(entity.device_id, {id_str, sizeof(id_str)});
 
         ESP_LOGI(TAG,
             "Device Context:"
@@ -166,7 +180,7 @@ esp_err_t DeviceContext::set_device_name(std::string_view name) noexcept
 // Nonce
 // ---------------------------------------------------------------------------
 
-esp_err_t DeviceContext::get_nonce(nonce_t* nonce) const noexcept
+esp_err_t DeviceContext::get_nonce(tg_nonce_t* nonce) const noexcept
 {
     if (!nonce)
         return ESP_ERR_INVALID_ARG;
@@ -175,7 +189,7 @@ esp_err_t DeviceContext::get_nonce(nonce_t* nonce) const noexcept
     return ESP_OK;
 }
 
-esp_err_t DeviceContext::set_nonce(nonce_t nonce) noexcept
+esp_err_t DeviceContext::set_nonce(tg_nonce_t nonce) noexcept
 {
     m_nonce.store(nonce, std::memory_order_relaxed);
     return store_nonce();
@@ -185,7 +199,7 @@ esp_err_t DeviceContext::set_nonce(nonce_t nonce) noexcept
 // Individual field getters (read-only views into the cached entity)
 // ---------------------------------------------------------------------------
 
-esp_err_t DeviceContext::get_public_key(public_key_t pubkey) const noexcept
+esp_err_t DeviceContext::get_public_key(tg_public_key_t pubkey) const noexcept
 {
     if (!pubkey)
         return ESP_ERR_INVALID_ARG;
@@ -195,7 +209,7 @@ esp_err_t DeviceContext::get_public_key(public_key_t pubkey) const noexcept
     return ESP_OK;
 }
 
-esp_err_t DeviceContext::get_private_key(private_key_t prvkey) const noexcept
+esp_err_t DeviceContext::get_private_key(tg_private_key_t prvkey) const noexcept
 {
     if (!prvkey)
         return ESP_ERR_INVALID_ARG;
@@ -205,7 +219,7 @@ esp_err_t DeviceContext::get_private_key(private_key_t prvkey) const noexcept
     return ESP_OK;
 }
 
-esp_err_t DeviceContext::get_device_id(device_uid_t device_id) const noexcept
+esp_err_t DeviceContext::get_device_id(tg_uid_t device_id) const noexcept
 {
     if (!device_id)
         return ESP_ERR_INVALID_ARG;
@@ -255,7 +269,7 @@ esp_err_t DeviceContext::store_entity() noexcept
 
 esp_err_t DeviceContext::load_nonce() noexcept
 {
-    nonce_t val = 0;
+    tg_nonce_t val = 0;
     const esp_err_t err = NVM.ReadU32(NVM_PARTITION_NONCE,
                                       NVS_DEVICENONCE_NS,
                                       NVS_DEVICENONCE_KEY_NONCE,

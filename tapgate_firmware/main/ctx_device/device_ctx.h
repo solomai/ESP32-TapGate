@@ -34,13 +34,13 @@ public:
     [[nodiscard]] esp_err_t set_device_name(std::string_view name) noexcept;
 
     // Get/Set Nonce (stored as u32 in NVM_PARTITION_NONCE, separate from entity)
-    [[nodiscard]] esp_err_t get_nonce(nonce_t *nonce) const noexcept;
-    [[nodiscard]] esp_err_t set_nonce(nonce_t nonce) noexcept;
+    [[nodiscard]] esp_err_t get_nonce(tg_nonce_t *nonce) const noexcept;
+    [[nodiscard]] esp_err_t set_nonce(tg_nonce_t nonce) noexcept;
 
     // Read-only accessors for individual entity fields
-    [[nodiscard]] esp_err_t get_public_key(public_key_t pubkey) const noexcept;
-    [[nodiscard]] esp_err_t get_private_key(private_key_t prvkey) const noexcept;
-    [[nodiscard]] esp_err_t get_device_id(device_uid_t device_id) const noexcept;
+    [[nodiscard]] esp_err_t get_public_key(tg_public_key_t pubkey) const noexcept;
+    [[nodiscard]] esp_err_t get_private_key(tg_private_key_t prvkey) const noexcept;
+    [[nodiscard]] esp_err_t get_device_id(tg_uid_t device_id) const noexcept;
 
 private:
     DeviceContext() = default;
@@ -66,7 +66,7 @@ private:
 #endif
 
     device_entity_t          m_entity{};
-    std::atomic<nonce_t>     m_nonce{0};
+    std::atomic<tg_nonce_t>     m_nonce{0};
 
 }; // class DeviceContext
 

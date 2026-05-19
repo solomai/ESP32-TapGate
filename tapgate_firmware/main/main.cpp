@@ -11,8 +11,10 @@
 #include "nvm.h"
 #include "datetime.h"
 #include "device_ctx.h"
+#include "uuid.h"
 
 #include "diag/reset_reason.h"
+#include "diag/board_info.h"
 
 #ifdef CONFIG_APP_WAIT_FOR_DEBUGGER
 #include "diag/wait_dbg.h"
@@ -65,17 +67,27 @@ extern "C" void app_main(void)
         char device_name_buf[NAME_MAX_SIZE]{};
         CALLW(TAG_MAIN, DeviceCtx.get_device_name({device_name_buf, sizeof(device_name_buf)}));
 
+        char device_id_buf[UID_STR_LEN]{};
+        {
+            tg_uid_t device_id{};
+            CALLW(TAG_MAIN, DeviceCtx.get_device_id(device_id));
+            uid_to_str(device_id, {device_id_buf, sizeof(device_id_buf)});
+        }
+
         const esp_reset_reason_t reason = esp_reset_reason();
         const esp_app_desc_t *app_desc = esp_app_get_description();
 
         EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
-            TAG_MAIN, "Boot Info:"
+            TAG_MAIN, "Boot Info [%s]:"
             "\nDevice name: \"%s\""
+            "\nDevice Id:   \"%s\""
             "\nFirmware Ver: \"%s\""
             "\nIDF Version: %s"
             "\nLast reset reason: \"%s\""
             "\nDateTime: %s",
+            get_current_chip_name(),
             device_name_buf,
+            device_id_buf,
             app_desc->version,
             app_desc->idf_ver,
             get_reset_reason_text(reason),

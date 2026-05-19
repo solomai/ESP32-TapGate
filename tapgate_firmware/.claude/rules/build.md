@@ -96,3 +96,6 @@ ctest --test-dir test/build --output-on-failure
 - `./.scripts/test_host.sh` — host-side unit tests
 - `./.scripts/test_hw.sh [PORT] [TARGET]` — pytest hardware tests
 - `./.scripts/clean.sh` — `idf.py fullclean`
+
+## Artifacts
+- place all generated artifacts (like `build_output.txt`) in `build/` — never commit generated files

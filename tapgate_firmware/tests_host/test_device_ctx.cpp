@@ -105,8 +105,9 @@ void DeviceCtx_Init_NoNvsData_EntityFieldsZeroed()
     TEST_ASSERT_EQUAL_MEMORY(zeros, e.pub_key,     PUBKEY_CAP);
     TEST_ASSERT_EQUAL_MEMORY(zeros, e.private_key, PRVKEY_CAP);
 
-    const uint8_t id_zeros[UID_CAP]{};
-    TEST_ASSERT_EQUAL_MEMORY(id_zeros, e.device_id, UID_CAP);
+    uint8_t id_expected[UID_CAP]{};
+    std::memset(id_expected, 'A', UID_CAP);
+    TEST_ASSERT_EQUAL_MEMORY(id_expected, e.device_id, UID_CAP);
 }
 
 // ---------------------------------------------------------------------------
@@ -233,7 +234,7 @@ void DeviceCtx_GetPublicKey_ReturnsEntityPubKey()
     const device_entity_t in = make_entity("K", 0x10, 0xAB, 0x00);
     (void)DeviceCtx.update_device_entity(&in);
 
-    public_key_t key{};
+    tg_public_key_t key{};
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.get_public_key(key));
     TEST_ASSERT_EQUAL_MEMORY(in.pub_key, key, PUBKEY_CAP);
 }
@@ -244,7 +245,7 @@ void DeviceCtx_GetPrivateKey_ReturnsEntityPrvKey()
     const device_entity_t in = make_entity("K", 0x10, 0x00, 0xCD);
     (void)DeviceCtx.update_device_entity(&in);
 
-    private_key_t key{};
+    tg_private_key_t key{};
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.get_private_key(key));
     TEST_ASSERT_EQUAL_MEMORY(in.private_key, key, PRVKEY_CAP);
 }
@@ -255,7 +256,7 @@ void DeviceCtx_GetDeviceId_ReturnsEntityDeviceId()
     const device_entity_t in = make_entity("K", 0x7F, 0x00, 0x00);
     (void)DeviceCtx.update_device_entity(&in);
 
-    device_uid_t uid{};
+    tg_uid_t uid{};
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.get_device_id(uid));
     TEST_ASSERT_EQUAL_MEMORY(in.device_id, uid, UID_CAP);
 }
@@ -269,7 +270,7 @@ void DeviceCtx_GetNonce_Default_IsZero()
     NVM.reset();
     reset_ctx_from_nvm();
 
-    nonce_t n = 0xDEADBEEF;
+    tg_nonce_t n = 0xDEADBEEF;
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.get_nonce(&n));
     TEST_ASSERT_EQUAL(0u, n);
 }
@@ -292,7 +293,7 @@ void DeviceCtx_SetNonce_GetNonce_Roundtrip()
     NVM.reset();
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.set_nonce(0x12345678u));
 
-    nonce_t n = 0;
+    tg_nonce_t n = 0;
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.get_nonce(&n));
     TEST_ASSERT_EQUAL(0x12345678u, n);
 }
@@ -308,7 +309,7 @@ void DeviceCtx_SetNonce_PersistsToNvm()
 
     reset_ctx_from_nvm();
 
-    nonce_t n = 0;
+    tg_nonce_t n = 0;
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.get_nonce(&n));
     TEST_ASSERT_EQUAL(0xCAFEBABEu, n);
 }
@@ -377,7 +378,7 @@ void DeviceCtx_SetNonce_MaxValue_Succeeds()
     NVM.reset();
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.set_nonce(UINT32_MAX));
 
-    nonce_t n = 0;
+    tg_nonce_t n = 0;
     TEST_ASSERT_EQUAL(ESP_OK, DeviceCtx.get_nonce(&n));
     TEST_ASSERT_EQUAL(UINT32_MAX, n);
 }
@@ -454,8 +455,8 @@ void DeviceCtx_Multithreaded_ConcurrentSetGetNonce_NoDeadlock()
     for (int i = 0; i < NUM_THREADS; ++i) {
         threads.emplace_back([i]() {
             for (int j = 0; j < ITERATIONS; ++j) {
-                (void)DeviceCtx.set_nonce(static_cast<nonce_t>(i * ITERATIONS + j));
-                nonce_t n = 0;
+                (void)DeviceCtx.set_nonce(static_cast<tg_nonce_t>(i * ITERATIONS + j));
+                tg_nonce_t n = 0;
                 (void)DeviceCtx.get_nonce(&n);
             }
         });

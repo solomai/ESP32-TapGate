@@ -9,6 +9,7 @@ idf_component_register(
                  "common"
                  "common/event_journal"
                  "common/datetime"
+                 "common/uuid"
                  "common/nvm"
                  "ctx_device"
                  "ctx_client"
