@@ -77,15 +77,27 @@ extern "C" void app_main(void)
         const esp_reset_reason_t reason = esp_reset_reason();
         const esp_app_desc_t *app_desc = esp_app_get_description();
 
+        char features_buf[128];
+        {
+            esp_chip_info_t chip{};
+            esp_chip_info(&chip);
+            build_chip_features_str(features_buf, sizeof(features_buf), chip);
+        }
+
         EVENT_JOURNAL_ADD(EVENT_JOURNAL_INFO,
-            TAG_MAIN, "Boot Info [%s]:"
-            "\nDevice name: \"%s\""
-            "\nDevice Id:   \"%s\""
-            "\nFirmware Ver: \"%s\""
-            "\nIDF Version: %s"
-            "\nLast reset reason: \"%s\""
-            "\nDateTime: %s",
+            TAG_MAIN, "Boot Info [%s-%s]:"
+            "\nFeatures:           %s"
+            "\nCrystal frequency:  %dMHz"
+            "\nDevice name:        \"%s\""
+            "\nDevice Id:          \"%s\""
+            "\nFirmware Ver:       \"%s\""
+            "\nIDF Version:        %s"
+            "\nLast reset reason:  \"%s\""
+            "\nDateTime:           %s",
             get_current_chip_name(),
+            get_chip_pkg_str(),
+            features_buf,
+            CONFIG_XTAL_FREQ,            
             device_name_buf,
             device_id_buf,
             app_desc->version,
