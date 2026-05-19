@@ -50,7 +50,8 @@ void _event_journal_store(enum event_journal_type type, const char *tag, const c
     // Formats ">> EVENT N <<" into a local buffer and binds _ej_tag to it.
 #define _EVENT_JOURNAL_TAG_DECL \
     char _ej_buf[32]; \
-    snprintf(_ej_buf, sizeof(_ej_buf), ">> EVENT %u <<", ++global_events_counter_per_session); \
+    snprintf(_ej_buf, sizeof(_ej_buf), ">> EVENT %u <<", \
+             __atomic_fetch_add(&global_events_counter_per_session, 1u, __ATOMIC_RELAXED) + 1u); \
     const char* const _ej_tag = _ej_buf;
 #else
 #define _EVENT_JOURNAL_TAG_DECL \
