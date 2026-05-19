@@ -6,6 +6,64 @@ This section covers the device-side architecture implementing the key features f
 
 ## High-Level Architecture
 
+The device exposes three independent communication channels — **BLE**, **MQTT** (over Wi-Fi/Internet), and **Wi-Fi AP** — all derived from a common channel base class. This abstraction allows the rest of the firmware to treat every channel uniformly, regardless of its transport specifics.
+
+All inbound messages received on any channel are placed into a single **shared FreeRTOS queue**. A dedicated **main processing task** drains this queue one message at a time: it resolves the sender's `ClientCtx` by the embedded client ID, decrypts and authenticates the payload using the **ECIES** module (X25519 + HKDF-SHA256 + AES-GCM), executes the requested command, and sends a response — preferring the same channel the message arrived on.
+
+```mermaid
+flowchart TB
+    subgraph mobile["Mobile Clients (1 … N)"]
+        direction LR
+        A1[Client App]
+        A2[Client App]
+        AN[…]
+    end
+
+    subgraph channels["Communication Channels  (Channel Base Class)"]
+        direction LR
+        BLE[BLE]
+        MQTT[MQTT\nWi-Fi / Internet]
+        AP[Wi-Fi AP]
+    end
+
+    mobile -- "parallel use\nall channels active" --> channels
+
+    channels --> Q[(Incoming\nMessage Queue)]
+
+    subgraph task["Main Processing Task"]
+        direction TB
+        D1[Dequeue message]
+        D2[Resolve ClientCtx\nby Client ID]
+        D3[Decrypt & verify\nECIES]
+        D4[Execute command]
+        D5[Send response\nprefer source channel]
+        D1 --> D2 --> D3 --> D4 --> D5
+    end
+
+    Q --> D1
+
+    D5 --> channels
+
+    subgraph state["Persistent State  (NVS)"]
+        direction TB
+        DEV[DeviceCtx\ndevice config & runtime state]
+        CLI[ClientCtx\nclient registry]
+        EVT[Event Journal\naudit log]
+    end
+
+    D4 <--> DEV & CLI & EVT
+```
+
+### Key design points
+
+| Aspect | Decision |
+|---|---|
+| **Channel uniformity** | All channels share a base class; the processing task is transport-agnostic |
+| **Single-consumer queue** | All channels feed one FreeRTOS queue; one task processes messages serially, eliminating concurrency on shared state |
+| **Request → Response** | Every message lifecycle is always `Client Request → Device Response`; invalid or undecryptable messages are silently dropped |
+| **End-to-end encryption** | Every regular message is encrypted with ECIES; enrollment messages are the only plaintext exception |
+| **Persistent state** | `DeviceCtx`, `ClientCtx`, and the Event Journal are backed by NVS and survive power cycles |
+
 ---
 
 ## Protocol
