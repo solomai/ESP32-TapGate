@@ -11,47 +11,43 @@ The device exposes three independent communication channels — **BLE**, **MQTT*
 All inbound messages received on any channel are placed into a single **shared FreeRTOS queue**. A dedicated **main processing task** drains this queue one message at a time: it resolves the sender's `ClientCtx` by the embedded client ID, decrypts and authenticates the payload using the **ECIES** module (X25519 + HKDF-SHA256 + AES-GCM), executes the requested command, and sends a response — preferring the same channel the message arrived on.
 
 ```mermaid
-flowchart TB
-    subgraph mobile["Mobile Clients (1 … N)"]
-        direction LR
-        A1[Client App]
-        A2[Client App]
-        AN[…]
+flowchart LR
+    subgraph CLT["📱 Mobile Clients (1 … N)"]
+        APP(["Client App"])
     end
 
-    subgraph channels["Communication Channels  (Channel Base Class)"]
-        direction LR
-        BLE[BLE]
-        MQTT[MQTT\nWi-Fi / Internet]
-        AP[Wi-Fi AP]
-    end
-
-    mobile -- "parallel use\nall channels active" --> channels
-
-    channels --> Q[(Incoming\nMessage Queue)]
-
-    subgraph task["Main Processing Task"]
+    subgraph CH["Communication Channels  —  shared base class"]
         direction TB
-        D1[Dequeue message]
-        D2[Resolve ClientCtx\nby Client ID]
-        D3[Decrypt & verify\nECIES]
-        D4[Execute command]
-        D5[Send response\nprefer source channel]
-        D1 --> D2 --> D3 --> D4 --> D5
+        BLE("BLE")
+        MQTT("MQTT · Wi-Fi")
+        AP("Wi-Fi AP")
     end
 
-    Q --> D1
+    subgraph FW["ESP32 Firmware"]
+        Q[/"Incoming\nMessage Queue"/]
 
-    D5 --> channels
+        subgraph TASK["Main Processing Task"]
+            direction TB
+            T1["① Resolve ClientCtx"]
+            T2["② Decrypt & Verify\n(ECIES)"]
+            T3["③ Execute Command"]
+            T4["④ Send Response"]
+            T1 --> T2 --> T3 --> T4
+        end
 
-    subgraph state["Persistent State  (NVS)"]
-        direction TB
-        DEV[DeviceCtx\ndevice config & runtime state]
-        CLI[ClientCtx\nclient registry]
-        EVT[Event Journal\naudit log]
+        subgraph NVS["Persistent State · NVS"]
+            direction TB
+            DC(["DeviceCtx"])
+            CC(["ClientCtx\nRegistry"])
+            EJ(["Event Journal"])
+        end
     end
 
-    D4 <--> DEV & CLI & EVT
+    APP --> BLE & MQTT & AP
+    BLE & MQTT & AP --> Q
+    Q --> T1
+    T4 -.->|"prefer source channel"| CH
+    T3 <--> DC & CC & EJ
 ```
 
 ### Key design points
