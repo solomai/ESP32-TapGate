@@ -11,7 +11,7 @@ The device exposes three independent communication channels — **BLE**, **MQTT*
 All inbound messages received on any channel are placed into a single **shared FreeRTOS queue**. A dedicated **main processing task** drains this queue one message at a time: it resolves the sender's `ClientCtx` by the embedded client ID, decrypts and authenticates the payload using the **ECIES** module (X25519 + HKDF-SHA256 + AES-GCM), executes the requested command, and sends a response — preferring the same channel the message arrived on.
 
 ```
-  ┌──────────────────┐   ╔══════════════════════════════════════════════════════════╗
+  ┌──────────────────┐   ╔═════════════════════════════════════════════════════════╗
   │     Channels     │   ║                  Main Processing Task                   ║
   │   shared base    │   ║                                                         ║   ┌─────────────────┐
   │                  │   ║   ┌──────────────┐   ┌──────────────┐                   ║   │                 │
@@ -26,7 +26,7 @@ All inbound messages received on any channel are placed into a single **shared F
   │  └────────────┘  │<══║   ┌──────────────┐   ┌──────┴───────┐                   ║   │                 │
   └──────────────────┘   ║   │ Outbox Queue │<──│  encode msg  │<─────────────────>╠══>│                 │
                          ║   └──────────────┘   └──────────────┘                   ║   └─────────────────┘
-                         ╚══════════════════════════════════════════════════════════╝
+                         ╚═════════════════════════════════════════════════════════╝
 ```
 
 ### Key design points
