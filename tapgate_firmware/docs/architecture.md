@@ -12,44 +12,38 @@ All inbound messages received on any channel are placed into a single **shared F
 
 ```mermaid
 flowchart LR
-    classDef client  fill:#e8edf2,stroke:#6b7f96,color:#1a2533
-    classDef channel fill:#edf0f3,stroke:#8a95a3,color:#1a2533
-    classDef queue   fill:#f0ede8,stroke:#8a7d6b,color:#1a2533
-    classDef step    fill:#edf2ed,stroke:#6b8a6b,color:#1a2533
-    classDef store   fill:#ebebeb,stroke:#8a8a8a,color:#1a2533
-
-    APP(["Mobile Clients (1 … N)"]):::client
-
-    subgraph CH["Communication Channels  ·  shared base class"]
+    subgraph CH["Channels  ·  shared base class"]
         direction TB
-        BLE("BLE"):::channel
-        MQTT("MQTT · Wi-Fi"):::channel
-        AP("Wi-Fi AP"):::channel
+        BLE("BLE")
+        MQTT("MQTT · Wi-Fi")
+        AP("Wi-Fi AP")
     end
 
-    Q[/"Incoming\nMessage Queue"/]:::queue
+    IQ[/"Inbox Queue"/]
+    OQ[/"Outbox Queue"/]
 
     subgraph TASK["Main Processing Task"]
         direction TB
-        T1["① Resolve ClientCtx"]:::step
-        T2["② Decrypt & Verify\n(ECIES)"]:::step
-        T3["③ Execute Command"]:::step
-        T4["④ Send Response"]:::step
-        T1 --> T2 --> T3 --> T4
+        DEC["decode msg"]
+        ENC["encode msg"]
     end
 
-    subgraph NVS["Persistent State · NVS"]
-        direction TB
-        DC(["DeviceCtx"]):::store
-        CC(["ClientCtx\nRegistry"]):::store
-        EJ(["Event Journal"]):::store
+    CL["Core Logic\nModule"]
+
+    subgraph CTX["Persistent State · NVS"]
+        direction LR
+        DCTX(["DeviceCtx"])
+        CCTX(["ClientCtx"])
+        EJ(["Event Journal"])
     end
 
-    APP --> BLE & MQTT & AP
-    BLE & MQTT & AP --> Q
-    Q --> T1
-    T4 -.->|"prefer source channel"| CH
-    T3 <--> DC & CC & EJ
+    CH  --> IQ
+    OQ  --> CH
+    IQ  --> DEC
+    ENC --> OQ
+    DEC <--> CL
+    ENC <--> CL
+    TASK <--> CTX
 ```
 
 ### Key design points
