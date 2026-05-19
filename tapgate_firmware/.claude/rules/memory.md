@@ -22,15 +22,25 @@ description: Memory safety and resource management rules for ESP-IDF / FreeRTOS
 - Prefer static or stack allocation for fixed-size buffers in tasks
 
 ## FreeRTOS Resource Ownership
-Wrap all FreeRTOS handles in RAII classes:
+Wrap all FreeRTOS handles in RAII structs (`std::unique_ptr<void>` does not compile — `void` is an incomplete type):
 ```cpp
-// Task
-struct TaskDeleter { void operator()(TaskHandle_t h) { vTaskDelete(h); } };
-using TaskHandle = std::unique_ptr<void, TaskDeleter>;
+// Task RAII wrapper
+struct OwnedTask {
+    TaskHandle_t handle{nullptr};
+    explicit OwnedTask(TaskHandle_t h) : handle(h) {}
+    ~OwnedTask() { if (handle) vTaskDelete(handle); }
+    OwnedTask(const OwnedTask&) = delete;
+    OwnedTask& operator=(const OwnedTask&) = delete;
+};
 
-// Queue
-struct QueueDeleter { void operator()(QueueHandle_t h) { vQueueDelete(h); } };
-using QueueHandle = std::unique_ptr<void, QueueDeleter>;
+// Queue RAII wrapper
+struct OwnedQueue {
+    QueueHandle_t handle{nullptr};
+    explicit OwnedQueue(QueueHandle_t h) : handle(h) {}
+    ~OwnedQueue() { if (handle) vQueueDelete(handle); }
+    OwnedQueue(const OwnedQueue&) = delete;
+    OwnedQueue& operator=(const OwnedQueue&) = delete;
+};
 ```
 - Use `std::mutex` / `std::lock_guard` when possible; fall back to FreeRTOS primitives only when interrupt-context access is needed
 - Use `SemaphoreHandle_t` with `xSemaphoreCreateMutex()` only for ISR-accessible mutexes; wrap in RAII
@@ -42,6 +52,7 @@ class NvsHandle {
 public:
     explicit NvsHandle(nvs_handle_t h) : m_handle(h) {}
     ~NvsHandle() { nvs_close(m_handle); }
+    nvs_handle_t get() const { return m_handle; }
     NvsHandle(const NvsHandle&) = delete;
     NvsHandle& operator=(const NvsHandle&) = delete;
 private:
@@ -51,17 +62,18 @@ private:
 
 ## Stack Sizes
 - Default `app_main` stack: 8 KB — increase via `CONFIG_ESP_MAIN_TASK_STACK_SIZE` in `sdkconfig.defaults`
-- Size custom tasks appropriately: `configMINIMAL_STACK_SIZE * 4` as a starting baseline
-- Use `uxTaskGetStackHighWaterMark(NULL)` during development to tune stack sizes
+- Size custom tasks: start at **4096 bytes** for simple tasks; **8192 bytes** for tasks using networking, C++ STL, or JSON parsing
+- Profile with `uxTaskGetStackHighWaterMark(nullptr)` during development; trim to leave ≥ 20% headroom
 
 ## Safety Checks (Host Tests)
 For host-side unit tests, run AddressSanitizer + UBSan:
-```bash
-cmake -B test/build -G Ninja \
-      -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
-      -DCMAKE_BUILD_TYPE=Debug test/
-cmake --build test/build -j$(nproc)
-ctest --test-dir test/build --output-on-failure
+```powershell
+# Requires Clang or GCC — run under WSL or a MinGW toolchain on Windows (MSVC does not support -fsanitize)
+cmake -B build_tests_host -G Ninja `
+      -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" `
+      -DCMAKE_BUILD_TYPE=Debug tests_host/
+cmake --build build_tests_host
+ctest --test-dir build_tests_host --output-on-failure
 ```
 Note: ASan/UBSan cannot run on the target chip. Run sanitizers on host tests only.
 
@@ -78,6 +90,22 @@ Stack and static are the default. Heap is the exception, not the rule.
 Every heap allocation (`new`, `std::make_unique`, `std::make_shared`, `heap_caps_malloc`) must be
 accompanied by a comment: `// Heap: <reason why stack/static is not viable>`
 
+## DMA Buffers
+Buffers passed to DMA peripherals (SPI, I2S, USB) have strict requirements:
+- Allocate with `heap_caps_malloc(size, MALLOC_CAP_DMA)` or declare with `DMA_ATTR` macro
+- On ESP32-S3 with PSRAM: flush cache before DMA write, invalidate after DMA read via `esp_cache_msync()`
+- Never use stack-allocated buffers for DMA — the stack may be in IRAM or non-DMA-accessible DRAM
+
+```cpp
+// Heap: DMA-capable buffer required for SPI transfer
+DMA_ATTR static uint8_t s_tx_buf[64];
+
+// OR dynamic allocation with DMA capability
+// Heap: DMA-capable, size determined by protocol frame size
+uint8_t* dma_buf = static_cast<uint8_t*>(heap_caps_malloc(len, MALLOC_CAP_DMA));
+```
+See also: `.claude/rules/esp-idf.md` for peripheral API patterns.
+
 ## Forbidden
 - `reinterpret_cast` on non-POD types without justification comment
 - Returning pointer/reference to local variable
@@ -87,3 +115,4 @@ accompanied by a comment: `// Heap: <reason why stack/static is not viable>`
 - Unbounded stack growth in recursive functions running in tasks
 - Heap allocation without a justification comment
 - `std::vector` / `std::string` / `std::map` in ISR handlers or tasks with stack < 4 KB
+- See also ISR constraints: `.claude/rules/code-style.md` ISR Context Rules and `.claude/rules/embedded-cpp.md` Heap Allocation rules

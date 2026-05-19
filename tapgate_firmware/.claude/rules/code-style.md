@@ -14,19 +14,21 @@ description: C++ coding style and idioms for ESP-IDF projects
 - Template parameters: `T`, `TValue`, `TKey`
 - FreeRTOS task functions: `task_<name>` with signature `void task_<name>(void* arg)`
 
-## Modern C++ Idioms (ESP-IDF toolchain supports C++23)
+## Modern C++ Idioms
+Language standard: see **Platform** in `.claude/CLAUDE.md` (C17 / C++20).
+
 - Prefer `auto` when type is obvious from context
 - Use range-for over index loops unless index is needed
 - Use structured bindings: `auto [key, val] = pair`
 - Use `std::span` for non-owning array views
 - Use `[[nodiscard]]` on functions returning `esp_err_t` or error codes
 - Use `constexpr` / `consteval` for compile-time computation
-- Use `std::format` (C++23) instead of `printf` / `sprintf` in non-ISR code
+- Use `std::format` (C++20) instead of `printf` / `sprintf` in non-ISR code; avoid in firmware hot paths due to binary-size impact — prefer `snprintf` into a `char[]` buffer there
 - Prefer `std::expected<T, esp_err_t>` for error handling in C++ APIs
 
 ## ESP-IDF Specific Style
 - Use `ESP_LOGx(TAG, ...)` macros for all logging — never `printf` in app code
-- Define `static const char* TAG = "module_name";` at file scope for log tags
+- Define `static constexpr char TAG[] = "module_name";` at file scope for log tags
 - Use `ESP_ERROR_CHECK(expr)` for unrecoverable errors (aborts on failure)
 - Use `ESP_RETURN_ON_ERROR(expr, TAG, fmt, ...)` for recoverable errors in functions returning `esp_err_t`
 - Use `ESP_GOTO_ON_ERROR` when cleanup via `goto` is needed

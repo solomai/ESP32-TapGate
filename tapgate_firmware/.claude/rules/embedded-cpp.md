@@ -64,6 +64,7 @@ auto buf = std::make_unique<uint8_t[]>(dynamic_size);
   - ISR handlers
   - Tasks with stack < 4 KB
   - Code paths called at > 100 Hz (hot paths)
+- See also `.claude/rules/code-style.md` ISR Context Rules and `.claude/rules/memory.md` Forbidden list for the full ISR constraint set
 - `std::string` — avoid entirely; use `std::string_view` for read-only string access, `char[]` for buffers
 - `std::map` / `std::unordered_map` — avoid; use sorted `std::array` + binary search for small tables
 
@@ -84,14 +85,14 @@ auto buf = std::make_unique<uint8_t[]>(dynamic_size);
 | `std::mutex` (bare) | Acceptable in tasks | FreeRTOS primitive in ISR context |
 
 Allowed without restriction: `std::array`, `std::span`, `std::optional`, `std::expected`,
-`std::string_view`, `std::array_view`, `std::pair`, `std::tuple`, `std::variant` (no RTTI dispatch),
+`std::string_view`, `std::pair`, `std::tuple`, `std::variant` (no RTTI dispatch),
 `std::bitset`, `std::atomic`, algorithm headers (`<algorithm>`, `<numeric>`, `<ranges>`).
 
 ## Virtual Functions
 
 - Virtual functions are allowed but carry vtable overhead (~4 bytes/pointer + vtable per class)
 - Prefer non-virtual interfaces in hot paths; use `final` to enable devirtualization
-- Never use pure virtual destructors unless the class is truly abstract
+- Use `virtual ~Base() = default;` in abstract base classes; use `virtual ~Base() = 0` with an out-of-line definition only when no other pure virtual function exists to mark the class abstract
 - Limit virtual dispatch depth in interrupt-driven paths
 
 ## Templates
@@ -110,5 +111,5 @@ Allowed without restriction: `std::array`, `std::span`, `std::optional`, `std::e
 ## Logging
 - Never use `std::cout` or C++ streams; use ESP-IDF logging macros (`ESP_LOGI`, `ESP_LOGE`, etc.)
 - Avoid logging in hot paths or ISRs; use flags to enable/disable verbose logging
-- Avoid logging under mutex locks to prevent deadlocks;
+- Avoid logging under mutex locks to prevent deadlocks
 - Log messages should be concise and informative; avoid large formatted strings in performance-critical code

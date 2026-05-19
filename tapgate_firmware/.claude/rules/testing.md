@@ -42,7 +42,7 @@ add_executable(host_tests
     unity/unity.c
 )
 
-target_compile_features(host_tests PRIVATE cxx_std_20)
+target_compile_features(host_tests PRIVATE cxx_std_20)  # matches project C++20 standard — see Platform in .claude/CLAUDE.md
 target_include_directories(host_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/unity
     ${CMAKE_CURRENT_SOURCE_DIR}/mocks
@@ -53,9 +53,9 @@ add_test(NAME host-tests.unit COMMAND host_tests)
 ```
 
 ### Commands
-```bash
+```powershell
 # Via script (recommended)
-python run_host_tests.py
+powershell -File .scripts/run_host_tests.ps1
 
 # Manual
 cmake -B build_tests_host -DCMAKE_BUILD_TYPE=Debug tests_host/
@@ -69,20 +69,20 @@ See [ESP-IDF Unit Testing docs](https://docs.espressif.com/projects/esp-idf/en/l
 
 Each test group is a standalone IDF project under `tests/test_<name>/`.
 
-Test files follow Unity conventions:
+Test files use free-form string descriptions (not the `Method_State_Expected` convention used in Tier 1); group tests by module using `[tag]` brackets:
 ```cpp
-TEST_CASE("my function returns expected value", "[my_module]")
+TEST_CASE("sensor returns error when bus is offline", "[sensor]")
 {
     TEST_ASSERT_EQUAL(42, my_function());
 }
 ```
 
 ### Commands
-```bash
+```powershell
 # Via script (recommended) — builds, flashes, reads serial for each group
-python run_device_tests.py                   # all groups
-python run_device_tests.py test_comp_crc32   # one group
-python run_device_tests.py "test_comp*"      # by mask
+powershell -File .scripts/run_device_tests.ps1                            # all groups
+powershell -File .scripts/run_device_tests.ps1 -Filter "test_comp_crc32" # one group
+powershell -File .scripts/run_device_tests.ps1 -Filter "test_comp*"      # by mask
 ```
 
 ## Tier 3 — Hardware-in-the-Loop (pytest-embedded)

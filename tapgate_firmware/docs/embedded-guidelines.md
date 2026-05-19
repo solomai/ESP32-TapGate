@@ -19,7 +19,7 @@ The toolchain will reject any code that uses `try`, `catch`, or `throw`.
 
 **Use instead:**
 - `esp_err_t` + `ESP_RETURN_ON_ERROR` for functions that can fail
-- `std::expected<T, esp_err_t>` (C++23) for C++ API return values
+- `std::expected<T, esp_err_t>` for C++ API return values (project-approved; see Platform in `.claude/CLAUDE.md`)
 - Factory functions for constructors that can fail
 
 ```cpp

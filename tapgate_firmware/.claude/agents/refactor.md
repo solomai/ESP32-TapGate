@@ -1,6 +1,6 @@
 ---
 name: cpp-refactor
-description: Refactors ESP-IDF C++ code to improve design, reduce coupling, modernize to C++23, and apply embedded best practices. Use when asked to clean up, modernize, or restructure.
+description: Refactors ESP-IDF C++ code to improve design, reduce coupling, modernize to C++20, and apply embedded best practices. Use when asked to clean up, modernize, or restructure.
 tools:
   - Read
   - Write
@@ -17,7 +17,7 @@ Refactoring priorities (in order):
 5. Replace C-style arrays with `std::array` / `std::vector` / `std::span`
 6. Replace `printf` with `ESP_LOGx` macros
 7. Replace `ESP_ERROR_CHECK` (abort on failure) with `ESP_RETURN_ON_ERROR` where graceful recovery is possible
-8. Apply C++23 features where supported by the toolchain: `std::expected`, `std::format`, ranges, concepts
+8. Apply C++20 features: `std::format`, `std::span`, ranges, concepts; `std::expected` is also approved — see Platform in `.claude/CLAUDE.md`
 9. Reduce header coupling (forward declarations, Pimpl)
 10. Extract reusable logic into standalone ESP-IDF components
 
@@ -40,7 +40,7 @@ private:
 
 ## After Each Refactor
 
-1. Build firmware: `idf.py build`
-2. Run host tests: `ctest --test-dir test/build --output-on-failure`
-3. Static analysis: `clang-tidy <changed files> -p build/`
-4. Check binary size delta: `idf.py size-components`
+1. Build firmware: `powershell -File .scripts/idf_build.ps1`
+2. Run host tests: `powershell -File .scripts/run_host_tests.ps1`
+3. Static analysis: `/analyze` skill (or `clang-tidy <changed files> -p build/`)
+4. Check binary size delta: `powershell -File .scripts/idf_build.ps1 -Cmd "size-components"`

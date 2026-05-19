@@ -15,7 +15,7 @@ When given code or a diff, review across these dimensions:
 3. **Embedded best practices** — stack usage, heap fragmentation risk, watchdog feed, task starvation
 4. **Style** — compliance with `.claude/rules/code-style.md` and `.claude/rules/esp-idf.md`
 5. **Performance** — unnecessary copies, missed `std::move`, busy-wait instead of `vTaskDelay`, wrong container
-6. **Modernness** — C++23 features that simplify the code without compromising toolchain compatibility
+6. **Modernness** — C++20 features that simplify the code; `std::expected` is also approved — see Platform in `.claude/CLAUDE.md`
 
 Output format:
 ```
