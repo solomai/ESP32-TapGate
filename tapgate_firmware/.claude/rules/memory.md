@@ -4,6 +4,54 @@ description: Memory safety and resource management rules for ESP-IDF / FreeRTOS
 
 # Memory Management Rules
 
+## Fixed-Size Buffer Sizing Rules
+
+Every buffer-size constant (`_CAP`, `_SIZE`, `_LEN`, `_BUF`, `_MAX`, `_CAPACITY`) must be
+validated against the actual data that flows into it. Two invariants must hold:
+
+1. **Safety** — the buffer is large enough (no overflow).
+2. **Efficiency** — the buffer is not wastefully larger than needed.
+
+### Sizing rule: round up to the nearest power of 2
+
+```
+recommended = next_pow2(max_data_size_in_bytes)
+```
+
+| Max data | Recommended |
+|---|---|
+| ≤ 8 B | 8 |
+| ≤ 16 B | 16 |
+| ≤ 32 B | 32 |
+| ≤ 64 B | 64 |
+| ≤ 128 B | 128 |
+| ≤ 256 B | 256 |
+| ≤ 512 B | 512 |
+
+When the exact maximum cannot be determined statically, use a worst-case approximation and
+document it in a comment at the constant definition.
+
+### Authoritative type sources
+
+Always read these files to determine data sizes — **never copy their values elsewhere**:
+- `main/common/constants.h` — `NAME_MAX_SIZE`, `UID_CAP`, `PUBKEY_CAP`, `PRVKEY_CAP`, …
+- `main/common/types.h` — `tg_uid_t`, `tg_name_t`, `tg_public_key_t`, …
+
+These files are not subject to refactoring.
+
+### Enforce with `static_assert`
+
+Where the relationship between a buffer constant and a type size is load-bearing, guard it:
+```cpp
+static_assert(MY_BUF_CAP >= sizeof(MyStruct),
+              "MY_BUF_CAP is too small for MyStruct");
+static_assert(MY_BUF_CAP == next_pow2(sizeof(MyStruct)),
+              "MY_BUF_CAP should be next power of 2 above MyStruct size");
+```
+
+For a full buffer audit across a module, use the `buffer-analyzer` agent
+(`.claude/agents/buffer-analyzer.md`).
+
 ## Ownership (C++ layer)
 - Owning raw pointer → `std::unique_ptr<T>`
 - Shared ownership → `std::shared_ptr<T>` (justify in comment; watch heap fragmentation)
@@ -113,6 +161,6 @@ See also: `.claude/rules/esp-idf.md` for peripheral API patterns.
 - Dynamic allocation in ISR context
 - Blocking calls in ISR context (`vTaskDelay`, mutex lock, etc.)
 - Unbounded stack growth in recursive functions running in tasks
-- Heap allocation without a justification comment
-- `std::vector` / `std::string` / `std::map` in ISR handlers or tasks with stack < 4 KB
+- Any heap allocation without a `// Heap: <reason>` justification comment
+- All heap-allocating STL containers without justification — full list in `.claude/rules/embedded-cpp.md`
 - See also ISR constraints: `.claude/rules/code-style.md` ISR Context Rules and `.claude/rules/embedded-cpp.md` Heap Allocation rules

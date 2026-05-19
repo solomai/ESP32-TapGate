@@ -65,7 +65,6 @@ Language standard: see **Platform** in `.claude/CLAUDE.md` (C17 / C++20).
 - Direct `malloc`/`free` — use `heap_caps_malloc` if specific heap is needed, otherwise RAII
 - `try` / `catch` / `throw` — exceptions are disabled (`-fno-exceptions`)
 - `dynamic_cast<>` / `typeid()` — RTTI is disabled (`-fno-rtti`)
-- `std::vector`, `std::string`, `std::map` without justification comment explaining why heap is needed
-- `std::unordered_map`, `std::list`, `std::deque`, `std::regex`, `std::thread`, `std::filesystem` — forbidden in firmware
+- Any heap-allocating STL container without a `// Heap: <reason>` justification comment — full list and alternatives in `.claude/rules/embedded-cpp.md`
 - `std::function` in hot paths or ISR — use function pointer or template instead
 - Heap allocation in ISR handlers — use static buffers and FreeRTOS queues

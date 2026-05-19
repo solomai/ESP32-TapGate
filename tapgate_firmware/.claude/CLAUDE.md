@@ -28,6 +28,7 @@ Use this map to identify the right rules, skills, scripts, and commands for each
 | **Step 2** — verify ESP-IDF APIs | https://docs.espressif.com/projects/esp-idf/en/v6.0/ |
 | **Step 3** — write host test first | See *Host Testing* below |
 | **Step 4** — implement | Follow TDD: red → green → refactor |
+| **Step 5** — new buffer constant? | Run `buffer-analyzer` agent to validate size against actual data |
 | Relevant rules | All rules in `.claude/rules/` |
 
 ### Build
@@ -77,6 +78,7 @@ Use this map to identify the right rules, skills, scripts, and commands for each
 | What | Tool |
 |---|---|
 | Review staged / specified files | `/review` skill — uses `cpp-reviewer` agent |
+| Buffer size audit | `buffer-analyzer` agent — triggered by any `_CAP`/`_SIZE`/`_LEN`/`_BUF`/`_MAX` constant |
 | Security-focused review | `/security-review` skill |
 | Crash / memory error diagnosis | `cpp-debugger` agent |
 | Relevant rules | All rules in `.claude/rules/` |
@@ -115,9 +117,9 @@ Use this map to identify the right rules, skills, scripts, and commands for each
 
 ## Memory Discipline
 - Default to stack or static storage; heap allocation requires a justification comment
-- Never use heap-allocating STL containers in ISR context or tasks with stack < 4 KB
-- Avoid `std::vector`, `std::string`, `std::map` without justification
-- See `.claude/rules/memory.md` and `.claude/rules/embedded-cpp.md`
+- **All heap-allocating STL containers are FORBIDDEN without justification** — see full table in `.claude/rules/embedded-cpp.md`
+- Allowed without restriction: `std::array`, `std::span`, `std::string_view`, `std::optional`, `std::variant`, `std::expected`
+- See `.claude/rules/memory.md` and `.claude/rules/embedded-cpp.md` for complete rules and alternatives
 
 ## Code Quality
 - Code must compile with zero warnings under the ESP-IDF toolchain

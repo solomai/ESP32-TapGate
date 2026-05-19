@@ -73,25 +73,38 @@ auto rx_buf = std::make_unique<uint8_t[]>(rx_buf_size);
 
 ## STL Container Reference
 
+All heap-allocating containers are **forbidden without a `// Heap: <reason>` justification comment**.
+See `.claude/rules/embedded-cpp.md` for the full table with alternatives.
+
+### Allowed (no heap allocation)
+
 | Container | Guidance |
 |---|---|
-| `std::array<T, N>` | Preferred for fixed-size sequences |
-| `std::span<T>` | Preferred for non-owning views |
+| `std::array<T, N>` | Preferred for fixed-size sequences — stack or static storage |
+| `std::span<T>` | Preferred for non-owning views over contiguous data |
 | `std::string_view` | Preferred for read-only string access |
-| `std::optional<T>` | Allowed; use for nullable values |
-| `std::expected<T, E>` | Preferred for error-returning APIs |
-| `std::variant<...>` | Allowed; avoid type-based dispatch via RTTI |
-| `std::bitset<N>` | Allowed |
-| `std::atomic<T>` | Allowed; use for shared variables between tasks/ISR |
-| `std::vector<T>` | Avoid; use `std::array` or static buffer |
-| `std::string` | Avoid; use `std::string_view` or `char[]` |
-| `std::map` / `std::set` | Avoid; use sorted array + `std::lower_bound` |
-| `std::unordered_map` | Forbidden in firmware |
-| `std::list` / `std::deque` | Forbidden; use ring buffer or FreeRTOS queue |
-| `std::function` | Avoid in hot paths (heap alloc for captures); use function pointer |
-| `std::thread` | Forbidden; use FreeRTOS `xTaskCreate` |
-| `std::regex` | Forbidden; implement manual parsing |
-| `std::filesystem` | Forbidden; use POSIX / SPIFFS / LittleFS APIs |
+| `std::optional<T>` | In-place, no heap; use for nullable values |
+| `std::expected<T, E>` | In-place; preferred for error-returning APIs (project-approved) |
+| `std::variant<T...>` | In-place; avoid RTTI-based type dispatch |
+| `std::bitset<N>` | Fixed-size bit array |
+| `std::atomic<T>` | Lock-free; use for shared variables between tasks/ISR |
+
+### Forbidden (require heap — use only with justification comment)
+
+| Container | Replacement |
+|---|---|
+| `std::vector<T>` | `std::array<T, N>` or static buffer |
+| `std::string` | `std::string_view` (read-only) or `char[]` (mutable) |
+| `std::map` / `std::multimap` | Sorted `std::array` + `std::lower_bound` |
+| `std::set` / `std::multiset` | Sorted `std::array` + binary search |
+| `std::unordered_map` / `std::unordered_set` | Sorted `std::array` or open-address table |
+| `std::list` / `std::forward_list` | Ring buffer or `std::array` with index wrap |
+| `std::deque` | `std::array` with index wrap |
+| `std::queue` / `std::stack` / `std::priority_queue` | FreeRTOS queue or fixed `std::array` |
+| `std::function` | Function pointer or template parameter |
+| `std::thread` | `xTaskCreate` (FreeRTOS) |
+| `std::regex` | Manual parsing |
+| `std::filesystem` | POSIX / SPIFFS / LittleFS APIs |
 
 ## Virtual Functions and Polymorphism
 

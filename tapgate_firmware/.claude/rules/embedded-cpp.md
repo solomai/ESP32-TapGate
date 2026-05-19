@@ -59,34 +59,72 @@ auto buf = std::make_unique<uint8_t[]>(dynamic_size);
 
 ### Rules:
 - Every `new` / `std::make_unique` / `std::make_shared` must have a comment explaining why heap is required
-- Prefer `std::array<T, N>` over `std::vector<T>` for fixed-size collections
-- Never use `std::vector`, `std::string`, `std::map`, `std::list` in:
-  - ISR handlers
-  - Tasks with stack < 4 KB
-  - Code paths called at > 100 Hz (hot paths)
+- All heap-allocating STL containers are **FORBIDDEN** without an explicit justification comment — see table below
 - See also `.claude/rules/code-style.md` ISR Context Rules and `.claude/rules/memory.md` Forbidden list for the full ISR constraint set
-- `std::string` — avoid entirely; use `std::string_view` for read-only string access, `char[]` for buffers
-- `std::map` / `std::unordered_map` — avoid; use sorted `std::array` + binary search for small tables
 
-## Heavy STL — RESTRICTED
+## Heap-Allocating STL Containers — FORBIDDEN Without Justification
 
-| Container / Type | Status | Alternative |
+**Default answer is NO.** Any container that can dynamically allocate memory is forbidden unless justified.
+Every heap-allocating container in firmware introduces non-deterministic allocation time, fragmentation
+risk, and silent failure when memory is exhausted (`bad_alloc` is disabled with `-fno-exceptions`).
+
+### Forbidden — require heap allocation
+
+| Container | Reason | Required replacement |
 |---|---|---|
-| `std::vector` | Avoid without justification | `std::array<T,N>`, static buffer |
-| `std::string` | Avoid | `std::string_view`, `char[]` |
-| `std::map` | Avoid | sorted `std::array` + `std::lower_bound` |
-| `std::unordered_map` | Forbidden in firmware | sorted array or custom hash table |
-| `std::list` / `std::deque` | Forbidden | ring buffer, FreeRTOS queue |
-| `std::shared_ptr` | Use sparingly | `std::unique_ptr` preferred |
-| `std::function` | Avoid | function pointer or template |
-| `std::regex` | Forbidden | manual parsing |
-| `std::filesystem` | Forbidden | POSIX / SPIFFS / LittleFS APIs |
-| `std::thread` | Forbidden | FreeRTOS `xTaskCreate` |
-| `std::mutex` (bare) | Acceptable in tasks | FreeRTOS primitive in ISR context |
+| `std::vector<T>` | Dynamic array, grows on heap | `std::array<T, N>`, static buffer |
+| `std::string` | Dynamic string on heap | `std::string_view` (read-only), `char[]` (mutable) |
+| `std::map<K, V>` | Red-black tree, every node heap-allocated | Sorted `std::array` + `std::lower_bound` |
+| `std::multimap<K, V>` | Same as `std::map` | Sorted `std::array` |
+| `std::set<T>` | Red-black tree, every node heap-allocated | Sorted `std::array` + binary search |
+| `std::multiset<T>` | Same as `std::set` | Sorted `std::array` |
+| `std::unordered_map<K, V>` | Hash table, heap-allocated + non-deterministic | Sorted `std::array` or open-address table |
+| `std::unordered_set<T>` | Same as `std::unordered_map` | Sorted `std::array` |
+| `std::list<T>` | Linked list, every node heap-allocated | Ring buffer, `std::array` with index wrap |
+| `std::forward_list<T>` | Same as `std::list` | Ring buffer |
+| `std::deque<T>` | Segmented array on heap | `std::array` with index wrap |
+| `std::queue<T>` | Backed by `std::deque` by default | FreeRTOS queue (`xQueueCreate`) |
+| `std::stack<T>` | Backed by `std::deque` by default | `std::array` used as a stack |
+| `std::priority_queue<T>` | Backed by `std::vector` by default | Fixed `std::array` + `std::push_heap` |
+| `std::function` | Heap-allocates for closures exceeding SBO | Function pointer or template parameter |
+| `std::regex` | Heap-heavy, non-deterministic | Manual parsing |
+| `std::thread` | OS thread, forbidden on FreeRTOS | `xTaskCreate` |
+| `std::filesystem` | Not available on ESP32 | POSIX / SPIFFS / LittleFS APIs |
 
-Allowed without restriction: `std::array`, `std::span`, `std::optional`, `std::expected`,
-`std::string_view`, `std::pair`, `std::tuple`, `std::variant` (no RTTI dispatch),
-`std::bitset`, `std::atomic`, algorithm headers (`<algorithm>`, `<numeric>`, `<ranges>`).
+### Allowed — no dynamic allocation
+
+| Type | Notes |
+|---|---|
+| `std::array<T, N>` | Fixed-size; lives on stack or static storage |
+| `std::span<T>` | Non-owning view; zero overhead |
+| `std::string_view` | Non-owning view over char data |
+| `std::optional<T>` | In-place, no heap |
+| `std::variant<T...>` | In-place; avoid RTTI-based type dispatch |
+| `std::pair<A, B>` | In-place |
+| `std::tuple<T...>` | In-place |
+| `std::bitset<N>` | Fixed-size bit array |
+| `std::atomic<T>` | Lock-free, no heap |
+| `std::expected<T, E>` | In-place; project-approved (see Platform in `.claude/CLAUDE.md`) |
+| `std::mutex` | Acceptable in tasks; use FreeRTOS primitive in ISR context |
+| Algorithm headers | `<algorithm>`, `<numeric>`, `<ranges>` — no allocation |
+
+### Smart pointers — allowed with mandatory justification
+
+The pointer itself is stack-sized; it *manages* a heap object. Every use must carry a comment.
+
+| Type | Rule |
+|---|---|
+| `std::unique_ptr<T>` | Allowed — mandatory `// Heap: <reason>` comment at use site |
+| `std::shared_ptr<T>` | Use sparingly — adds reference-count heap overhead; prefer `unique_ptr` |
+
+### When heap allocation is unavoidable
+
+If a heap-allocating container is genuinely necessary, the use site must carry:
+```cpp
+// Heap: <specific reason — e.g., size determined at runtime from NVS config, max bounded by X>
+std::vector<uint8_t> buf(size);
+```
+Prefer allocating once at startup and reusing, rather than allocating repeatedly at runtime.
 
 ## Virtual Functions
 
