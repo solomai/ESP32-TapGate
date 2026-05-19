@@ -12,35 +12,37 @@ All inbound messages received on any channel are placed into a single **shared F
 
 ```mermaid
 flowchart LR
-    subgraph CLT["📱 Mobile Clients (1 … N)"]
-        APP(["Client App"])
-    end
+    classDef client  fill:#e8edf2,stroke:#6b7f96,color:#1a2533
+    classDef channel fill:#edf0f3,stroke:#8a95a3,color:#1a2533
+    classDef queue   fill:#f0ede8,stroke:#8a7d6b,color:#1a2533
+    classDef step    fill:#edf2ed,stroke:#6b8a6b,color:#1a2533
+    classDef store   fill:#ebebeb,stroke:#8a8a8a,color:#1a2533
 
-    subgraph CH["Communication Channels  —  shared base class"]
+    APP(["Mobile Clients (1 … N)"]):::client
+
+    subgraph CH["Communication Channels  ·  shared base class"]
         direction TB
-        BLE("BLE")
-        MQTT("MQTT · Wi-Fi")
-        AP("Wi-Fi AP")
+        BLE("BLE"):::channel
+        MQTT("MQTT · Wi-Fi"):::channel
+        AP("Wi-Fi AP"):::channel
     end
 
-    subgraph FW["ESP32 Firmware"]
-        Q[/"Incoming\nMessage Queue"/]
+    Q[/"Incoming\nMessage Queue"/]:::queue
 
-        subgraph TASK["Main Processing Task"]
-            direction TB
-            T1["① Resolve ClientCtx"]
-            T2["② Decrypt & Verify\n(ECIES)"]
-            T3["③ Execute Command"]
-            T4["④ Send Response"]
-            T1 --> T2 --> T3 --> T4
-        end
+    subgraph TASK["Main Processing Task"]
+        direction TB
+        T1["① Resolve ClientCtx"]:::step
+        T2["② Decrypt & Verify\n(ECIES)"]:::step
+        T3["③ Execute Command"]:::step
+        T4["④ Send Response"]:::step
+        T1 --> T2 --> T3 --> T4
+    end
 
-        subgraph NVS["Persistent State · NVS"]
-            direction TB
-            DC(["DeviceCtx"])
-            CC(["ClientCtx\nRegistry"])
-            EJ(["Event Journal"])
-        end
+    subgraph NVS["Persistent State · NVS"]
+        direction TB
+        DC(["DeviceCtx"]):::store
+        CC(["ClientCtx\nRegistry"]):::store
+        EJ(["Event Journal"]):::store
     end
 
     APP --> BLE & MQTT & AP
