@@ -4,8 +4,12 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 
-#include <vector>
 #include <cstring>
+
+// Maximum size for read-before-write comparison buffers (stack-allocated).
+// Calls with data exceeding these caps skip the comparison and write unconditionally.
+static constexpr size_t NVM_STR_COMPARE_CAP  = 256;
+static constexpr size_t NVM_BLOB_COMPARE_CAP = 256;
 
 static const char* TAG = "NVM";
 
@@ -108,21 +112,20 @@ esp_err_t NVMWrapper::WriteString(const char *partition,
     if (err != ESP_OK)
         return err;
 
-    // To reduce memory cell degradation, data is rewritten only when changes have occurred
+    // To reduce memory cell degradation, data is rewritten only when changes have occurred.
+    // Strings longer than NVM_STR_COMPARE_CAP are written unconditionally (safe, no heap).
     size_t existing_len = 0;
     err = nvs_get_str(handle, key, nullptr, &existing_len);
-    if (err == ESP_OK && existing_len > 0) {
-        // existing_len includes the null terminator
-        std::vector<char> buffer(existing_len);
-        err = nvs_get_str(handle, key, buffer.data(), &existing_len);
-        if (err == ESP_OK && std::strcmp(buffer.data(), value) == 0) {
+    if (err == ESP_OK && existing_len > 0 && existing_len <= NVM_STR_COMPARE_CAP) {
+        char buffer[NVM_STR_COMPARE_CAP];
+        err = nvs_get_str(handle, key, buffer, &existing_len);
+        if (err == ESP_OK && std::strcmp(buffer, value) == 0) {
             nvs_close(handle);
             ESP_LOGD(TAG, "%s the value \"%s\" already set for part: %s space: %s key %s", __FUNCTION__, value, partition, namespace_name, key);
             return ESP_OK; // No change needed
         }
-    } else if (err == ESP_ERR_NVS_NOT_FOUND) {
-        // Key not present, proceed to set
-    } else if (err != ESP_OK) {
+    } else if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+        // NOT_FOUND and strings too large for the cache both fall through to write
         nvs_close(handle);
         return err;
     }
@@ -290,21 +293,20 @@ esp_err_t NVMWrapper::WriteBlob(const char *partition,
     if (err != ESP_OK)
         return err;
 
-    // To reduce memory cell degradation, data is rewritten only when changes have occurred
+    // To reduce memory cell degradation, data is rewritten only when changes have occurred.
+    // Blobs larger than NVM_BLOB_COMPARE_CAP are written unconditionally (safe, no heap).
     size_t existing_len = 0;
     err = nvs_get_blob(handle, key, nullptr, &existing_len);
-    if (err == ESP_OK && existing_len == size) {
-        // Heap: blob size only known at runtime, needed for equality check before write
-        std::vector<uint8_t> existing(existing_len);
-        err = nvs_get_blob(handle, key, existing.data(), &existing_len);
-        if (err == ESP_OK && std::memcmp(existing.data(), value, size) == 0) {
+    if (err == ESP_OK && existing_len == size && size <= NVM_BLOB_COMPARE_CAP) {
+        uint8_t existing[NVM_BLOB_COMPARE_CAP];
+        err = nvs_get_blob(handle, key, existing, &existing_len);
+        if (err == ESP_OK && std::memcmp(existing, value, size) == 0) {
             nvs_close(handle);
             ESP_LOGD(TAG, "%s blob already set for part: %s space: %s key %s", __FUNCTION__, partition, namespace_name, key);
             return ESP_OK; // No change needed
         }
-    } else if (err == ESP_ERR_NVS_NOT_FOUND) {
-        // Key not present, proceed to set
-    } else if (err != ESP_OK) {
+    } else if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+        // NOT_FOUND and blobs too large for the cache both fall through to write
         nvs_close(handle);
         return err;
     }
