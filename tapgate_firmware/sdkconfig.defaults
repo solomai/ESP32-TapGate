@@ -6,6 +6,13 @@ CONFIG_LIBC_NEWLIB_NANO_FORMAT=y
 CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=n
 CONFIG_APP_REPRODUCIBLE_BUILD=y
 
+# IWDT timeout extended for JTAG debugging.
+# OpenOCD halts the CPU during launch.json setupCommands (set var dbg_ready,
+# tbreak, symbol loading). During a CPU halt the IWDT keeps counting; if the
+# halt exceeds the default 300 ms the IWDT fires a spurious "Guru Meditation
+# Error". 10 s covers GDB symbol-load time.
+CONFIG_ESP_INT_WDT_TIMEOUT_MS=10000
+
 
 # Partition Table
 #

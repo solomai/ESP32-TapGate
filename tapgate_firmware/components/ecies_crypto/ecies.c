@@ -104,7 +104,7 @@ cleanup:
     psa_reset_key_attributes(&attr);
 
     if (!ok) {
-        memset(shared_secret, 0, ECIES_X25519_KEY_SIZE);
+        ecies_secure_zero(shared_secret, ECIES_X25519_KEY_SIZE);
     }
     return ok;
 }
@@ -229,7 +229,7 @@ cleanup:
     psa_reset_key_attributes(&attr);
 
     if (!ok) {
-        memset(private_key, 0, ECIES_X25519_KEY_SIZE);
+        ecies_secure_zero(private_key, ECIES_X25519_KEY_SIZE);
     }
     return ok;
 }
@@ -388,10 +388,10 @@ bool ecies_encrypt(const uint8_t *plaintext,
     ok = true;
 
 cleanup:
-    memset(ephemeral_priv, 0, sizeof(ephemeral_priv));
-    memset(shared_secret,  0, sizeof(shared_secret));
-    memset(aes_key,        0, sizeof(aes_key));
-    memset(nonce,          0, sizeof(nonce));
+    ecies_secure_zero(ephemeral_priv, sizeof(ephemeral_priv));
+    ecies_secure_zero(shared_secret,  sizeof(shared_secret));
+    ecies_secure_zero(aes_key,        sizeof(aes_key));
+    ecies_secure_zero(nonce,          sizeof(nonce));
 
     if (aes_key_id != PSA_KEY_ID_NULL) {
         psa_destroy_key(aes_key_id);
@@ -492,8 +492,8 @@ bool ecies_decrypt(const uint8_t *ciphertext,
     ok = true;
 
 cleanup:
-    memset(shared_secret, 0, sizeof(shared_secret));
-    memset(aes_key,       0, sizeof(aes_key));
+    ecies_secure_zero(shared_secret, sizeof(shared_secret));
+    ecies_secure_zero(aes_key,       sizeof(aes_key));
 
     if (aes_key_id != PSA_KEY_ID_NULL) {
         psa_destroy_key(aes_key_id);
@@ -501,7 +501,7 @@ cleanup:
     psa_reset_key_attributes(&aes_attr);
 
     if (!ok && plaintext != NULL) {
-        memset(plaintext, 0, plaintext_capacity);
+        ecies_secure_zero(plaintext, plaintext_capacity);
     }
     return ok;
 }

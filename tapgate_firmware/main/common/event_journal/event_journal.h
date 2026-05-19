@@ -47,11 +47,19 @@ void _event_journal_store(enum event_journal_type type, const char *tag, const c
 #if defined(APP_DEBUG_MODE) || defined(CONFIG_APP_DEBUG_MODE)
 #include <stdio.h>
     extern unsigned int global_events_counter_per_session;
+    // Cross-platform atomic post-increment (returns old value).
+    // Firmware target (GCC) uses the GCC built-in; MSVC host tests are
+    // single-threaded so a plain post-increment is sufficient.
+    #if defined(_MSC_VER)
+        #define _EJ_COUNTER_INC(p) ((unsigned)(*(p))++)
+    #else
+        #define _EJ_COUNTER_INC(p) __atomic_fetch_add((p), 1u, __ATOMIC_RELAXED)
+    #endif
     // Formats ">> EVENT N <<" into a local buffer and binds _ej_tag to it.
 #define _EVENT_JOURNAL_TAG_DECL \
     char _ej_buf[32]; \
     snprintf(_ej_buf, sizeof(_ej_buf), ">> EVENT %u <<", \
-             __atomic_fetch_add(&global_events_counter_per_session, 1u, __ATOMIC_RELAXED) + 1u); \
+             _EJ_COUNTER_INC(&global_events_counter_per_session) + 1u); \
     const char* const _ej_tag = _ej_buf;
 #else
 #define _EVENT_JOURNAL_TAG_DECL \

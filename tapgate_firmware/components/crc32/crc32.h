@@ -14,8 +14,7 @@
  * Reference test: CRC32("123456789") = 0xCBF43926
  */
 
-#ifndef CRC32_H
-#define CRC32_H
+#pragma once
 
 #include <stdint.h>
 #include <stddef.h>
@@ -65,4 +64,3 @@ uint32_t crc32_calculate(const uint8_t *data, size_t len);
 }
 #endif
 
-#endif /* CRC32_H */

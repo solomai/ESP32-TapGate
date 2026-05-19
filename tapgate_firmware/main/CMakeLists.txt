@@ -13,4 +13,14 @@ idf_component_register(
                  "common/nvm"
                  "ctx_device"
                  "ctx_client"
+    PRIV_REQUIRES
+        esp_system
+        nvs_flash
+        app_trace
+        esp_app_format
+        esp_timer
+        bootloader_support
+        esp_hw_support
+        efuse
+        mbedtls
 )

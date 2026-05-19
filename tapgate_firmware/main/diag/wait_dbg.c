@@ -46,7 +46,7 @@ void wait_debugger_connection(void)
             ESP_LOGW(TAG, "GDB timeout after %u seconds, continuing execution.", CONFIG_APP_WAIT_FOR_DEBUGGER_TIMEOUT);
             return;
         }
-        vTaskDelay(pdMS_TO_TICKS(200));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 
     // GDB signaled ready, break at dbg_resume_point() for a clean debug start.

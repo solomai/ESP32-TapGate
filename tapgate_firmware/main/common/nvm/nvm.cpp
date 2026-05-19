@@ -90,11 +90,6 @@ esp_err_t NVMWrapper::ReadString(const char *partition,
 
     size_t length = size;
     err = nvs_get_str(handle, key, buffer, &length);
-    if (err == ESP_ERR_NVS_NOT_FOUND)
-    {
-        buffer[0] = '\0';
-        err = ESP_OK;
-    }
     nvs_close(handle);
     return err;
 }
@@ -197,6 +192,10 @@ esp_err_t NVMWrapper::WriteU32(const char *partition,
         ESP_LOGD(TAG, "%s the value \"%d\" already set for part: %s space: %s key %s", __FUNCTION__, value, partition, namespace_name, key);
         return ESP_OK; // No change needed
     }
+    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+        nvs_close(handle);
+        return err;
+    }
 
     err = nvs_set_u32(handle, key, value);
     if (err == ESP_OK) {
@@ -245,6 +244,10 @@ esp_err_t NVMWrapper::WriteU8(const char *partition,
         nvs_close(handle);
         ESP_LOGD(TAG, "%s the value \"%d\" already set for part: %s space: %s key %s", __FUNCTION__, value, partition, namespace_name, key);
         return ESP_OK; // No change needed
+    }
+    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+        nvs_close(handle);
+        return err;
     }
 
     err = nvs_set_u8(handle, key, value);
