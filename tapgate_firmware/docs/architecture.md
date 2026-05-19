@@ -10,38 +10,23 @@ The device exposes three independent communication channels — **BLE**, **MQTT*
 
 All inbound messages received on any channel are placed into a single **shared FreeRTOS queue**. A dedicated **main processing task** drains this queue one message at a time: it resolves the sender's `ClientCtx` by the embedded client ID, decrypts and authenticates the payload using the **ECIES** module (X25519 + HKDF-SHA256 + AES-GCM), executes the requested command, and sends a response — preferring the same channel the message arrived on.
 
-```mermaid
-flowchart LR
-    subgraph CH["Channels  ·  shared base class"]
-        direction TB
-        BLE("BLE")
-        MQTT("MQTT · Wi-Fi")
-        AP("Wi-Fi AP")
-    end
-
-    IQ[/"Inbox Queue"/]
-    OQ[/"Outbox Queue"/]
-
-    subgraph TASK["Main Processing Task"]
-        direction TB
-        DEC["decode msg"]
-        ENC["encode msg"]
-        subgraph CTX["Persistent State · NVS"]
-            direction LR
-            DCTX(["DeviceCtx"])
-            CCTX(["ClientCtx"])
-            EJ(["Event Journal"])
-        end
-        DEC & ENC <--> CTX
-    end
-
-    CL["Core Logic\nModule"]
-
-    CH  --> IQ & OQ
-    IQ  --> DEC
-    OQ  --> ENC
-    DEC <--> CL
-    ENC <--> CL
+```
+  ┌──────────────────┐   ╔══════════════════════════════════════════════════════════╗
+  │     Channels     │   ║                  Main Processing Task                   ║
+  │   shared base    │   ║                                                         ║   ┌─────────────────┐
+  │                  │   ║   ┌──────────────┐   ┌──────────────┐                   ║   │                 │
+  │  ┌────────────┐  ├──▶║   │ Inbox Queue  ├──▶│  decode msg  │◀─────────────────▶╠══▶│   Core Logic    │
+  │  │    BLE     │  │   ║   └──────────────┘   └──────┬───────┘                   ║   │     Module      │
+  │  └────────────┘  │   ║                             │                           ║   │                 │
+  │  ┌────────────┐  │   ║              ┌──────────────▼───────────────────────┐   ║   │                 │
+  │  │ MQTT·Wi-Fi │  │   ║              │         Persistent State · NVS       │   ║   │                 │
+  │  └────────────┘  │   ║              │   DeviceCtx · ClientCtx · EJ         │   ║   │                 │
+  │  ┌────────────┐  │   ║              └──────────────▲───────────────────────┘   ║   │                 │
+  │  │  Wi-Fi AP  │  │   ║                             │                           ║   │                 │
+  │  └────────────┘  │◀══║   ┌──────────────┐   ┌──────┴───────┐                   ║   │                 │
+  └──────────────────┘   ║   │ Outbox Queue │◀──│  encode msg  │◀─────────────────▶╠══▶│                 │
+                         ║   └──────────────┘   └──────────────┘                   ║   └─────────────────┘
+                         ╚══════════════════════════════════════════════════════════╝
 ```
 
 ### Key design points
