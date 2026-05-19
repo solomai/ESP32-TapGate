@@ -44,7 +44,8 @@ esp_err_t DeviceContext::Init() noexcept
     esp_err_t init_err = ESP_OK;
     {
         const esp_err_t err = load_entity();
-        if (err == ESP_ERR_NVS_NOT_FOUND) {
+        if (err == ESP_ERR_NVS_NOT_FOUND)
+        {
             // Generate device ID outside the lock — crypto operation is expensive
             tg_uid_t device_id = {};
             const esp_err_t uid_err = generate_rng_uid(device_id);
@@ -62,6 +63,10 @@ esp_err_t DeviceContext::Init() noexcept
                 }
             }
             ESP_LOGW(TAG, "Entity not in NVS, applying defaults");
+
+            // Store Device Ctx to NVM
+            store_entity();
+            
         } else if (err != ESP_OK) {
             ESP_LOGE(TAG, "Failed to load entity: %s", esp_err_to_name(err));
             init_err = err;
@@ -191,6 +196,9 @@ esp_err_t DeviceContext::get_nonce(tg_nonce_t* nonce) const noexcept
 
 esp_err_t DeviceContext::set_nonce(tg_nonce_t nonce) noexcept
 {
+    if (m_nonce.load(std::memory_order_relaxed) == nonce)
+        return ESP_OK;
+
     m_nonce.store(nonce, std::memory_order_relaxed);
     return store_nonce();
 }
