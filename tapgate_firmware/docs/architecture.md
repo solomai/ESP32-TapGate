@@ -26,24 +26,22 @@ flowchart LR
         direction TB
         DEC["decode msg"]
         ENC["encode msg"]
+        subgraph CTX["Persistent State · NVS"]
+            direction LR
+            DCTX(["DeviceCtx"])
+            CCTX(["ClientCtx"])
+            EJ(["Event Journal"])
+        end
+        DEC & ENC <--> CTX
     end
 
     CL["Core Logic\nModule"]
 
-    subgraph CTX["Persistent State · NVS"]
-        direction LR
-        DCTX(["DeviceCtx"])
-        CCTX(["ClientCtx"])
-        EJ(["Event Journal"])
-    end
-
-    CH  --> IQ
-    OQ  --> CH
+    CH  --> IQ & OQ
     IQ  --> DEC
-    ENC --> OQ
+    OQ  --> ENC
     DEC <--> CL
     ENC <--> CL
-    TASK <--> CTX
 ```
 
 ### Key design points
